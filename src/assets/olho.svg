@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Olho Escarlate - versao detalhada.
+  Usada pelo scripts/gerar-icone.js nos tamanhos grandes do .ico (32 e 48 px).
+  Nos tamanhos pequenos os tracos finos somem, entao la entra o olho-simples.svg.
+
+  O width/height de 256 existe so para o sharp rasterizar em alta resolucao
+  antes de reduzir. O desenho em si vive no viewBox de 24x24.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24">
+  <defs>
+    <radialGradient id="iris" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ff5a6b"/>
+      <stop offset="45%" stop-color="#e0263b"/>
+      <stop offset="100%" stop-color="#7a0f1e"/>
+    </radialGradient>
+    <radialGradient id="pupila" cx="38%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#4a1218"/>
+      <stop offset="70%" stop-color="#120406"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+  </defs>
+
+  <!-- contorno amendoado do olho -->
+  <path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" stroke="#c7cad1" stroke-width="1.3" fill="none"/>
+
+  <!-- iris -->
+  <circle cx="12" cy="12" r="4.4" fill="url(#iris)"/>
+  <circle cx="12" cy="12" r="4.4" fill="none" stroke="#3a0810" stroke-width="0.5"/>
+
+  <!-- tracos da iris -->
+  <line x1="12" y1="8" x2="12" y2="9.2" stroke="#3a0810" stroke-width="0.5"/>
+  <line x1="12" y1="14.8" x2="12" y2="16" stroke="#3a0810" stroke-width="0.5"/>
+  <line x1="8" y1="12" x2="9.2" y2="12" stroke="#3a0810" stroke-width="0.5"/>
+  <line x1="14.8" y1="12" x2="16" y2="12" stroke="#3a0810" stroke-width="0.5"/>
+
+  <!-- pupila -->
+  <circle cx="12" cy="12" r="2.1" fill="url(#pupila)"/>
+  <circle cx="12" cy="12" r="2.1" fill="none" stroke="#000000" stroke-width="0.3" opacity="0.6"/>
+
+  <!-- brilhos -->
+  <circle cx="13.1" cy="10.9" r="1.1" fill="#ffffff" opacity="0.9"/>
+  <circle cx="10.8" cy="13" r="0.5" fill="#ffffff" opacity="0.4"/>
+</svg>
