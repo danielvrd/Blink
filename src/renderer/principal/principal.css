@@ -1,0 +1,332 @@
+/*
+  Janela principal do Blink: barra de titulo, barra de abas e o conteudo das
+  tres abas.
+
+  Os valores vem do design (design_handoff_blink/README.md, secao "Telas").
+  Cores, raios e sombras sao sempre variaveis de tokens.css.
+*/
+
+html,
+body {
+  height: 100%;
+}
+
+/* --- A janela ------------------------------------------------------------- */
+
+.janela {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  border: 1px solid var(--borda-janela);
+  border-radius: var(--raio-janela);
+  /* Corta o que passar do canto arredondado: a barra de titulo e retangular
+     e encostaria no canto sem isto. */
+  overflow: hidden;
+}
+
+/* --- Barra de titulo ------------------------------------------------------ */
+
+.barra-titulo {
+  flex: none;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 14px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--divisoria);
+  /* Arrastar a barra move a janela, como em qualquer janela do Windows. */
+  -webkit-app-region: drag;
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--texto-forte-2);
+}
+
+.botoes-janela {
+  display: flex;
+  /* Sem isto os botoes virariam area de arrastar e nao dariam para clicar. */
+  -webkit-app-region: no-drag;
+}
+
+.botao-janela {
+  width: 38px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--icone-janela);
+}
+
+.botao-janela:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Vermelho no fechar: e o que o Windows faz em toda janela. */
+.botao-janela.fechar:hover {
+  background: #c42b1c;
+  color: #ffffff;
+}
+
+.botao-janela[disabled] {
+  cursor: default;
+}
+
+.botao-janela[disabled]:hover {
+  background: transparent;
+}
+
+.icone-minimizar {
+  width: 9px;
+  height: 1px;
+  background: currentColor;
+}
+
+.icone-maximizar {
+  width: 9px;
+  height: 9px;
+  border: 1px solid currentColor;
+}
+
+/* --- Barra de abas -------------------------------------------------------- */
+
+.barra-abas {
+  flex: none;
+  display: flex;
+  padding: 0 8px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--divisoria);
+}
+
+.aba {
+  flex: 1;
+  padding: 11px 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--raio-aba);
+  color: var(--texto-secundario);
+}
+
+.aba:hover {
+  color: var(--texto-2);
+}
+
+.aba.ativa {
+  color: var(--texto-forte);
+  background: var(--aba-ativa-fundo);
+  border-bottom-color: var(--destaque);
+}
+
+/* --- Conteudo ------------------------------------------------------------- */
+
+.conteudo {
+  flex: 1;
+  min-height: 270px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/*
+  Cada aba ocupa a altura toda do conteudo. Como a aba do SQL Formatter e a
+  mais alta e a janela tem tamanho fixo, as outras duas sobrariam espaco
+  embaixo: o `margin-top: auto` do rodape empurra ele para o fim e as tres
+  abas ficam com a mesma cara.
+*/
+.painel-aba {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Pecas repetidas nas abas --------------------------------------------- */
+
+.rotulo {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--rotulo);
+  margin-bottom: 8px;
+}
+
+.secao {
+  margin-bottom: 22px;
+}
+
+.linha-campo {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Caixa que mostra o atalho, em fonte monoespacada. */
+.campo-bind {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--fonte-mono);
+  font-size: 12.5px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+  padding: 8px 10px;
+  color: var(--texto-forte-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+  Estado que o design nao previu: outro programa do Windows ja usa essa
+  combinacao e o registro falhou. Sem este aviso a bind ficaria gravada na
+  tela e simplesmente nunca dispararia.
+*/
+.campo-bind.conflito {
+  border-color: var(--destaque-estado);
+  color: var(--destaque-estado);
+}
+
+.aviso-conflito {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--destaque-estado);
+}
+
+/* Caminho da pasta de notas: so leitura, com reticencias se nao couber. */
+.caminho-pasta {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--fonte-mono);
+  font-size: 12px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+  padding: 8px 10px;
+  color: var(--texto-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.caminho-pasta.vazio {
+  color: var(--rotulo);
+}
+
+/* --- Botoes --------------------------------------------------------------- */
+
+.botao-fantasma {
+  padding: 8px 12px;
+  border-radius: var(--raio-campo);
+  border: 1px solid var(--borda-fantasma);
+  background: transparent;
+  color: var(--texto-2);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.botao-fantasma:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Enquanto espera as teclas do novo atalho. */
+.botao-fantasma.gravando {
+  color: var(--destaque-estado);
+}
+
+.botao-primario {
+  padding: 9px 18px;
+  border-radius: var(--raio-botao);
+  border: none;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.botao-primario:hover {
+  filter: brightness(1.12);
+}
+
+/* --- Campos --------------------------------------------------------------- */
+
+.campo-select {
+  width: 100%;
+  background: var(--superficie);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+  padding: 8px 10px;
+  font-size: 12.5px;
+  color: var(--texto-forte-2);
+  /* Faz o Windows desenhar a lista aberta em tema escuro. */
+  color-scheme: dark;
+}
+
+.grade-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+/* Controle segmentado: um grupo de botoes onde so um fica ativo. */
+.segmentado {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+}
+
+.segmentado button {
+  flex: 1;
+  padding: 6px 2px;
+  border: none;
+  border-radius: var(--raio-item);
+  background: transparent;
+  color: var(--texto-secundario);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.segmentado button:hover {
+  color: var(--texto-2);
+}
+
+.segmentado button.ativo {
+  background: var(--segmentado-ativo);
+  color: var(--texto-forte);
+}
+
+/* Os botoes de palavras-chave mostram UPPER / lower, entao a fonte
+   monoespacada deixa a diferenca de caixa obvia. */
+.segmentado.mono button {
+  font-family: var(--fonte-mono);
+}
+
+/* --- Rodape da aba -------------------------------------------------------- */
+
+.rodape-aba {
+  margin-top: auto;
+  border-top: 1px solid var(--divisoria);
+  padding-top: 16px;
+  text-align: center;
+}
+
+.rodape-aba .legenda {
+  font-size: 11.5px;
+  color: var(--rotulo);
+  margin-bottom: 10px;
+  text-wrap: pretty;
+}

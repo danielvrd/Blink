@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <!--
+    Content-Security-Policy: a tela so pode carregar o que vem do proprio
+    projeto. Sem script de fora, sem conexao para fora. O app e local.
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:;">
+  <title>Blink</title>
+
+  <link rel="stylesheet" href="../comum/tokens.css">
+  <link rel="stylesheet" href="../comum/base.css">
+  <link rel="stylesheet" href="principal.css">
+</head>
+<body>
+
+  <!--
+    A janela do Electron e transparente e sem moldura. Esta div e a janela
+    que o usuario ve: fundo, borda e o canto arredondado de 16px.
+  -->
+  <div class="janela">
+
+    <!-- Barra de titulo, no estilo do Windows. Arrastar aqui move a janela. -->
+    <header class="barra-titulo">
+      <div class="titulo">
+        <!-- Olho escarlate, versao simplificada (o mesmo do design) -->
+        <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" stroke="currentColor" stroke-width="1.4" fill="none"></path>
+          <circle cx="12" cy="12" r="4.4" fill="#e0263b"></circle>
+          <circle cx="12" cy="12" r="2" fill="#1a0508"></circle>
+          <circle cx="13.2" cy="10.7" r="1" fill="#ffffff" opacity="0.9"></circle>
+        </svg>
+        <span>Blink</span>
+      </div>
+
+      <div class="botoes-janela">
+        <button class="botao-janela" id="btn-minimizar" title="Minimizar" aria-label="Minimizar">
+          <span class="icone-minimizar"></span>
+        </button>
+        <!--
+          O botao de maximizar esta aqui porque o design pede os tres botoes
+          do Windows. Ele nao faz nada: a janela tem tamanho fixo, entao
+          maximizar uma tela de configuracoes de 460px so deixaria um retangulo
+          preto gigante com os campos amontoados no topo.
+        -->
+        <button class="botao-janela" id="btn-maximizar" title="Maximizar" aria-label="Maximizar" disabled>
+          <span class="icone-maximizar"></span>
+        </button>
+        <button class="botao-janela fechar" id="btn-fechar" title="Esconder na bandeja" aria-label="Esconder na bandeja">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"></line>
+            <line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.2"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- As tres abas. O conteudo de cada uma e montado pelo JavaScript. -->
+    <nav class="barra-abas" id="barra-abas"></nav>
+    <main class="conteudo" id="conteudo"></main>
+
+  </div>
+
+  <!--
+    Scripts comuns, na ordem: cada arquivo pendura o que expoe no objeto
+    global `Blink`, e o principal.js, que vem por ultimo, usa todos eles.
+
+    Sao <script> comuns de proposito, sem type="module": as telas carregam
+    pelo protocolo file:, e o navegador recusa modulos por esse protocolo.
+  -->
+  <script src="../comum/ui.js"></script>
+  <script src="pecas.js"></script>
+  <script src="campo-bind.js"></script>
+  <script src="aba-diff.js"></script>
+  <script src="aba-note.js"></script>
+  <script src="aba-sql.js"></script>
+  <script src="principal.js"></script>
+</body>
+</html>

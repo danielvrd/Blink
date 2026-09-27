@@ -1,0 +1,140 @@
+/*
+  Base comum a todas as telas do Blink: fontes, reset e detalhes que valem
+  para o app inteiro.
+*/
+
+/* --- Fontes ---------------------------------------------------------------
+  Os arquivos ficam no proprio projeto (src/assets/fontes). O app e offline:
+  nada de Google Fonts ou qualquer CDN.
+  Os caminhos sao relativos a ESTE arquivo, nao ao HTML que o importa.
+--------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../../assets/fontes/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('../../assets/fontes/Inter-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('../../assets/fontes/Inter-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('../../assets/fontes/Inter-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../../assets/fontes/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../../assets/fontes/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../../assets/fontes/JetBrainsMono-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: block;
+}
+
+/* --- Reset ---------------------------------------------------------------- */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--fonte);
+  /* O fundo fica por conta de cada tela: a janela e transparente para o
+     canto arredondado aparecer. */
+  background: transparent;
+  color: var(--texto);
+  /* Nada de selecionar texto da interface como se fosse uma pagina web.
+     Onde faz sentido selecionar (campos, notas, SQL), a regra e desfeita. */
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+input,
+textarea {
+  user-select: text;
+  cursor: text;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Remove o contorno azul padrao, mas mantem um anel visivel para quem navega
+   de teclado - senao nao da para saber onde esta o foco. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--destaque-estado);
+  outline-offset: 2px;
+}
+
+/* --- Barra de rolagem ----------------------------------------------------- */
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* --- Animacoes ------------------------------------------------------------ */
+
+@keyframes aparecer {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes entrarModal {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}

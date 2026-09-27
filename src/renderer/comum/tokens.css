@@ -1,0 +1,70 @@
+/*
+  Design tokens do Blink.
+
+  Sao os valores da tabela "Design tokens" do handoff
+  (design_handoff_blink/README.md). Nenhuma cor, raio ou sombra deve ser
+  escrita solta em outro arquivo: tudo sai daqui. Assim, mudar o vermelho do
+  app e mexer em uma linha so.
+*/
+
+:root {
+  /* --- Cores: superficies --------------------------------------------- */
+  --fundo: #0a0a0a;              /* fundo das janelas e dos modais */
+  --superficie: #161616;         /* barras, cabecalhos, campos */
+  --painel-codigo: #111111;      /* painel de SQL (etapa 2) */
+
+  /* --- Cores: destaque ------------------------------------------------ */
+  --destaque: #a8393a;           /* vermelho do app */
+  --destaque-estado: #c65453;    /* texto de estado, ex.: "Gravando..." */
+  --sobre-destaque: #f5eceb;     /* texto em cima do vermelho */
+  --aba-ativa-fundo: rgba(168, 57, 58, 0.14);
+  --segmentado-ativo: rgba(168, 57, 58, 0.22);
+
+  /* --- Cores: bordas -------------------------------------------------- */
+  --borda-janela: rgba(255, 255, 255, 0.08);
+  --divisoria: rgba(255, 255, 255, 0.06);
+  --borda-campo: rgba(255, 255, 255, 0.1);
+  --borda-fantasma: rgba(255, 255, 255, 0.12);
+  --borda-modal: rgba(168, 57, 58, 0.28);
+  --borda-modal-nota: rgba(168, 57, 58, 0.3);
+
+  /* --- Cores: texto --------------------------------------------------- */
+  --texto-forte: #eef0f5;
+  --texto-forte-2: #e8e9ee;
+  --texto: #c9ccd3;
+  --texto-2: #c7cad1;
+  --texto-secundario: #7d8190;
+  --texto-secundario-2: #7d828f;
+  --rotulo: #5f6373;             /* rotulos de secao e dicas */
+  --icone-janela: #8b8f9c;       /* setas da barra de titulo */
+
+  /* --- Cores: estados do diff (etapa 4) ------------------------------- */
+  --diff-pendente: oklch(0.75 0.15 55);
+  --diff-pendente-fundo: oklch(0.75 0.15 55 / 0.14);
+  --diff-aplicado: oklch(0.72 0.16 145);
+  --diff-aplicado-fundo: oklch(0.72 0.16 145 / 0.16);
+  --apagar: oklch(0.68 0.19 25);
+  --apagar-hover: oklch(0.75 0.19 25);
+
+  --sobreposicao: rgba(6, 7, 9, 0.72);
+
+  /* --- Tipografia ----------------------------------------------------- */
+  --fonte: Inter, "Segoe UI", system-ui, sans-serif;
+  --fonte-mono: "JetBrains Mono", Consolas, monospace;
+
+  /* --- Raios ---------------------------------------------------------- */
+  --raio-janela: 16px;
+  --raio-modal: 14px;
+  --raio-modal-nota: 20px;
+  --raio-campo: 8px;             /* campos e segmentados */
+  --raio-botao: 9px;
+  --raio-botao-pequeno: 7px;
+  --raio-aba: 6px 6px 0 0;
+  --raio-item: 6px;
+
+  /* --- Sombras -------------------------------------------------------- */
+  --sombra-janela: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+  --sombra-modal: 0 40px 80px -20px rgba(0, 0, 0, 0.7);
+  --sombra-modal-nota: 0 30px 60px -15px rgba(0, 0, 0, 0.7);
+  --sombra-popover: 0 10px 24px rgba(0, 0, 0, 0.5);
+}

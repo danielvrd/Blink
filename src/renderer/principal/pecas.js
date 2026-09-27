@@ -1,0 +1,60 @@
+/**
+ * Pedacos que as tres abas repetem.
+ *
+ * Mora aqui o que aparece igual em Diff Checker, Fast Note e SQL Formatter,
+ * para nao ter tres copias do mesmo HTML.
+ */
+
+window.Blink = window.Blink || {};
+
+(function () {
+  const { el } = window.Blink.ui;
+
+  /**
+   * Rodape da aba: uma legenda e o botao "Abrir demonstracao".
+   *
+   * O botao chama a mesma funcao do processo principal que a bind global
+   * chama, entao a ferramenta abre igual pelos dois caminhos. Nas etapas 2, 3
+   * e 4 essa funcao passa a abrir a janela de verdade; por enquanto ela so
+   * escreve no console.
+   */
+  function rodape({ ferramenta, legenda }) {
+    return el('div', { class: 'rodape-aba' }, [
+      el('div', { class: 'legenda', texto: legenda }),
+      el('button', {
+        class: 'botao-primario',
+        texto: 'Abrir demonstração',
+        onclick: () => window.blink.demonstracao.abrir(ferramenta),
+      }),
+    ]);
+  }
+
+  /**
+   * Controle segmentado: botoes lado a lado onde so um fica ativo.
+   *
+   * opcoes    [{ valor, rotulo }]
+   * valor     qual esta ativo agora
+   * mono      true usa a fonte monoespacada (usado em UPPER / lower)
+   * aoTrocar  recebe o novo valor
+   */
+  function segmentado({ opcoes, valor, mono, aoTrocar }) {
+    const caixa = el('div', { class: mono ? 'segmentado mono' : 'segmentado' });
+
+    const botoes = opcoes.map((opcao) =>
+      el('button', {
+        class: opcao.valor === valor ? 'ativo' : '',
+        texto: opcao.rotulo,
+        onclick: () => {
+          // Tira o ativo de todos e poe so neste.
+          botoes.forEach((b, i) => b.classList.toggle('ativo', opcoes[i].valor === opcao.valor));
+          aoTrocar(opcao.valor);
+        },
+      })
+    );
+
+    window.Blink.ui.anexar(caixa, botoes);
+    return caixa;
+  }
+
+  window.Blink.pecas = { rodape, segmentado };
+})();
