@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+button,input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:5px}
+::-webkit-scrollbar-track{background:transparent}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes modalIn{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:oklch(0.14 0.006 260);padding:56px 20px 90px;display:flex;flex-direction:column;align-items:center;gap:52px;font-family:Inter,system-ui,sans-serif;position:relative">
+
+  <div style="max-width:480px;text-align:center;color:#8b8f9c;font-size:12.5px;line-height:1.6">
+    <div style="font:600 13px 'JetBrains Mono',monospace;color:#eef0f5;letter-spacing:.03em;margin-bottom:8px">BLINK — mockup de interface</div>
+    Clique nas abas para ver as configurações. Os botões "Abrir demonstração" mostram o que a bind abriria.
+  </div>
+
+  <div style="width:460px;max-width:92vw;border-radius:16px;background:#0a0a0a;border:1px solid rgba(255,255,255,0.08);box-shadow:0 30px 60px -20px rgba(0,0,0,.6);overflow:hidden">
+
+    <sc-if value="{{chromeIsMac}}" hint-placeholder-val="{{false}}">
+      <div style="height:40px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid rgba(255,255,255,.06);position:relative;background:#161616">
+        <div style="display:flex;gap:8px">
+          <div style="width:11px;height:11px;border-radius:50%;background:#ff5f57;opacity:.6"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#febc2e;opacity:.6"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#28c840;opacity:.6"></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;text-align:center;font-size:12px;color:#8b8f9c;pointer-events:none">Blink</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{chromeIsWindows}}" hint-placeholder-val="{{false}}">
+      <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 0 0 14px;border-bottom:1px solid rgba(255,255,255,.06);background:#161616">
+        <div style="display:flex;align-items:center;gap:8px">
+          <svg width="13" height="13" viewBox="0 0 24 24"><path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" stroke="#e8e9ee" stroke-width="1.4" fill="none"></path><circle cx="12" cy="12" r="4.4" fill="#e0263b"></circle><circle cx="12" cy="12" r="2" fill="#1a0508"></circle><circle cx="13.2" cy="10.7" r="1" fill="#fff" opacity="0.9"></circle></svg>
+          <span style="font-size:12px;font-weight:500;color:#e8e9ee">Blink</span>
+        </div>
+        <div style="display:flex">
+          <div style="width:38px;height:40px;display:flex;align-items:center;justify-content:center;color:#8b8f9c"><div style="width:9px;height:1px;background:currentColor"></div></div>
+          <div style="width:38px;height:40px;display:flex;align-items:center;justify-content:center;color:#8b8f9c"><div style="width:9px;height:9px;border:1px solid currentColor"></div></div>
+          <div style="width:38px;height:40px;display:flex;align-items:center;justify-content:center;color:#8b8f9c">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"></line><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.2"></line></svg>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{chromeIsFrameless}}" hint-placeholder-val="{{true}}">
+      <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 14px;border-bottom:1px solid rgba(255,255,255,.06);background:#161616">
+        <div style="display:flex;align-items:center;gap:8px">
+          <svg width="13" height="13" viewBox="0 0 24 24"><path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" stroke="#e8e9ee" stroke-width="1.4" fill="none"></path><circle cx="12" cy="12" r="4.4" fill="#e0263b"></circle><circle cx="12" cy="12" r="2" fill="#1a0508"></circle><circle cx="13.2" cy="10.7" r="1" fill="#fff" opacity="0.9"></circle></svg>
+          <span style="font-size:12px;font-weight:500;color:#e8e9ee">Blink</span>
+        </div>
+        <button style="width:24px;height:24px;border-radius:6px;border:none;background:transparent;color:#8b8f9c;font-size:14px;cursor:pointer" style-hover="background:rgba(255,255,255,.08)">×</button>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;padding:0 8px;border-bottom:1px solid rgba(255,255,255,.06);background:#161616">
+      <sc-for list="{{tabVMs}}" as="tab" hint-placeholder-count="4">
+        <button onClick="{{tab.onClick}}" style="flex:1;padding:11px 4px;font-size:12.5px;font-weight:600;background:{{tab.bg}};border:none;border-bottom:2px solid {{tab.borderColor}};border-radius:6px 6px 0 0;cursor:pointer;color:{{tab.color}}" style-hover="color:#c7cad1">{{tab.label}}</button>
+      </sc-for>
+    </div>
+
+    <div style="padding:20px;min-height:270px">
+      <sc-if value="{{activeTabIsDiff}}" hint-placeholder-val="{{true}}">
+        <div>
+          <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5f6373;margin-bottom:8px">Atalho de captura e comparação</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:22px">
+            <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#161616;border:1px solid rgba(255,255,255,.1);padding:8px 10px;border-radius:8px;color:#e8e9ee">{{diffBindLabel}}</span>
+            <button onClick="{{onDiffBindClick}}" style="padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:{{diffBindButtonColor}};font-size:12px;font-weight:600;cursor:pointer">{{diffBindButtonLabel}}</button>
+          </div>
+
+          <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:16px;text-align:center">
+            <div style="font-size:11.5px;color:#5f6373;margin-bottom:10px">Assim abriria após usar a bind duas vezes:</div>
+            <button onClick="{{openDiffModal}}" style="padding:9px 18px;border-radius:9px;border:none;background:#a8393a;color:#f5eceb;font-size:12.5px;font-weight:700;cursor:pointer">Abrir demonstração</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{activeTabIsNote}}" hint-placeholder-val="{{false}}">
+        <div>
+          <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5f6373;margin-bottom:8px">Atalho para abrir</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:22px">
+            <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#161616;border:1px solid rgba(255,255,255,.1);padding:8px 10px;border-radius:8px;color:#e8e9ee">{{noteBindLabel}}</span>
+            <button onClick="{{onNoteBindClick}}" style="padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:{{noteBindButtonColor}};font-size:12px;font-weight:600;cursor:pointer">{{noteBindButtonLabel}}</button>
+          </div>
+
+          <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5f6373;margin-bottom:8px">Pasta de notas</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:22px">
+            <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;background:#161616;border:1px solid rgba(255,255,255,.1);padding:8px 10px;border-radius:8px;color:#c7cad1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">~/Documents/BlinkNotes</div>
+            <button style="padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#c7cad1;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Selecionar…</button>
+          </div>
+
+          <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:16px;text-align:center">
+            <div style="font-size:11.5px;color:#5f6373;margin-bottom:10px">Assim abriria ao usar a bind:</div>
+            <button onClick="{{openNoteModal}}" style="padding:9px 18px;border-radius:9px;border:none;background:#a8393a;color:#f5eceb;font-size:12.5px;font-weight:700;cursor:pointer">Abrir demonstração</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{activeTabIsSql}}" hint-placeholder-val="{{false}}">
+        <div>
+          <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5f6373;margin-bottom:8px">Atalho para formatar seleção</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:22px">
+            <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#161616;border:1px solid rgba(255,255,255,.1);padding:8px 10px;border-radius:8px;color:#e8e9ee">{{sqlBindLabel}}</span>
+            <button onClick="{{onSqlBindClick}}" style="padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:{{sqlBindButtonColor}};font-size:12px;font-weight:600;cursor:pointer">{{sqlBindButtonLabel}}</button>
+          </div>
+
+          <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5f6373;margin-bottom:8px">Dialeto</div>
+          <select value="{{sqlDialect}}" onChange="{{handleSqlDialect}}" style="width:100%;margin-bottom:22px;background:#161616;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;font-size:12.5px;color:#e8e9ee;color-scheme:dark">
+            <sc-for list="{{sqlDialectOpts}}" as="d" hint-placeholder-count="5">
+              <option value="{{d.value}}">{{d.label}}</option>
+            </sc-for>
+          </select>
+
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:22px">
+            <div>
+              <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5f6373;margin-bottom:8px">Palavras-chave</div>
+              <div style="display:flex;gap:3px;padding:3px;background:#161616;border:1px solid rgba(255,255,255,.1);border-radius:8px">
+                <sc-for list="{{kwCaseOpts}}" as="o" hint-placeholder-count="3">
+                  <button onClick="{{o.onClick}}" style="flex:1;padding:6px 2px;border:none;border-radius:6px;background:{{o.bg}};color:{{o.color}};font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;cursor:pointer">{{o.label}}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5f6373;margin-bottom:8px">Indentação</div>
+              <div style="display:flex;gap:3px;padding:3px;background:#161616;border:1px solid rgba(255,255,255,.1);border-radius:8px">
+                <sc-for list="{{indentOpts}}" as="o" hint-placeholder-count="3">
+                  <button onClick="{{o.onClick}}" style="flex:1;padding:6px 2px;border:none;border-radius:6px;background:{{o.bg}};color:{{o.color}};font-size:11px;font-weight:600;cursor:pointer">{{o.label}}</button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:16px;text-align:center">
+            <div style="font-size:11.5px;color:#5f6373;margin-bottom:10px;text-wrap:pretty">Selecione a SQL em qualquer lugar e use a bind: o texto é substituído já formatado.</div>
+            <button onClick="{{openSqlModal}}" style="padding:9px 18px;border-radius:9px;border:none;background:#a8393a;color:#f5eceb;font-size:12.5px;font-weight:700;cursor:pointer">Abrir demonstração</button>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <div style="width:460px;max-width:92vw;display:flex;flex-direction:column;gap:16px">
+    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#5f6373;text-align:center">Sugestões de ícone — bandeja do sistema</div>
+    <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap">
+      <sc-for list="{{trayIcons}}" as="ic" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <div style="width:44px;height:44px;border-radius:12px;background:#161616;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;position:relative">
+            <sc-if value="{{ic.isScarletEye}}" hint-placeholder-val="{{false}}">
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <defs>
+                  <radialGradient id="scarletIris" cx="42%" cy="38%" r="65%">
+                    <stop offset="0%" stop-color="#ff5a6b"></stop>
+                    <stop offset="45%" stop-color="#e0263b"></stop>
+                    <stop offset="100%" stop-color="#7a0f1e"></stop>
+                  </radialGradient>
+                  <radialGradient id="scarletPupil" cx="38%" cy="35%" r="70%">
+                    <stop offset="0%" stop-color="#4a1218"></stop>
+                    <stop offset="70%" stop-color="#120406"></stop>
+                    <stop offset="100%" stop-color="#000000"></stop>
+                  </radialGradient>
+                </defs>
+                <path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" stroke="#c7cad1" stroke-width="1.3" fill="none"></path>
+                <circle cx="12" cy="12" r="4.4" fill="url(#scarletIris)"></circle>
+                <circle cx="12" cy="12" r="4.4" fill="none" stroke="#3a0810" stroke-width="0.5"></circle>
+                <line x1="12" y1="8" x2="12" y2="9.2" stroke="#3a0810" stroke-width="0.5"></line>
+                <line x1="12" y1="14.8" x2="12" y2="16" stroke="#3a0810" stroke-width="0.5"></line>
+                <line x1="8" y1="12" x2="9.2" y2="12" stroke="#3a0810" stroke-width="0.5"></line>
+                <line x1="14.8" y1="12" x2="16" y2="12" stroke="#3a0810" stroke-width="0.5"></line>
+                <circle cx="12" cy="12" r="2.1" fill="url(#scarletPupil)"></circle>
+                <circle cx="12" cy="12" r="2.1" fill="none" stroke="#000" stroke-width="0.3" opacity="0.6"></circle>
+                <circle cx="13.1" cy="10.9" r="1.1" fill="#fff" opacity="0.9"></circle>
+                <circle cx="10.8" cy="13" r="0.5" fill="#fff" opacity="0.4"></circle>
+              </svg>
+            </sc-if>
+            <sc-if value="{{ic.isBlink}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 13 C7 9 17 9 21 13" stroke="#c7cad1" stroke-width="1.6" fill="none"></path><line x1="7" y1="14" x2="6" y2="16.5" stroke="#e0263b" stroke-width="1.3"></line><line x1="12" y1="15" x2="12" y2="17.5" stroke="#e0263b" stroke-width="1.3"></line><line x1="17" y1="14" x2="18" y2="16.5" stroke="#e0263b" stroke-width="1.3"></line></svg></sc-if>
+            <sc-if value="{{ic.isSlitEye}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M2 12 L9 6 L15 6 L22 12 L15 18 L9 18 Z" stroke="#c7cad1" stroke-width="1.4" fill="none"></path><rect x="11" y="7" width="2" height="10" rx="1" fill="#e0263b"></rect></svg></sc-if>
+            <sc-if value="{{ic.isPairEyes}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M1 12 C3 8.5 7 8.5 9 12 C7 15.5 3 15.5 1 12 Z" stroke="#c7cad1" stroke-width="1.2" fill="none"></path><rect x="4.3" y="10" width="1.4" height="4" rx="0.7" fill="#e0263b"></rect><path d="M15 12 C17 8.5 21 8.5 23 12 C21 15.5 17 15.5 15 12 Z" stroke="#c7cad1" stroke-width="1.2" fill="none"></path><rect x="18.3" y="10" width="1.4" height="4" rx="0.7" fill="#e0263b"></rect></svg></sc-if>
+            <sc-if value="{{ic.isRecommended}}" hint-placeholder-val="{{false}}">
+              <div style="position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);background:#a8393a;color:#f5eceb;font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap">SUGERIDO</div>
+            </sc-if>
+          </div>
+          <div style="font-size:11px;color:#7d8190">{{ic.label}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{showDiffModal}}" hint-placeholder-val="{{false}}">
+    <div style="position:fixed;inset:0;background:rgba(6,7,9,.72);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:50;animation:fadeIn .15s ease-out">
+      <div style="width:min(1040px,90vw);height:min(680px,80vh);background:#0a0a0a;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 80px -20px rgba(0,0,0,.7);border:1px solid rgba(168,57,58,0.28);font-family:Inter,system-ui,sans-serif;animation:modalIn .18s ease-out">
+        <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);background:#161616">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#c9ccd3">Comparação de texto</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onClick="{{copyRightText}}" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(168,57,58,0.28);background:transparent;color:#c9ccd3;font-size:11.5px;font-weight:600;cursor:pointer">{{copyRightLabel}}</button>
+            <button onClick="{{closeDiffModal}}" style="width:28px;height:28px;border-radius:7px;border:none;background:transparent;color:#7d828f;font-size:16px;cursor:pointer" style-hover="background:rgba(255,255,255,.08)">×</button>
+          </div>
+        </div>
+        <div style="flex:1;overflow-y:auto;display:grid;grid-template-columns:1fr 44px 1fr;padding:16px 6px">
+          <sc-for list="{{rowVMs}}" as="item" hint-placeholder-count="7">
+            <div style="display:contents">
+              <div onClick="{{item.onClickLeft}}" style="padding:8px 18px;margin:1px 0;border-radius:5px;font:13px/1.6 'JetBrains Mono',monospace;color:#c9ccd3;background:{{item.leftBg}};border-left:3px solid {{item.leftBorderColor}};box-shadow:{{item.ringShadow}};cursor:{{item.cursorStyle}};white-space:pre-wrap">{{item.leftText}}</div>
+              <div style="display:flex;align-items:center;justify-content:center">
+                <sc-if value="{{item.showArrow}}" hint-placeholder-val="{{false}}">
+                  <button onClick="{{item.onApply}}" style="width:28px;height:28px;border-radius:8px;border:none;background:{{item.arrowBg}};color:{{item.arrowColor}};font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">→</button>
+                </sc-if>
+                <sc-if value="{{item.showCheck}}" hint-placeholder-val="{{false}}">
+                  <span style="color:oklch(0.72 0.16 145);font-size:15px">✓</span>
+                </sc-if>
+              </div>
+              <div style="padding:8px 18px;margin:1px 0;border-radius:5px;font:13px/1.6 'JetBrains Mono',monospace;color:#c9ccd3;background:{{item.rightBg}};border-left:3px solid {{item.rightBorderColor}};white-space:pre-wrap">{{item.rightText}}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid rgba(255,255,255,0.08);display:flex;gap:20px;align-items:center;font-size:11px;color:#7d828f">
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:oklch(0.75 0.15 55)"></span>Diferença</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:oklch(0.72 0.16 145)"></span>Aplicado</span>
+          <span style="margin-left:auto">Esc para fechar</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{showSqlModal}}" hint-placeholder-val="{{false}}">
+    <div style="position:fixed;inset:0;background:rgba(6,7,9,.72);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:50;animation:fadeIn .15s ease-out">
+      <div style="width:min(1040px,90vw);height:min(640px,80vh);background:#0a0a0a;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 80px -20px rgba(0,0,0,.7);border:1px solid rgba(168,57,58,0.28);font-family:Inter,system-ui,sans-serif;animation:modalIn .18s ease-out">
+        <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);background:#161616">
+          <div style="font-size:13px;font-weight:600;color:#c9ccd3">SQL Formatter</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onClick="{{copySql}}" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(168,57,58,0.28);background:transparent;color:#c9ccd3;font-size:11.5px;font-weight:600;cursor:pointer">{{sqlCopyLabel}}</button>
+            <button onClick="{{closeSqlModal}}" style="width:28px;height:28px;border-radius:7px;border:none;background:transparent;color:#7d828f;font-size:16px;cursor:pointer" style-hover="background:rgba(255,255,255,.08)">×</button>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+          <div style="display:flex;flex-direction:column;min-height:0;padding:14px 16px;gap:8px">
+            <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5f6373">Seleção original</div>
+            <textarea value="{{sqlRaw}}" onChange="{{handleSqlRaw}}" spellcheck="false" placeholder="Cole ou digite uma SQL…" style="flex:1;resize:none;background:#111111;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 14px;font:13px/1.6 'JetBrains Mono',monospace;color:#9a9ea9;overflow-wrap:anywhere"></textarea>
+          </div>
+          <div style="display:flex;flex-direction:column;min-height:0;padding:14px 16px;gap:8px;border-left:1px solid rgba(255,255,255,0.06)">
+            <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5f6373">Formatada</div>
+            <div style="flex:1;overflow:auto;background:#111111;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 14px;font:13px/1.6 'JetBrains Mono',monospace;tab-size:4">
+              <sc-for list="{{sqlLines}}" as="ln" hint-placeholder-count="10">
+                <div style="white-space:pre;min-height:1.6em"><sc-for list="{{ln.tokens}}" as="tk" hint-placeholder-count="3"><span style="color:{{tk.color}}">{{tk.text}}</span></sc-for></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid rgba(255,255,255,0.08);display:flex;gap:16px;align-items:center;font-size:11px;color:#7d828f;flex-wrap:wrap">
+          <span style="color:#c9ccd3">{{sqlSummary}}</span>
+          <span>No uso real, a seleção é substituída direto, sem abrir janela.</span>
+          <span style="margin-left:auto">Esc para fechar</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{showNoteModal}}" hint-placeholder-val="{{false}}">
+    <div style="position:fixed;inset:0;background:rgba(6,7,9,.72);display:flex;align-items:center;justify-content:center;z-index:50;animation:fadeIn .15s ease-out">
+      <div style="width:320px;height:380px;background:#0a0a0a;border-radius:20px;border:1px solid rgba(168,57,58,.3);box-shadow:0 30px 60px -15px rgba(0,0,0,.7);display:flex;flex-direction:column;overflow:hidden;font-family:Inter,system-ui,sans-serif;animation:modalIn .18s ease-out">
+        <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(168,57,58,.2);background:#161616">
+          <div style="display:flex;align-items:center;gap:7px">
+            <svg width="12" height="12" viewBox="0 0 24 24"><path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" stroke="#e8e9ee" stroke-width="1.4" fill="none"></path><circle cx="12" cy="12" r="4.4" fill="#e0263b"></circle><circle cx="12" cy="12" r="2" fill="#1a0508"></circle><circle cx="13.2" cy="10.7" r="1" fill="#fff" opacity="0.9"></circle></svg>
+            <span style="font-size:12.5px;font-weight:600;color:#eef0f5">Fast Note</span>
+          </div>
+          <button onClick="{{closeNoteModal}}" style="width:24px;height:24px;border-radius:6px;border:none;background:transparent;color:#7d8190;font-size:14px;cursor:pointer" style-hover="background:rgba(255,255,255,.08)">×</button>
+        </div>
+        <div style="padding:14px 16px 16px;flex:1;display:flex;flex-direction:column;gap:10px;min-height:0">
+          <div style="display:flex;gap:16px;position:relative">
+            <select value="{{selectValue}}" onChange="{{handleNoteFileChange}}" style="flex:1;min-width:0;background:#161616;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;font-size:12.5px;color:#e8e9ee;color-scheme:dark">
+              <sc-for list="{{noteOptions}}" as="opt" hint-placeholder-count="2">
+                <option value="{{opt.value}}">{{opt.label}}</option>
+              </sc-for>
+              <option value="__new__">+ Criar nova nota</option>
+            </select>
+            <button onClick="{{toggleClearConfirm}}" title="Limpar tudo" style="width:20px;height:20px;align-self:center;flex:none;padding:0;border-radius:5px;border:none;background:#a8393a;display:flex;align-items:center;justify-content:center;cursor:{{clearBtnCursor}};opacity:{{clearBtnOpacity}}">
+              <svg width="15" height="15" viewBox="0 0 24 24">
+                <line x1="18" y1="2" x2="12.2" y2="12" stroke="#f5eceb" stroke-width="2" stroke-linecap="round"></line>
+                <path d="M9 11 L15.5 11 L18.5 21 L5.5 21 Z" fill="#f5eceb"></path>
+                <rect x="9" y="10.2" width="6.5" height="2" rx="0.6" fill="#5a1a1b"></rect>
+                <line x1="9.7" y1="13.2" x2="8" y2="21" stroke="#a8393a" stroke-width="1"></line>
+                <line x1="12.3" y1="13.2" x2="12" y2="21" stroke="#a8393a" stroke-width="1"></line>
+                <line x1="14.9" y1="13.2" x2="16.3" y2="21" stroke="#a8393a" stroke-width="1"></line>
+              </svg>
+            </button>
+            <sc-if value="{{showClearConfirm}}" hint-placeholder-val="{{false}}">
+              <div style="position:absolute;top:42px;right:0;z-index:5;background:#161616;border:1px solid rgba(168,57,58,.3);border-radius:8px;padding:10px;width:150px;box-shadow:0 10px 24px rgba(0,0,0,.5)">
+                <div style="font-size:11.5px;color:#e8e9ee;margin-bottom:8px">Limpar todas as notas deste arquivo?</div>
+                <div style="display:flex;gap:6px">
+                  <button onClick="{{clearAllTopics}}" style="flex:1;padding:5px 0;border-radius:6px;border:none;background:#a8393a;color:#f5eceb;font-size:11px;font-weight:600;cursor:pointer">Limpar</button>
+                  <button onClick="{{cancelClear}}" style="flex:1;padding:5px 0;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#c7cad1;font-size:11px;cursor:pointer">Não</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{noteCreating}}" hint-placeholder-val="{{false}}">
+            <input value="{{newNoteName}}" onChange="{{handleNewNoteName}}" placeholder="nome-da-nota.md" style="width:100%;background:#161616;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:'JetBrains Mono',monospace;color:#e8e9ee"></input>
+          </sc-if>
+          <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px;min-height:0">
+            <sc-if value="{{noteCreating}}" hint-placeholder-val="{{false}}">
+              <div style="font-size:11.5px;color:#5f6373;padding:6px 2px">Nenhum tópico ainda — escreva abaixo.</div>
+            </sc-if>
+            <sc-for list="{{topicVMs}}" as="tp" hint-placeholder-count="2">
+              <div draggable="true" onDragStart="{{tp.onDragStart}}" onDragOver="{{tp.onDragOver}}" onDrop="{{tp.onDrop}}" onDragEnd="{{tp.onDragEnd}}" style="padding:6px 4px 6px 4px;border-radius:6px;font-size:12px;font-family:'JetBrains Mono',monospace;color:#c7cad1;background:{{tp.bg}};opacity:{{tp.opacity}};box-shadow:{{tp.dropShadow}};cursor:grab;display:flex;align-items:center;gap:6px" style-hover="background:rgba(255,255,255,.04)">
+                <span style="flex:none;color:#4a4d57;font-size:11px;letter-spacing:-1px;user-select:none">⋮⋮</span>
+                <span style="flex:1;min-width:0;display:flex;gap:5px">
+                  <span style="flex:none">–</span>
+                  <span style="flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word;white-space:normal">{{tp.text}}</span>
+                </span>
+                <button onClick="{{tp.onDelete}}" style="width:22px;height:22px;flex:none;border:none;background:transparent;color:oklch(0.68 0.19 25);font-size:15px;cursor:pointer;border-radius:4px" style-hover="color:oklch(0.75 0.19 25);background:rgba(255,255,255,.08)">×</button>
+              </div>
+            </sc-for>
+          </div>
+
+          <textarea value="{{noteText}}" onChange="{{handleNoteText}}" onKeyDown="{{handleNoteKeyDown}}" placeholder="Escreva e pressione Enter…" style="height:60px;resize:none;background:#161616;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:'JetBrains Mono',monospace;color:#eef0f5;overflow-wrap:anywhere;word-break:break-word;box-sizing:border-box"></textarea>
+
+          <div style="font-size:10px;color:#5f6373">Enter adiciona um tópico · Pasta: ~/Documents/BlinkNotes</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1000},&quot;windowChrome&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;windows&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;frameless&quot;,&quot;macos&quot;,&quot;windows&quot;],&quot;section&quot;:&quot;Janela&quot;},&quot;trayIconPick&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;scarletEye&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;scarletEye&quot;,&quot;blink&quot;,&quot;slitEye&quot;,&quot;pairEyes&quot;],&quot;section&quot;:&quot;Bandeja&quot;}}">
+class Component extends DCLogic {
+  state = {
+    activeTab: 'diff',
+    diffBindCapturing: false,
+    noteBindCapturing: false,
+    showDiffModal: false,
+    showNoteModal: false,
+    selectedDiffRow: null,
+    appliedRows: {},
+    noteFile: 'trabalho.md',
+    noteCreating: false,
+    newNoteName: '',
+    noteText: '',
+    extraFiles: [],
+    topicsByFile: {
+      'trabalho.md': ['Rever PR #142 antes do deploy', 'Call com cliente às 15h', 'Atualizar changelog da v1.3'],
+      'ideias.md': ['App de hábitos com streaks', 'Atalho global para histórico do clipboard'],
+    },
+    justAddedKey: null,
+    rightCopied: false,
+    showClearConfirm: false,
+    dragIndex: null,
+    dragOverIndex: null,
+    showSqlModal: false,
+    sqlBindCapturing: false,
+    sqlDialect: 'transactsql',
+    sqlKwCase: 'upper',
+    sqlIndent: '4',
+    sqlRaw: "select p.id, p.nome, count(o.id) as total_pedidos, sum(o.valor) as valor_total from pessoas p left join pedidos o on o.pessoa_id = p.id where p.ativo = 1 and o.data >= '2026-01-01' group by p.id, p.nome having count(o.id) > 3 order by valor_total desc",
+    sqlCopied: false,
+    sqlLibReady: false,
+    sqlLibError: false,
+  };
+
+  SQL_DIALECTS = [
+    { value: 'transactsql', label: 'SQL Server (T-SQL)' },
+    { value: 'postgresql', label: 'PostgreSQL' },
+    { value: 'mysql', label: 'MySQL' },
+    { value: 'plsql', label: 'Oracle (PL/SQL)' },
+    { value: 'sql', label: 'SQL padrão' },
+  ];
+  SQL_KW = new Set('SELECT FROM WHERE AND OR NOT LEFT RIGHT INNER OUTER FULL CROSS JOIN ON GROUP BY ORDER HAVING AS COUNT SUM AVG MIN MAX INSERT INTO VALUES UPDATE SET DELETE CASE WHEN THEN ELSE END DISTINCT TOP LIMIT OFFSET UNION ALL IN IS NULL LIKE BETWEEN EXISTS DESC ASC WITH CREATE TABLE ALTER DROP COALESCE ISNULL CAST CONVERT'.split(' '));
+
+  ROWS = [
+    { id: 1, left: 'Relatório de Sprint — Semana 12', right: 'Relatório de Sprint — Semana 12', diff: false },
+    { id: 2, left: 'O time finalizou 8 das 10 tarefas planejadas.', right: 'O time finalizou 9 das 10 tarefas planejadas.', diff: true },
+    { id: 3, left: 'A funcionalidade de login social ainda está em revisão.', right: 'A funcionalidade de login social ainda está em revisão.', diff: false },
+    { id: 4, left: 'Testamos a integração com o novo servidor de pagamentos.', right: 'Testamos a integração com o novo servidor de pagamentos e aprovamos.', diff: true },
+    { id: 5, left: 'Nenhum bug crítico foi reportado esta semana.', right: 'Nenhum bug crítico foi reportado esta semana.', diff: false },
+    { id: 6, left: 'Próxima sprint focará em performance.', right: 'Próxima sprint focará em performance e acessibilidade.', diff: true },
+    { id: 7, left: 'Reunião de retrospectiva marcada para sexta-feira.', right: 'Reunião de retrospectiva marcada para sexta-feira.', diff: false },
+  ];
+
+  ACCENT = '#a8393a';
+  MUTED = '#7d828f';
+
+  TABS = [
+    { id: 'diff', label: 'Diff Checker' },
+    { id: 'note', label: 'Fast Note' },
+    { id: 'sql', label: 'SQL Formatter' },
+  ];
+
+  TRAY_ICONS = [
+    { key: 'scarletEye', label: 'Olho Escarlate' },
+    { key: 'blink', label: 'Piscar' },
+    { key: 'slitEye', label: 'Olho em Fenda' },
+    { key: 'pairEyes', label: 'Par de Olhos' },
+  ];
+
+  componentDidMount() {
+    this._onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (this.state.showNoteModal) this.closeNoteModal();
+        else if (this.state.showDiffModal) this.closeDiffModal();
+        else if (this.state.showSqlModal) this.closeSqlModal();
+      }
+    };
+    window.addEventListener('keydown', this._onKey);
+    if (window.sqlFormatter) this.setState({ sqlLibReady: true });
+    else {
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/sql-formatter/dist/sql-formatter.min.js';
+      s.onload = () => this.setState({ sqlLibReady: true });
+      s.onerror = () => this.setState({ sqlLibError: true });
+      document.head.appendChild(s);
+    }
+  }
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this._onKey);
+  }
+
+  setTab = (id) => this.setState({ activeTab: id });
+  openDiffModal = () => this.setState({ showDiffModal: true, selectedDiffRow: null });
+  closeDiffModal = () => this.setState({ showDiffModal: false, appliedRows: {}, selectedDiffRow: null, rightCopied: false });
+  openNoteModal = () => this.setState({ showNoteModal: true });
+  closeNoteModal = () => this.setState({ showNoteModal: false, showClearConfirm: false });
+
+  selectRow = (id) => this.setState({ selectedDiffRow: this.state.selectedDiffRow === id ? null : id });
+  applyRow = (id) => this.setState((s) => ({ appliedRows: { ...s.appliedRows, [id]: true }, selectedDiffRow: null }));
+
+  copyRightText = () => {
+    this.writeClipboard(this.ROWS.map((r) => (this.state.appliedRows[r.id] ? r.left : r.right)).join('\n'));
+    this.setState({ rightCopied: true });
+    setTimeout(() => this.setState({ rightCopied: false }), 1400);
+  };
+
+  deleteTopic = (fileKey, index) => this.setState((s) => {
+    const topics = (s.topicsByFile[fileKey] || []).slice();
+    topics.splice(index, 1);
+    return { topicsByFile: { ...s.topicsByFile, [fileKey]: topics } };
+  });
+
+  onTopicDragStart = (i) => (e) => {
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(i)); } catch (err) {}
+    this.setState({ dragIndex: i });
+  };
+  onTopicDragOver = (i) => (e) => {
+    e.preventDefault();
+    if (this.state.dragOverIndex !== i) this.setState({ dragOverIndex: i });
+  };
+  onTopicDrop = (i) => (e) => {
+    e.preventDefault();
+    const from = this.state.dragIndex;
+    if (from == null || from === i) return this.setState({ dragIndex: null, dragOverIndex: null });
+    this.setState((s) => {
+      const arr = (s.topicsByFile[s.noteFile] || []).slice();
+      const [item] = arr.splice(from, 1);
+      arr.splice(i, 0, item);
+      return { topicsByFile: { ...s.topicsByFile, [s.noteFile]: arr }, dragIndex: null, dragOverIndex: null };
+    });
+  };
+  onTopicDragEnd = () => this.setState({ dragIndex: null, dragOverIndex: null });
+
+  openSqlModal = () => this.setState({ showSqlModal: true });
+  closeSqlModal = () => this.setState({ showSqlModal: false, sqlRaw: '', sqlCopied: false });
+
+  writeClipboard(text) {
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (err) {}
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(fallback);
+    else fallback();
+  }
+  handleSqlDialect = (e) => this.setState({ sqlDialect: e.target.value });
+  handleSqlRaw = (e) => this.setState({ sqlRaw: e.target.value });
+
+  formatSql() {
+    if (!window.sqlFormatter) return this.state.sqlLibError ? '-- Formatador indisponível nesta demo (sem conexão).' : '-- Carregando formatador…';
+    try {
+      return window.sqlFormatter.format(this.state.sqlRaw, {
+        language: this.state.sqlDialect,
+        keywordCase: this.state.sqlKwCase,
+        tabWidth: this.state.sqlIndent === 'tab' ? 4 : Number(this.state.sqlIndent),
+        useTabs: this.state.sqlIndent === 'tab',
+      });
+    } catch (err) {
+      return '-- Não foi possível formatar: ' + err.message;
+    }
+  }
+
+  highlightSql(text) {
+    const re = /('(?:[^']|'')*')|(--[^\n]*)|([A-Za-z_][A-Za-z0-9_]*)|(\d+(?:\.\d+)?)|([^A-Za-z0-9_'\-]+|-|[\s\S])/g;
+    return text.split('\n').map((line) => {
+      const tokens = [];
+      let m;
+      re.lastIndex = 0;
+      while ((m = re.exec(line))) {
+        let color = '#c9ccd3';
+        if (m[1]) color = '#d8b48a';
+        else if (m[2]) color = '#5f6373';
+        else if (m[3] && this.SQL_KW.has(m[3].toUpperCase())) color = '#e0676a';
+        else if (m[4]) color = '#d8b48a';
+        tokens.push({ text: m[0], color });
+      }
+      return { tokens };
+    });
+  }
+
+  copySql = () => {
+    this.writeClipboard(this.formatSql());
+    this.setState({ sqlCopied: true });
+    setTimeout(() => this.setState({ sqlCopied: false }), 1400);
+  };
+
+  toggleClearConfirm = () => this.setState((s) => ({ showClearConfirm: !s.showClearConfirm }));
+  cancelClear = () => this.setState({ showClearConfirm: false });
+  clearAllTopics = () => this.setState((s) => ({ topicsByFile: { ...s.topicsByFile, [s.noteFile]: [] }, showClearConfirm: false }));
+
+  toggleBindCapture = (which) => {
+    const key = { diff: 'diffBindCapturing', note: 'noteBindCapturing', sql: 'sqlBindCapturing' }[which];
+    this.setState({ [key]: true });
+    setTimeout(() => this.setState({ [key]: false }), 1400);
+  };
+
+  handleNoteFileChange = (e) => {
+    const val = e.target.value;
+    if (val === '__new__') this.setState({ noteCreating: true, newNoteName: '', noteText: '', showClearConfirm: false });
+    else this.setState({ noteCreating: false, noteFile: val, noteText: '', showClearConfirm: false });
+  };
+  handleNewNoteName = (e) => this.setState({ newNoteName: e.target.value });
+  handleNoteText = (e) => this.setState({ noteText: e.target.value });
+
+  handleNoteKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const text = this.state.noteText.trim();
+      if (!text) return;
+      let key, isNew = false;
+      if (this.state.noteCreating) {
+        key = (this.state.newNoteName || 'nova-nota').trim();
+        if (!key.endsWith('.md')) key += '.md';
+        isNew = true;
+      } else {
+        key = this.state.noteFile;
+      }
+      this.setState((s) => {
+        const topics = (s.topicsByFile[key] || []).slice();
+        topics.unshift(text);
+        const extraFiles = isNew && !s.extraFiles.includes(key) ? [...s.extraFiles, key] : s.extraFiles;
+        return {
+          topicsByFile: { ...s.topicsByFile, [key]: topics },
+          extraFiles,
+          noteFile: key,
+          noteCreating: false,
+          noteText: '',
+          justAddedKey: key,
+        };
+      });
+      setTimeout(() => this.setState({ justAddedKey: null }), 1600);
+    }
+  };
+
+  renderVals() {
+    const chrome = this.props.windowChrome || 'frameless';
+    const orange = 'oklch(0.75 0.15 55)';
+    const green = 'oklch(0.72 0.16 145)';
+
+    const rowVMs = this.ROWS.map((r) => {
+      const applied = !!this.state.appliedRows[r.id];
+      const selected = this.state.selectedDiffRow === r.id;
+      return {
+        id: r.id,
+        leftText: r.left,
+        rightText: applied ? r.left : r.right,
+        leftBg: r.diff ? 'oklch(0.75 0.15 55 / 0.14)' : 'transparent',
+        leftBorderColor: r.diff ? orange : 'transparent',
+        rightBg: r.diff ? (applied ? 'oklch(0.72 0.16 145 / 0.16)' : 'oklch(0.75 0.15 55 / 0.14)') : 'transparent',
+        rightBorderColor: r.diff ? (applied ? green : orange) : 'transparent',
+        ringShadow: selected ? '0 0 0 2px ' + this.ACCENT + ' inset' : 'none',
+        cursorStyle: r.diff && !applied ? 'pointer' : 'default',
+        onClickLeft: r.diff && !applied ? () => this.selectRow(r.id) : undefined,
+        showArrow: r.diff && !applied,
+        arrowBg: selected ? this.ACCENT : 'rgba(255,255,255,0.1)',
+        arrowColor: selected ? '#f5eceb' : this.MUTED,
+        onApply: r.diff && !applied ? () => this.applyRow(r.id) : undefined,
+        showCheck: r.diff && applied,
+      };
+    });
+
+    const noteOptions = [
+      { value: 'trabalho.md', label: 'trabalho.md' },
+      { value: 'ideias.md', label: 'ideias.md' },
+      ...this.state.extraFiles.map((f) => ({ value: f, label: f })),
+    ];
+    const currentTopics = this.state.noteCreating ? [] : (this.state.topicsByFile[this.state.noteFile] || []);
+    const topicVMs = currentTopics.map((t, i) => ({
+      text: t,
+      bg: this.state.justAddedKey === this.state.noteFile && i === 0 ? 'rgba(168,57,58,.18)' : 'transparent',
+      onDelete: () => this.deleteTopic(this.state.noteFile, i),
+      onDragStart: this.onTopicDragStart(i),
+      onDragOver: this.onTopicDragOver(i),
+      onDrop: this.onTopicDrop(i),
+      onDragEnd: this.onTopicDragEnd,
+      opacity: this.state.dragIndex === i ? 0.4 : 1,
+      dropShadow: this.state.dragOverIndex === i && this.state.dragIndex != null && this.state.dragIndex !== i
+        ? (this.state.dragIndex < i ? 'inset 0 -2px 0 #a8393a' : 'inset 0 2px 0 #a8393a')
+        : 'none',
+    }));
+
+    const seg = (current, value, onClick, label) => ({
+      label,
+      onClick,
+      bg: current === value ? 'rgba(168,57,58,0.22)' : 'transparent',
+      color: current === value ? '#eef0f5' : '#7d8190',
+    });
+    const kwCaseOpts = [
+      seg(this.state.sqlKwCase, 'upper', () => this.setState({ sqlKwCase: 'upper' }), 'UPPER'),
+      seg(this.state.sqlKwCase, 'lower', () => this.setState({ sqlKwCase: 'lower' }), 'lower'),
+      seg(this.state.sqlKwCase, 'preserve', () => this.setState({ sqlKwCase: 'preserve' }), 'Manter'),
+    ];
+    const indentOpts = [
+      seg(this.state.sqlIndent, '2', () => this.setState({ sqlIndent: '2' }), '2 esp.'),
+      seg(this.state.sqlIndent, '4', () => this.setState({ sqlIndent: '4' }), '4 esp.'),
+      seg(this.state.sqlIndent, 'tab', () => this.setState({ sqlIndent: 'tab' }), 'Tab'),
+    ];
+    const sqlLines = this.state.showSqlModal ? this.highlightSql(this.formatSql()) : [];
+    const dialectLabel = (this.SQL_DIALECTS.find((d) => d.value === this.state.sqlDialect) || {}).label;
+    const kwLabel = { upper: 'MAIÚSCULAS', lower: 'minúsculas', preserve: 'caixa original' }[this.state.sqlKwCase];
+    const indentLabel = this.state.sqlIndent === 'tab' ? 'Tab' : this.state.sqlIndent + ' espaços';
+
+    const tabVMs = this.TABS.map((t) => ({
+      ...t,
+      onClick: () => this.setTab(t.id),
+      color: this.state.activeTab === t.id ? '#eef0f5' : '#7d8190',
+      borderColor: this.state.activeTab === t.id ? this.ACCENT : 'transparent',
+      bg: this.state.activeTab === t.id ? 'rgba(168,57,58,0.14)' : 'transparent',
+    }));
+
+    const trayIcons = this.TRAY_ICONS.map((ic) => ({
+      ...ic,
+      isScarletEye: ic.key === 'scarletEye',
+      isBlink: ic.key === 'blink',
+      isSlitEye: ic.key === 'slitEye',
+      isPairEyes: ic.key === 'pairEyes',
+      isRecommended: (this.props.trayIconPick || 'scarletEye') === ic.key,
+    }));
+
+    return {
+      chromeIsMac: chrome === 'macos',
+      chromeIsWindows: chrome === 'windows',
+      chromeIsFrameless: chrome === 'frameless',
+      tabVMs,
+      activeTabIsDiff: this.state.activeTab === 'diff',
+      activeTabIsNote: this.state.activeTab === 'note',
+      activeTabIsSql: this.state.activeTab === 'sql',
+      sqlBindLabel: this.state.sqlBindCapturing ? 'Pressione as teclas…' : 'Ctrl + Shift + F',
+      sqlBindButtonLabel: this.state.sqlBindCapturing ? 'Gravando…' : 'Alterar',
+      sqlBindButtonColor: this.state.sqlBindCapturing ? '#c65453' : '#c7cad1',
+      onSqlBindClick: () => this.toggleBindCapture('sql'),
+      sqlDialect: this.state.sqlDialect,
+      sqlDialectOpts: this.SQL_DIALECTS,
+      handleSqlDialect: this.handleSqlDialect,
+      kwCaseOpts,
+      indentOpts,
+      showSqlModal: this.state.showSqlModal,
+      openSqlModal: this.openSqlModal,
+      closeSqlModal: this.closeSqlModal,
+      sqlRaw: this.state.sqlRaw,
+      handleSqlRaw: this.handleSqlRaw,
+      sqlLines,
+      copySql: this.copySql,
+      sqlCopyLabel: this.state.sqlCopied ? 'Copiado ✓' : 'Copiar',
+      sqlSummary: dialectLabel + ' · ' + kwLabel + ' · ' + indentLabel,
+      diffBindLabel: this.state.diffBindCapturing ? 'Pressione as teclas…' : 'Ctrl + Shift + D',
+      diffBindButtonLabel: this.state.diffBindCapturing ? 'Gravando…' : 'Alterar',
+      diffBindButtonColor: this.state.diffBindCapturing ? '#c65453' : '#c7cad1',
+      noteBindLabel: this.state.noteBindCapturing ? 'Pressione as teclas…' : 'Ctrl + Shift + N',
+      noteBindButtonLabel: this.state.noteBindCapturing ? 'Gravando…' : 'Alterar',
+      noteBindButtonColor: this.state.noteBindCapturing ? '#c65453' : '#c7cad1',
+      onDiffBindClick: () => this.toggleBindCapture('diff'),
+      onNoteBindClick: () => this.toggleBindCapture('note'),
+      openDiffModal: this.openDiffModal,
+      openNoteModal: this.openNoteModal,
+      showDiffModal: this.state.showDiffModal,
+      showNoteModal: this.state.showNoteModal,
+      closeDiffModal: this.closeDiffModal,
+      copyRightText: this.copyRightText,
+      copyRightLabel: this.state.rightCopied ? 'Copiado ✓' : 'Copiar texto',
+      closeNoteModal: this.closeNoteModal,
+      rowVMs,
+      noteOptions,
+      selectValue: this.state.noteCreating ? '__new__' : this.state.noteFile,
+      noteCreating: this.state.noteCreating,
+      newNoteName: this.state.newNoteName,
+      noteText: this.state.noteText,
+      topicVMs,
+      handleNoteFileChange: this.handleNoteFileChange,
+      handleNewNoteName: this.handleNewNoteName,
+      handleNoteText: this.handleNoteText,
+      handleNoteKeyDown: this.handleNoteKeyDown,
+      trayIcons,
+      showClearConfirm: this.state.showClearConfirm,
+      toggleClearConfirm: currentTopics.length > 0 ? this.toggleClearConfirm : undefined,
+      cancelClear: this.cancelClear,
+      clearAllTopics: this.clearAllTopics,
+      hasTopics: currentTopics.length > 0,
+      clearBtnOpacity: currentTopics.length > 0 ? 1 : 0.35,
+      clearBtnCursor: currentTopics.length > 0 ? 'pointer' : 'default',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

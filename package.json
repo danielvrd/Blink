@@ -1,0 +1,21 @@
+{
+  "name": "blink",
+  "version": "0.1.0",
+  "description": "App desktop local para Windows com tres ferramentas de acesso rapido: Diff Checker, Fast Note e SQL Formatter.",
+  "main": "src/main/main.js",
+  "author": "danielvrd",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "gerar-icone": "node scripts/gerar-icone.js"
+  },
+  "dependencies": {
+    "electron-store": "8.2.0"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "png-to-ico": "2.1.8",
+    "sharp": "0.35.4"
+  }
+}

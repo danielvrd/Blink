@@ -1,0 +1,7 @@
+# Normaliza as quebras de linha: LF no repositorio, CRLF no disco no Windows.
+* text=auto
+
+# Arquivos binarios: nunca mexer.
+*.ico binary
+*.png binary
+*.woff2 binary

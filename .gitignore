@@ -1,0 +1,20 @@
+# Dependências
+node_modules/
+
+# Saída de build / empacotamento (etapa 5)
+dist/
+out/
+release/
+
+# Logs
+npm-debug.log*
+*.log
+
+# Sistema operacional
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editores
+.vscode/
+.idea/
