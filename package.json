@@ -1,5 +1,6 @@
 {
   "name": "blink",
+  "productName": "Blink",
   "version": "0.1.0",
   "description": "App desktop local para Windows com tres ferramentas de acesso rapido: Diff Checker, Fast Note e SQL Formatter.",
   "main": "src/main/main.js",

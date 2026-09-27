@@ -1,0 +1,50 @@
+/**
+ * Ponte entre as telas e o processo principal.
+ *
+ * As telas rodam sem acesso ao Node: elas nao conseguem ler arquivos, abrir
+ * janelas nem chamar o Electron. Este arquivo roda antes da tela carregar e
+ * coloca em `window.blink` a lista curta de coisas que ela pode fazer. Nada
+ * fora desta lista fica disponivel.
+ *
+ * Todas as funcoes devolvem uma Promise, porque quem responde e o processo
+ * principal, do outro lado da mensagem.
+ */
+
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('blink', {
+  config: {
+    /**
+     * Le tudo de uma vez. Devolve:
+     *   { valores, situacaoBinds, caminhoArquivo }
+     */
+    ler: () => ipcRenderer.invoke('config:ler'),
+
+    /** Grava um campo, ex.: gravar('sql.dialeto', 'postgresql'). */
+    gravar: (caminho, valor) => ipcRenderer.invoke('config:gravar', caminho, valor),
+  },
+
+  janela: {
+    minimizar: () => ipcRenderer.invoke('janela:minimizar'),
+    /** O X da barra de titulo: esconde na bandeja, nao encerra o app. */
+    esconder: () => ipcRenderer.invoke('janela:esconder'),
+  },
+
+  atalhos: {
+    /**
+     * Troca a bind de uma ferramenta ('diff', 'note' ou 'sql').
+     * Devolve { ok, motivo } - veja os motivos em src/main/atalhos.js.
+     */
+    definir: (nome, acelerador) => ipcRenderer.invoke('atalhos:definir', nome, acelerador),
+  },
+
+  pasta: {
+    /** Abre o seletor de pasta do Windows. Devolve o caminho ou null. */
+    escolher: () => ipcRenderer.invoke('pasta:escolher'),
+  },
+
+  demonstracao: {
+    /** O botao "Abrir demonstracao" de cada aba. */
+    abrir: (nome) => ipcRenderer.invoke('demonstracao:abrir', nome),
+  },
+});
