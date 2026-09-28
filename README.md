@@ -67,8 +67,36 @@ especificação visual completa (`README.md`). É a fonte da verdade para cores,
 
 | Etapa | O que entrega | Situação |
 |---|---|---|
-| 1 | Bandeja, janela principal com as 3 abas, configurações salvas | em andamento |
-| 2 | Captura da seleção e SQL Formatter funcionando | a fazer |
+| 1 | Bandeja, janela principal com as 3 abas, configurações salvas | pronta |
+| 2 | Captura da seleção e SQL Formatter funcionando | pronta |
+| 2b | Tela de demonstração do SQL Formatter | a fazer |
 | 3 | Fast Note funcionando | a fazer |
 | 4 | Diff Checker funcionando | a fazer |
 | 5 | Menu da bandeja, iniciar com o Windows, instalador | a fazer |
+
+### Como testar o SQL Formatter
+
+1. `npm start`
+2. Abra qualquer editor (VS Code, Bloco de Notas, SQL Server Management Studio)
+3. Escreva uma SQL em uma linha só, por exemplo:
+   `select a,b from t where x=1 order by a`
+4. Selecione o texto e pressione `Ctrl + Alt + F`
+
+A seleção deve ser substituída pela SQL formatada. Se nada acontecer, veja
+"Quando o atalho não faz nada" abaixo.
+
+### Quando o atalho não faz nada
+
+O Windows não permite perguntar a outro programa o que está selecionado. O
+Blink simula `Ctrl + C`, lê a área de transferência e devolve ela como estava
+(`src/main/selecao.js`). Isso depende de o Windows deixar o Blink enviar
+teclas, o que pode falhar em alguns casos:
+
+- **O programa da frente roda como administrador e o Blink não.** O Windows
+  bloqueia envio de teclas de um programa comum para um elevado. Rode os dois
+  no mesmo nível.
+- **O atalho não registrou.** Abra a janela do Blink: se o campo do atalho
+  estiver vermelho, outro programa já usa essa combinação. Escolha outra.
+- **O programa demora para responder.** As esperas estão em constantes no
+  começo do `selecao.js` (`LIMITE_CAPTURA` e `PAUSA_APOS_COLAR`), com o
+  porquê de cada número. Aumente se o seu editor for lento.

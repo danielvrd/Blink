@@ -96,14 +96,18 @@ function mostrarPrincipal() {
 }
 
 /**
- * Abre a janela de uma ferramenta: 'diff', 'note' ou 'sql'.
+ * Abre a janela de uma ferramenta: 'diff' ou 'note'.
  *
  * Este e o ponto de encontro dos dois caminhos que levam a uma ferramenta:
  * a bind global e o botao "Abrir demonstracao" da janela principal. Os dois
  * chamam esta mesma funcao, entao a ferramenta abre igual nos dois casos e
  * sem passar pela janela principal.
  *
- * TODO etapa 2 (sql), 3 (note) e 4 (diff): criar as janelas de verdade.
+ * O SQL Formatter nao passa por aqui: ele troca a selecao no lugar, sem
+ * abrir janela (veja ferramenta-sql.js). A tela de demonstracao dele, que o
+ * design preve como pre-visualizacao, ainda nao foi feita.
+ *
+ * TODO etapa 3 (note) e 4 (diff): criar as janelas de verdade.
  * Por enquanto so registra no console.
  */
 function abrirFerramenta(nome) {

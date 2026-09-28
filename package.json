@@ -12,7 +12,9 @@
     "gerar-icone": "node scripts/gerar-icone.js"
   },
   "dependencies": {
-    "electron-store": "8.2.0"
+    "@nut-tree-fork/libnut-win32": "2.7.5",
+    "electron-store": "8.2.0",
+    "sql-formatter": "15.9.0"
   },
   "devDependencies": {
     "electron": "44.4.5",

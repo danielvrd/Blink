@@ -18,6 +18,19 @@ const janelas = require('./janelas');
 const bandeja = require('./bandeja');
 const atalhos = require('./atalhos');
 const ipc = require('./ipc');
+const ferramentaSql = require('./ferramenta-sql');
+
+/**
+ * O que cada bind faz.
+ *
+ * O SQL Formatter e o unico que nao abre janela: ele troca a selecao no
+ * lugar, no programa em que o usuario esta. Os outros dois abrem a janela
+ * da ferramenta.
+ */
+function acionarFerramenta(nome) {
+  if (nome === 'sql') return ferramentaSql.executar();
+  return janelas.abrirFerramenta(nome);
+}
 
 /**
  * Uma instancia so.
@@ -32,9 +45,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => janelas.mostrarPrincipal());
 
   app.whenReady().then(() => {
-    // O que acontece quando uma bind e pressionada. Na etapa 1 a funcao
-    // abrirFerramenta ainda so escreve no console.
-    atalhos.definirAcao((ferramenta) => janelas.abrirFerramenta(ferramenta));
+    atalhos.definirAcao(acionarFerramenta);
 
     ipc.registrar();
     atalhos.registrarTodas();
