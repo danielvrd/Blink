@@ -26,8 +26,19 @@ contextBridge.exposeInMainWorld('blink', {
 
   janela: {
     minimizar: () => ipcRenderer.invoke('janela:minimizar'),
-    /** O X da barra de titulo: esconde na bandeja, nao encerra o app. */
+    /** O X da janela principal: esconde na bandeja, nao encerra o app. */
     esconder: () => ipcRenderer.invoke('janela:esconder'),
+    /** O X e o Esc das janelas das ferramentas: fecham de verdade. */
+    fechar: () => ipcRenderer.invoke('janela:fechar'),
+  },
+
+  diff: {
+    /** As linhas da comparacao, pedidas assim que a janela carrega. */
+    linhas: () => ipcRenderer.invoke('diff:linhas'),
+  },
+
+  areaTransferencia: {
+    escrever: (texto) => ipcRenderer.invoke('areaTransferencia:escrever', texto),
   },
 
   atalhos: {

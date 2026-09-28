@@ -19,16 +19,18 @@ const bandeja = require('./bandeja');
 const atalhos = require('./atalhos');
 const ipc = require('./ipc');
 const ferramentaSql = require('./ferramenta-sql');
+const ferramentaDiff = require('./ferramenta-diff');
 
 /**
  * O que cada bind faz.
  *
- * O SQL Formatter e o unico que nao abre janela: ele troca a selecao no
- * lugar, no programa em que o usuario esta. Os outros dois abrem a janela
- * da ferramenta.
+ * O SQL Formatter nao abre janela: formata a selecao e deixa na area de
+ * transferencia. O Diff Checker funciona em dois tempos - a primeira bind
+ * guarda o texto, a segunda compara e abre a janela.
  */
 function acionarFerramenta(nome) {
   if (nome === 'sql') return ferramentaSql.executar();
+  if (nome === 'diff') return ferramentaDiff.executar();
   return janelas.abrirFerramenta(nome);
 }
 

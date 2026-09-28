@@ -1,0 +1,210 @@
+/*
+  Janela de comparacao do Diff Checker.
+  Valores da secao 2 do design (design_handoff_blink/README.md).
+*/
+
+html,
+body {
+  height: 100%;
+}
+
+.modal {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  border: 1px solid var(--borda-modal);
+  border-radius: var(--raio-modal);
+  overflow: hidden;
+}
+
+/* --- Cabecalho ------------------------------------------------------------ */
+
+.cabecalho {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda-janela);
+  /* Arrastar pelo cabecalho move a janela: ela nao tem moldura do Windows. */
+  -webkit-app-region: drag;
+}
+
+.cabecalho .titulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.acoes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  -webkit-app-region: no-drag;
+}
+
+.botao-contorno {
+  padding: 6px 12px;
+  border-radius: var(--raio-botao-pequeno);
+  border: 1px solid var(--borda-modal);
+  background: transparent;
+  color: var(--texto);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.botao-contorno:hover {
+  background: rgba(168, 57, 58, 0.14);
+}
+
+.botao-x {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--raio-botao-pequeno);
+  background: transparent;
+  color: var(--texto-secundario-2);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.botao-x:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Corpo ---------------------------------------------------------------- */
+
+/*
+  Uma rolagem vertical so, para a grade inteira. Se cada lado rolasse por
+  conta propria, os dois sairiam de sincronia e o alinhamento linha a linha
+  - que e o ponto da tela - se perderia.
+*/
+.corpo {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 44px 1fr;
+  padding: 16px 6px;
+  align-content: start;
+}
+
+.celula {
+  padding: 8px 18px;
+  margin: 1px 0;
+  border-radius: 5px;
+  font: 13px/1.6 var(--fonte-mono);
+  color: var(--texto);
+  border-left: 3px solid transparent;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+/* Linha com diferenca: os dois lados em laranja. */
+.celula.pendente {
+  background: var(--diff-pendente-fundo);
+  border-left-color: var(--diff-pendente);
+}
+
+/* Linha ja aplicada: o lado direito em verde. */
+.celula.aplicada {
+  background: var(--diff-aplicado-fundo);
+  border-left-color: var(--diff-aplicado);
+}
+
+/* O lado esquerdo de uma linha diferente ainda nao aplicada pode ser clicado
+   para escolher qual linha a seta vai levar para a direita. */
+.celula.clicavel {
+  cursor: pointer;
+}
+
+.celula.selecionada {
+  box-shadow: inset 0 0 0 2px var(--destaque);
+}
+
+/*
+  Lado que nao existe: a linha foi so adicionada ou so removida. A celula
+  fica vazia mas mantem o fundo, para deixar claro que falta algo ali - e
+  para os dois lados continuarem na mesma altura.
+*/
+.celula.ausente {
+  opacity: 0.55;
+}
+
+/* --- Calha central -------------------------------------------------------- */
+
+.calha {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seta {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--raio-campo);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--texto-secundario-2);
+  font-size: 14px;
+}
+
+.seta:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* A seta da linha escolhida fica vermelha: e a que vai ser aplicada. */
+.seta.ativa {
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+}
+
+.confirmado {
+  color: var(--diff-aplicado);
+  font-size: 15px;
+}
+
+/* --- Rodape --------------------------------------------------------------- */
+
+.rodape {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--borda-janela);
+  font-size: 11px;
+  color: var(--texto-secundario-2);
+}
+
+.legenda {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.marca {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.marca.pendente {
+  background: var(--diff-pendente);
+}
+
+.marca.aplicada {
+  background: var(--diff-aplicado);
+}
+
+.rodape .dica {
+  margin-left: auto;
+}

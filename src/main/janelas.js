@@ -6,7 +6,7 @@
  */
 
 const path = require('path');
-const { BrowserWindow } = require('electron');
+const { BrowserWindow, screen } = require('electron');
 
 const PRELOAD = path.join(__dirname, '..', 'preload', 'preload.js');
 const RENDERER = path.join(__dirname, '..', 'renderer');
@@ -96,22 +96,95 @@ function mostrarPrincipal() {
 }
 
 /**
- * Abre a janela de uma ferramenta: 'diff' ou 'note'.
+ * Abre a janela de uma ferramenta que ainda nao existe.
  *
- * Este e o ponto de encontro dos dois caminhos que levam a uma ferramenta:
- * a bind global e o botao "Abrir demonstracao" da janela principal. Os dois
- * chamam esta mesma funcao, entao a ferramenta abre igual nos dois casos e
- * sem passar pela janela principal.
+ * O SQL Formatter nao passa por aqui: ele so mexe na area de transferencia
+ * (veja ferramenta-sql.js). O Diff Checker tem a abrirDiff() abaixo.
  *
- * O SQL Formatter nao passa por aqui: ele troca a selecao no lugar, sem
- * abrir janela (veja ferramenta-sql.js). A tela de demonstracao dele, que o
- * design preve como pre-visualizacao, ainda nao foi feita.
- *
- * TODO etapa 3 (note) e 4 (diff): criar as janelas de verdade.
- * Por enquanto so registra no console.
+ * TODO etapa 3: a janela do Fast Note.
  */
 function abrirFerramenta(nome) {
   console.log(`[janelas] abrirFerramenta("${nome}") ainda nao implementado`);
+}
+
+// --- Janela do Diff Checker -------------------------------------------------
+
+/** Tamanho que a janela da comparacao gostaria de ter. */
+const LARGURA_DIFF = 1040;
+const ALTURA_DIFF = 680;
+
+let diff = null;
+
+/**
+ * As linhas da comparacao que a janela vai desenhar.
+ *
+ * Ficam aqui e nao vao na URL: sao dois textos inteiros, que podem ser
+ * grandes. A tela pede por IPC assim que carrega.
+ */
+let linhasDiff = [];
+
+/** As linhas da comparacao aberta agora. Usado pelo ipc.js. */
+function obterLinhasDiff() {
+  return linhasDiff;
+}
+
+/**
+ * Abre a janela de comparacao com as linhas passadas.
+ *
+ * Fica no monitor onde o mouse esta, e nao sempre no principal: a pessoa
+ * acabou de selecionar um texto la, entao e onde ela esta olhando.
+ */
+function abrirDiff(linhas) {
+  linhasDiff = linhas;
+
+  // Ja tem uma comparacao aberta: recarrega com as linhas novas em vez de
+  // empilhar uma segunda janela.
+  if (diff && !diff.isDestroyed()) {
+    diff.reload();
+    diff.show();
+    diff.focus();
+    return diff;
+  }
+
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workAreaSize;
+  const largura = Math.min(LARGURA_DIFF, Math.round(area.width * 0.9));
+  const altura = Math.min(ALTURA_DIFF, Math.round(area.height * 0.8));
+
+  diff = new BrowserWindow({
+    width: largura,
+    height: altura,
+    minWidth: 520,
+    minHeight: 320,
+    show: false,
+    frame: false,
+    transparent: true,
+    // Sempre no topo: a bind e usada de dentro de outro programa e a
+    // comparacao precisa aparecer na frente dele.
+    alwaysOnTop: true,
+    icon: ICONE,
+    title: 'Comparação de texto',
+    webPreferences: {
+      preload: PRELOAD,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  diff.loadFile(path.join(RENDERER, 'diff', 'index.html'));
+
+  diff.once('ready-to-show', () => {
+    diff.show();
+    diff.focus();
+  });
+
+  // Fechar descarta a comparacao, como pede o design.
+  diff.on('closed', () => {
+    diff = null;
+    linhasDiff = [];
+  });
+
+  return diff;
 }
 
 module.exports = {
@@ -119,5 +192,7 @@ module.exports = {
   obterPrincipal,
   mostrarPrincipal,
   abrirFerramenta,
+  abrirDiff,
+  obterLinhasDiff,
   permitirEncerrar,
 };

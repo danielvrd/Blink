@@ -10,10 +10,11 @@
  * antes de usar.
  */
 
-const { ipcMain, dialog, BrowserWindow, app } = require('electron');
+const { ipcMain, dialog, BrowserWindow, app, clipboard } = require('electron');
 const config = require('./config');
 const atalhos = require('./atalhos');
 const janelas = require('./janelas');
+const ferramentaDiff = require('./ferramenta-diff');
 
 /** A janela que enviou a mensagem, ou null se ela ja tiver sido fechada. */
 function janelaDoEvento(evento) {
@@ -44,6 +45,28 @@ function registrar() {
 
   ipcMain.handle('janela:esconder', (evento) => {
     janelaDoEvento(evento)?.hide();
+  });
+
+  // Fecha de verdade. E o X e o Esc das janelas das ferramentas, que sao
+  // descartaveis - ao contrario da janela principal, que so esconde.
+  ipcMain.handle('janela:fechar', (evento) => {
+    janelaDoEvento(evento)?.close();
+  });
+
+  // --- Comparacao de texto -------------------------------------------------
+
+  // A janela do diff pede as linhas assim que carrega. Elas nao vao na URL
+  // porque sao dois textos inteiros.
+  ipcMain.handle('diff:linhas', () => janelas.obterLinhasDiff());
+
+  // --- Area de transferencia -----------------------------------------------
+
+  // O navigator.clipboard do navegador nao e confiavel em paginas abertas
+  // pelo protocolo file:, entao copiar passa por aqui.
+  ipcMain.handle('areaTransferencia:escrever', async (_evento, texto) => {
+    if (typeof texto !== 'string') return false;
+    await clipboard.writeText(texto);
+    return true;
   });
 
   // --- Atalhos -------------------------------------------------------------
@@ -78,10 +101,17 @@ function registrar() {
 
   // --- Demonstracao --------------------------------------------------------
 
-  // O botao "Abrir demonstracao" de cada aba. Ele chama a mesma funcao que a
-  // bind global chama, entao os dois caminhos abrem a mesma janela.
+  // O botao "Abrir demonstracao" de cada aba.
   ipcMain.handle('demonstracao:abrir', (_evento, nome) => {
     if (!atalhos.FERRAMENTAS.includes(nome)) return false;
+
+    // O Diff Checker abre a mesma janela da bind, com dois textos de
+    // exemplo, para dar para ver como fica sem capturar nada.
+    if (nome === 'diff') {
+      ferramentaDiff.abrirExemplo();
+      return true;
+    }
+
     janelas.abrirFerramenta(nome);
     return true;
   });

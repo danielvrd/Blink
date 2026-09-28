@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:;">
+  <title>Comparação de texto</title>
+
+  <link rel="stylesheet" href="../comum/tokens.css">
+  <link rel="stylesheet" href="../comum/base.css">
+  <link rel="stylesheet" href="diff.css">
+</head>
+<body>
+
+  <!--
+    A janela do Electron e transparente e sem moldura; esta div e a
+    comparacao que o usuario ve, com o canto arredondado e a borda vermelha
+    do design.
+  -->
+  <div class="modal">
+
+    <header class="cabecalho">
+      <div class="titulo">Comparação de texto</div>
+      <div class="acoes">
+        <button class="botao-contorno" id="btn-copiar">Copiar texto</button>
+        <button class="botao-x" id="btn-fechar" title="Fechar" aria-label="Fechar">×</button>
+      </div>
+    </header>
+
+    <!--
+      Uma grade de tres colunas: texto da esquerda, calha dos botoes, texto
+      da direita. Cada linha do texto ocupa uma linha da grade, entao os dois
+      lados ficam sempre na mesma altura, como um livro aberto.
+    -->
+    <div class="corpo" id="corpo"></div>
+
+    <footer class="rodape">
+      <span class="legenda"><span class="marca pendente"></span>Diferença</span>
+      <span class="legenda"><span class="marca aplicada"></span>Aplicado</span>
+      <span class="dica">Esc para fechar</span>
+    </footer>
+
+  </div>
+
+  <script src="../comum/ui.js"></script>
+  <script src="diff.js"></script>
+</body>
+</html>

@@ -69,9 +69,9 @@ especificação visual completa (`README.md`). É a fonte da verdade para cores,
 |---|---|---|
 | 1 | Bandeja, janela principal com as 3 abas, configurações salvas | pronta |
 | 2 | Captura da seleção e SQL Formatter funcionando | pronta |
+| 4 | Diff Checker funcionando | pronta |
 | 2b | Tela de demonstração do SQL Formatter | a fazer |
 | 3 | Fast Note funcionando | a fazer |
-| 4 | Diff Checker funcionando | a fazer |
 | 5 | Menu da bandeja, iniciar com o Windows, instalador | a fazer |
 
 ### Como testar o SQL Formatter
@@ -86,6 +86,26 @@ especificação visual completa (`README.md`). É a fonte da verdade para cores,
 O arquivo de origem **não é alterado**. A bind formata e deixa o resultado na
 área de transferência; uma notificação do Windows confirma. Se nada acontecer,
 veja "Quando o atalho não faz nada" abaixo.
+
+### Como testar o Diff Checker
+
+A bind funciona em **dois tempos**:
+
+1. Selecione o primeiro texto e pressione `Ctrl + Alt + D` — uma notificação
+   confirma que ele foi guardado.
+2. Selecione o segundo texto (em qualquer programa) e pressione `Ctrl + Alt + D`
+   de novo — a janela de comparação abre.
+
+Na janela: clique em uma linha da esquerda para escolhê-la e na seta para
+levá-la para a direita. "Copiar texto" copia o lado direito inteiro, já com as
+linhas aplicadas. `Esc` fecha e descarta a comparação.
+
+O texto guardado vale por **2 minutos**. Depois disso a próxima bind volta a ser
+a primeira, para você não comparar com algo que capturou e esqueceu. Ao abrir a
+janela o guardado também é descartado, então o próximo par começa limpo.
+
+O botão "Abrir demonstração" da aba abre a mesma janela com dois textos de
+exemplo, sem capturar nada.
 
 ### Quando o atalho não faz nada
 
