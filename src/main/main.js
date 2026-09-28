@@ -22,6 +22,7 @@ const ferramentaSql = require('./ferramenta-sql');
 const ferramentaDiff = require('./ferramenta-diff');
 const ferramentaNote = require('./ferramenta-note');
 const aviso = require('./aviso');
+const atualizacao = require('./atualizacao');
 
 /**
  * O que cada bind faz.
@@ -83,6 +84,11 @@ if (!app.requestSingleInstanceLock()) {
     // pede o design. Quem mostra e o clique no icone.
     janelas.criarPrincipal();
     bandeja.criar();
+
+    // O menu mostra em que pe esta a atualizacao, entao precisa ser
+    // redesenhado a cada mudanca de estado.
+    atualizacao.definirAoMudar(() => bandeja.atualizarMenu());
+    atualizacao.iniciar();
 
     console.log(`[blink] pronto. Configuracoes em: ${config.caminhoArquivo()}`);
   });

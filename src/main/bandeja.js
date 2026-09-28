@@ -9,6 +9,7 @@ const path = require('path');
 const { Tray, Menu, app } = require('electron');
 const janelas = require('./janelas');
 const inicializacao = require('./inicializacao');
+const atualizacao = require('./atualizacao');
 
 const ICONE = path.join(__dirname, '..', 'assets', 'icones', 'blink.ico');
 
@@ -30,6 +31,41 @@ let acionarFerramenta = () => {};
 
 function definirAcao(callback) {
   acionarFerramenta = callback;
+}
+
+/**
+ * O item de atualizacao, que muda conforme o que esta acontecendo.
+ *
+ * Rodando pelo npm start ele aparece desabilitado: nao ha instalador para
+ * trocar, e um item que nao faz nada sem explicacao confunde mais do que
+ * ajuda.
+ */
+function itemDeAtualizacao() {
+  const { estado, versao, disponivel } = atualizacao.situacao();
+
+  if (!disponivel) {
+    return { label: 'Atualizações (só no Blink instalado)', enabled: false };
+  }
+
+  if (estado === 'pronta') {
+    return {
+      label: `Reiniciar para atualizar (${versao})`,
+      click: () => atualizacao.instalarAgora(janelas.permitirEncerrar),
+    };
+  }
+
+  if (estado === 'baixando') {
+    return { label: `Baixando a versão ${versao}…`, enabled: false };
+  }
+
+  if (estado === 'checando') {
+    return { label: 'Procurando atualizações…', enabled: false };
+  }
+
+  return {
+    label: 'Procurar atualizações',
+    click: () => atualizacao.procurar({ manual: true }),
+  };
 }
 
 /**
@@ -63,6 +99,7 @@ function montarMenu() {
       click: () => acionarFerramenta('sql-ajuda'),
     },
     { type: 'separator' },
+    itemDeAtualizacao(),
     {
       label: 'Iniciar com o Windows',
       type: 'checkbox',

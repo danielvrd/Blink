@@ -50,6 +50,60 @@ app instalado, feche o de desenvolvimento antes pelo "Sair" da bandeja.
 O app sobe **escondido**: o ícone do olho aparece na bandeja, ao lado do relógio. Clique nele para
 abrir a janela de configurações.
 
+## Publicar uma atualização
+
+O app **não** lê o código do repositório. Ele lê um arquivo `latest.yml`
+publicado numa **Release** do GitHub, compara a versão de lá com a que está
+rodando e baixa o instalador novo se houver novidade.
+
+Quer dizer: fazer `git push` não atualiza ninguém. O que atualiza é publicar uma
+Release.
+
+### Uma vez só: o token
+
+O `electron-builder` precisa de permissão para criar a Release. Gere um token em
+**GitHub → Settings → Developer settings → Personal access tokens → Fine-grained**,
+com acesso ao repositório `Blink` e permissão de escrita em **Contents**.
+
+Guarde na sua conta do Windows (uma vez só, vale para sempre):
+
+```powershell
+[Environment]::SetEnvironmentVariable('GH_TOKEN', 'seu_token_aqui', 'User')
+```
+
+Feche e reabra o terminal depois disso.
+
+### A cada versão
+
+1. Suba o número da versão no `package.json` (`0.1.0` → `0.1.1`).
+2. Faça o commit e o push normalmente.
+3. Rode:
+
+```
+npm run publicar
+```
+
+Isso empacota e cria a Release no GitHub com o instalador e o `latest.yml`.
+
+Pronto. O Blink instalado de cada pessoa vai encontrar a versão nova na próxima
+vez que abrir, ou em até 6 horas se já estiver aberto.
+
+### Como a atualização chega
+
+- Procura ao iniciar e a cada 6 horas.
+- Achou: baixa em segundo plano e avisa por notificação.
+- Baixou: avisa de novo, e o menu da bandeja passa a mostrar
+  **"Reiniciar para atualizar"**.
+- Se você não clicar, a atualização se aplica sozinha na próxima vez que o Blink
+  fechar.
+
+Nada disso funciona pelo `npm start`: sem instalador não há o que trocar, e o
+menu mostra o item desabilitado.
+
+**Importante na primeira vez:** a atualização automática só existe a partir da
+versão que a inclui. Uma cópia instalada antes disso não vai se atualizar
+sozinha — precisa ser reinstalada uma vez na mão.
+
 ## Menu do ícone na bandeja
 
 Clique com o botão direito no olho, ao lado do relógio:
@@ -60,6 +114,7 @@ Clique com o botão direito no olho, ao lado do relógio:
 | Diff Checker | abre a comparação com dois textos de exemplo |
 | Fast Note | abre o bloco de notas |
 | SQL Formatter | lembra qual é o atalho |
+| Procurar atualizações | consulta o GitHub na hora; vira "Reiniciar para atualizar" quando há uma baixada |
 | Iniciar com o Windows | liga ou desliga a inicialização automática |
 | Sair | encerra o Blink de verdade |
 
@@ -120,6 +175,7 @@ especificação visual completa (`README.md`). É a fonte da verdade para cores,
 | 4 | Diff Checker funcionando | pronta |
 | 3 | Fast Note funcionando | pronta |
 | 5 | Menu da bandeja, iniciar com o Windows, instalador | pronta |
+| 6 | Atualização automática pelo GitHub Releases | pronta |
 | 2b | Tela de demonstração do SQL Formatter | a fazer |
 
 ### Como testar o SQL Formatter

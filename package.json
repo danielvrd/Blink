@@ -11,12 +11,14 @@
     "start": "electron .",
     "gerar-icone": "node scripts/gerar-icone.js",
     "empacotar": "electron-builder --win",
-    "empacotar-pasta": "electron-builder --win --dir"
+    "empacotar-pasta": "electron-builder --win --dir",
+    "publicar": "electron-builder --win --publish always"
   },
   "dependencies": {
     "@nut-tree-fork/libnut-win32": "2.7.5",
     "diff": "9.0.0",
     "electron-store": "8.2.0",
+    "electron-updater": "6.8.9",
     "sql-formatter": "15.9.0"
   },
   "devDependencies": {
@@ -63,6 +65,17 @@
       "installerIcon": "src/assets/icones/blink.ico",
       "uninstallerIcon": "src/assets/icones/blink.ico",
       "deleteAppDataOnUninstall": false
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "danielvrd",
+        "repo": "Blink"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danielvrd/Blink.git"
   }
 }
