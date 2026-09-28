@@ -21,6 +21,7 @@ const ipc = require('./ipc');
 const ferramentaSql = require('./ferramenta-sql');
 const ferramentaDiff = require('./ferramenta-diff');
 const ferramentaNote = require('./ferramenta-note');
+const aviso = require('./aviso');
 
 /**
  * O que cada bind faz.
@@ -34,6 +35,15 @@ const FERRAMENTAS = {
   sql: () => ferramentaSql.executar(),
   diff: () => ferramentaDiff.executar(),
   note: () => ferramentaNote.executar(),
+
+  // Estes dois so vem do menu da bandeja. Clicar em um item de menu tira o
+  // foco do programa onde o texto estava selecionado, entao as duas
+  // ferramentas que dependem de selecao nao tem o que capturar por ali.
+  'diff-exemplo': () => ferramentaDiff.abrirExemplo(),
+  'sql-ajuda': () => {
+    const bind = config.obter('binds').sql;
+    aviso.mostrar(`Selecione uma SQL em qualquer programa e use ${bind}.`);
+  },
 };
 
 function acionarFerramenta(nome) {
@@ -55,7 +65,16 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => janelas.mostrarPrincipal());
 
   app.whenReady().then(() => {
+    /**
+     * Identificacao do app para o Windows.
+     *
+     * Sem isto as notificacoes aparecem como "electron.app.Blink" e o
+     * Windows pode agrupar os icones da barra de tarefas errado.
+     */
+    app.setAppUserModelId('com.danielvrd.blink');
+
     atalhos.definirAcao(acionarFerramenta);
+    bandeja.definirAcao(acionarFerramenta);
 
     ipc.registrar();
     atalhos.registrarTodas();

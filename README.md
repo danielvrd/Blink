@@ -9,15 +9,57 @@ acionadas por atalhos globais:
 
 Tudo roda localmente. Não há servidor, API ou envio de dados para fora da máquina.
 
-## Como rodar
+## Instalar
+
+Baixe o `Blink-Setup-0.1.0.exe` e execute. A instalação é por usuário, então não
+pede senha de administrador.
+
+O Windows vai mostrar um aviso azul do SmartScreen dizendo que o app é de um
+editor desconhecido. É esperado: o instalador não tem assinatura digital, que é
+um certificado pago. Clique em "Mais informações" e depois em "Executar assim
+mesmo".
+
+Depois de instalado, o Blink sobe escondido na bandeja. Para ele iniciar junto
+com o Windows, clique com o botão direito no ícone e marque "Iniciar com o
+Windows".
+
+## Como rodar durante o desenvolvimento
 
 ```
 npm install
 npm start
 ```
 
+## Gerar o instalador
+
+```
+npm run empacotar
+```
+
+O resultado sai em `dist/Blink-Setup-<versão>.exe`. Para conferir o app
+empacotado sem gerar o instalador (bem mais rápido), use
+`npm run empacotar-pasta`: ele deixa o executável pronto em
+`dist/win-unpacked/`.
+
 O app sobe **escondido**: o ícone do olho aparece na bandeja, ao lado do relógio. Clique nele para
 abrir a janela de configurações.
+
+## Menu do ícone na bandeja
+
+Clique com o botão direito no olho, ao lado do relógio:
+
+| Item | O que faz |
+|---|---|
+| Abrir Blink | mostra a janela de configurações |
+| Diff Checker | abre a comparação com dois textos de exemplo |
+| Fast Note | abre o bloco de notas |
+| SQL Formatter | lembra qual é o atalho |
+| Iniciar com o Windows | liga ou desliga a inicialização automática |
+| Sair | encerra o Blink de verdade |
+
+O Diff Checker e o SQL Formatter dependem de um texto selecionado, e clicar em
+um item de menu tira o foco do programa onde ele estava. Por isso, pelo menu,
+esses dois não capturam nada — use as binds.
 
 ## Atalhos padrão
 
@@ -71,8 +113,8 @@ especificação visual completa (`README.md`). É a fonte da verdade para cores,
 | 2 | Captura da seleção e SQL Formatter funcionando | pronta |
 | 4 | Diff Checker funcionando | pronta |
 | 3 | Fast Note funcionando | pronta |
+| 5 | Menu da bandeja, iniciar com o Windows, instalador | pronta |
 | 2b | Tela de demonstração do SQL Formatter | a fazer |
-| 5 | Menu da bandeja, iniciar com o Windows, instalador | a fazer |
 
 ### Como testar o SQL Formatter
 

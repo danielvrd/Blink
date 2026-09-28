@@ -8,6 +8,7 @@
 const path = require('path');
 const { Tray, Menu, app } = require('electron');
 const janelas = require('./janelas');
+const inicializacao = require('./inicializacao');
 
 const ICONE = path.join(__dirname, '..', 'assets', 'icones', 'blink.ico');
 
@@ -18,16 +19,58 @@ const ICONE = path.join(__dirname, '..', 'assets', 'icones', 'blink.ico');
  */
 let bandeja = null;
 
-function criar() {
-  bandeja = new Tray(ICONE);
-  bandeja.setToolTip('Blink');
+/**
+ * O que fazer quando um item de ferramenta e escolhido.
+ *
+ * Vem de fora (do main.js) em vez de a bandeja chamar as ferramentas
+ * direto: as ferramentas precisam das janelas, e as janelas nao precisam
+ * saber que existe uma bandeja. Assim o require nao anda em circulo.
+ */
+let acionarFerramenta = () => {};
 
-  // Etapa 5 acrescenta aqui os atalhos para cada ferramenta e a opcao de
-  // iniciar com o Windows. Agora elas ainda nao tem o que abrir.
-  const menu = Menu.buildFromTemplate([
+function definirAcao(callback) {
+  acionarFerramenta = callback;
+}
+
+/**
+ * Monta o menu do zero.
+ *
+ * Chamado de novo a cada mudanca porque o Menu do Electron e imutavel: nao
+ * da para so trocar a marca de selecao de um item ja montado.
+ */
+function montarMenu() {
+  return Menu.buildFromTemplate([
     {
       label: 'Abrir Blink',
       click: () => janelas.mostrarPrincipal(),
+    },
+    { type: 'separator' },
+    {
+      label: 'Diff Checker',
+      // Pela bandeja nao ha selecao para capturar: o clique no menu tira o
+      // foco do programa onde o texto estava. Entao aqui o item abre a
+      // comparacao de exemplo, que e para o que ele serve na pratica.
+      click: () => acionarFerramenta('diff-exemplo'),
+    },
+    {
+      label: 'Fast Note',
+      click: () => acionarFerramenta('note'),
+    },
+    {
+      label: 'SQL Formatter',
+      // Este depende de uma selecao, que o menu nao tem. O clique so
+      // lembra qual e o atalho.
+      click: () => acionarFerramenta('sql-ajuda'),
+    },
+    { type: 'separator' },
+    {
+      label: 'Iniciar com o Windows',
+      type: 'checkbox',
+      checked: inicializacao.ligado(),
+      click: () => {
+        inicializacao.alternar();
+        atualizarMenu();
+      },
     },
     { type: 'separator' },
     {
@@ -38,8 +81,19 @@ function criar() {
       },
     },
   ]);
+}
 
-  bandeja.setContextMenu(menu);
+/** Redesenha o menu, para a marca de selecao acompanhar o estado. */
+function atualizarMenu() {
+  if (bandeja && !bandeja.isDestroyed()) {
+    bandeja.setContextMenu(montarMenu());
+  }
+}
+
+function criar() {
+  bandeja = new Tray(ICONE);
+  bandeja.setToolTip('Blink');
+  bandeja.setContextMenu(montarMenu());
 
   // Clique esquerdo abre a janela principal.
   bandeja.on('click', () => janelas.mostrarPrincipal());
@@ -47,4 +101,4 @@ function criar() {
   return bandeja;
 }
 
-module.exports = { criar };
+module.exports = { criar, definirAcao, atualizarMenu };
