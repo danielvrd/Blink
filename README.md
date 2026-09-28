@@ -11,8 +11,8 @@ Tudo roda localmente. Não há servidor, API ou envio de dados para fora da máq
 
 ## Instalar
 
-Baixe o `Blink-Setup-0.1.0.exe` e execute. A instalação é por usuário, então não
-pede senha de administrador.
+Baixe o `Blink-Setup-0.1.0.exe` (113 MB) e execute. A instalação é por usuário,
+em `%LOCALAPPDATA%\Programs\Blink`, então não pede senha de administrador.
 
 O Windows vai mostrar um aviso azul do SmartScreen dizendo que o app é de um
 editor desconhecido. É esperado: o instalador não tem assinatura digital, que é
@@ -40,6 +40,12 @@ O resultado sai em `dist/Blink-Setup-<versão>.exe`. Para conferir o app
 empacotado sem gerar o instalador (bem mais rápido), use
 `npm run empacotar-pasta`: ele deixa o executável pronto em
 `dist/win-unpacked/`.
+
+**Só roda uma cópia do Blink por vez.** Duas brigariam pelos mesmos atalhos
+globais e a segunda ficaria muda. Se você abrir o app instalado enquanto um
+`npm start` estiver rodando, o novo apenas mostra a janela do que já está no ar
+e encerra — o que parece um travamento, mas é a trava funcionando. Para testar o
+app instalado, feche o de desenvolvimento antes pelo "Sair" da bandeja.
 
 O app sobe **escondido**: o ícone do olho aparece na bandeja, ao lado do relógio. Clique nele para
 abrir a janela de configurações.
