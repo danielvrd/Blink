@@ -37,6 +37,18 @@ contextBridge.exposeInMainWorld('blink', {
     linhas: () => ipcRenderer.invoke('diff:linhas'),
   },
 
+  notas: {
+    /** Pasta configurada e lista dos arquivos .md. */
+    estado: () => ipcRenderer.invoke('notas:estado'),
+    /** Topicos de um arquivo, na ordem do arquivo (mais novo por ultimo). */
+    ler: (arquivo) => ipcRenderer.invoke('notas:ler', arquivo),
+    /** Acrescenta um topico no fim. Devolve o nome do arquivo gravado. */
+    adicionar: (arquivo, texto) => ipcRenderer.invoke('notas:adicionar', arquivo, texto),
+    /** Regrava a lista inteira: usado por apagar e reordenar. */
+    salvar: (arquivo, topicos) => ipcRenderer.invoke('notas:salvar', arquivo, topicos),
+    limpar: (arquivo) => ipcRenderer.invoke('notas:limpar', arquivo),
+  },
+
   areaTransferencia: {
     escrever: (texto) => ipcRenderer.invoke('areaTransferencia:escrever', texto),
   },

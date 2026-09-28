@@ -1,0 +1,291 @@
+/*
+  Bloco de notas do Fast Note.
+  Valores da secao 3 do design (design_handoff_blink/README.md).
+*/
+
+html,
+body {
+  height: 100%;
+}
+
+.modal {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  border: 1px solid var(--borda-modal-nota);
+  border-radius: var(--raio-modal-nota);
+  overflow: hidden;
+}
+
+/* --- Cabecalho ------------------------------------------------------------ */
+
+.cabecalho {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  background: var(--superficie);
+  border-bottom: 1px solid rgba(168, 57, 58, 0.2);
+  -webkit-app-region: drag;
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--texto-forte);
+}
+
+.botao-x {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--raio-item);
+  background: transparent;
+  color: var(--texto-secundario);
+  font-size: 14px;
+  line-height: 1;
+  -webkit-app-region: no-drag;
+}
+
+.botao-x:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Corpo ---------------------------------------------------------------- */
+
+.corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.linha-arquivo {
+  display: flex;
+  gap: 16px;
+  position: relative;
+}
+
+.campo-select {
+  flex: 1;
+  min-width: 0;
+  background: var(--superficie);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+  padding: 8px 10px;
+  font-size: 12.5px;
+  color: var(--texto-forte-2);
+  color-scheme: dark;
+}
+
+.botao-limpar {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  align-self: center;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 5px;
+  background: var(--destaque);
+}
+
+/* Sem topicos nao ha o que limpar. */
+.botao-limpar[disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.campo-nome {
+  width: 100%;
+  background: var(--superficie);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+  padding: 8px 10px;
+  font-size: 12.5px;
+  font-family: var(--fonte-mono);
+  color: var(--texto-forte-2);
+}
+
+/* --- Confirmacao do limpar tudo ------------------------------------------- */
+
+.popover {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  z-index: 5;
+  width: 150px;
+  padding: 10px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-modal-nota);
+  border-radius: var(--raio-campo);
+  box-shadow: var(--sombra-popover);
+}
+
+.popover .pergunta {
+  font-size: 11.5px;
+  color: var(--texto-forte-2);
+  margin-bottom: 8px;
+}
+
+.popover .botoes {
+  display: flex;
+  gap: 6px;
+}
+
+.popover button {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: var(--raio-item);
+  font-size: 11px;
+}
+
+.botao-primario {
+  border: none;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-weight: 600;
+}
+
+.botao-fantasma {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--texto-2);
+}
+
+/* --- Lista de topicos ----------------------------------------------------- */
+
+.lista {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.topico {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border-radius: var(--raio-item);
+  font-size: 12px;
+  font-family: var(--fonte-mono);
+  color: var(--texto-2);
+  cursor: grab;
+}
+
+.topico:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* O item que esta sendo arrastado. */
+.topico.arrastando {
+  opacity: 0.4;
+}
+
+/* Linha-guia mostrando onde o item vai entrar. */
+.topico.solta-acima {
+  box-shadow: inset 0 2px 0 var(--destaque);
+}
+
+.topico.solta-abaixo {
+  box-shadow: inset 0 -2px 0 var(--destaque);
+}
+
+/* Topico recem-adicionado pisca para voce ver onde ele entrou. */
+.topico.novo {
+  background: rgba(168, 57, 58, 0.18);
+}
+
+.alca {
+  flex: none;
+  color: #4a4d57;
+  font-size: 11px;
+  letter-spacing: -1px;
+  user-select: none;
+}
+
+.corpo-topico {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 5px;
+}
+
+.traco {
+  flex: none;
+}
+
+/* O texto quebra dentro do modal e as linhas seguintes ficam alinhadas a
+   direita do traco, em vez de voltarem para a margem. */
+.texto {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.botao-apagar {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--apagar);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.botao-apagar:hover {
+  color: var(--apagar-hover);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.vazio {
+  font-size: 11.5px;
+  color: var(--rotulo);
+  padding: 6px 2px;
+}
+
+/* --- Escrita -------------------------------------------------------------- */
+
+.rascunho {
+  flex: none;
+  height: 60px;
+  resize: none;
+  background: var(--superficie);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+  padding: 8px 10px;
+  font-size: 12.5px;
+  font-family: var(--fonte-mono);
+  color: var(--texto-forte);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.dica {
+  flex: none;
+  font-size: 10px;
+  color: var(--rotulo);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -15,6 +15,8 @@ const config = require('./config');
 const atalhos = require('./atalhos');
 const janelas = require('./janelas');
 const ferramentaDiff = require('./ferramenta-diff');
+const ferramentaNote = require('./ferramenta-note');
+const notas = require('./notas');
 
 /** A janela que enviou a mensagem, ou null se ela ja tiver sido fechada. */
 function janelaDoEvento(evento) {
@@ -58,6 +60,42 @@ function registrar() {
   // A janela do diff pede as linhas assim que carrega. Elas nao vao na URL
   // porque sao dois textos inteiros.
   ipcMain.handle('diff:linhas', () => janelas.obterLinhasDiff());
+
+  // --- Fast Note -----------------------------------------------------------
+
+  // Tudo que a janela de notas precisa para se montar, em uma leitura so.
+  ipcMain.handle('notas:estado', async () => ({
+    pasta: notas.pasta(),
+    arquivos: await notas.listar(),
+  }));
+
+  ipcMain.handle('notas:ler', async (_evento, arquivo) => {
+    if (typeof arquivo !== 'string') return { topicos: [] };
+    return notas.ler(arquivo);
+  });
+
+  // Acrescenta um topico. Serve tanto para arquivo existente quanto para
+  // um novo: o notas.adicionar cria o arquivo se ele nao existir.
+  ipcMain.handle('notas:adicionar', async (_evento, arquivo, texto) => {
+    if (typeof arquivo !== 'string' || typeof texto !== 'string') return null;
+
+    const limpo = texto.trim();
+    if (limpo === '') return null;
+
+    return notas.adicionar(arquivo, limpo);
+  });
+
+  // Regrava a lista inteira. Usado por apagar e por reordenar.
+  ipcMain.handle('notas:salvar', async (_evento, arquivo, topicos) => {
+    if (typeof arquivo !== 'string' || !Array.isArray(topicos)) return false;
+    if (!topicos.every((t) => typeof t === 'string')) return false;
+    return notas.salvarTopicos(arquivo, topicos);
+  });
+
+  ipcMain.handle('notas:limpar', async (_evento, arquivo) => {
+    if (typeof arquivo !== 'string') return false;
+    return notas.limpar(arquivo);
+  });
 
   // --- Area de transferencia -----------------------------------------------
 
@@ -112,7 +150,15 @@ function registrar() {
       return true;
     }
 
-    janelas.abrirFerramenta(nome);
+    // O Fast Note nao tem o que demonstrar: o botao abre o bloco de notas
+    // de verdade, igual a bind.
+    if (nome === 'note') {
+      ferramentaNote.executar();
+      return true;
+    }
+
+    // TODO etapa 2b: a tela de pre-visualizacao do SQL Formatter.
+    console.log(`[ipc] demonstracao de "${nome}" ainda nao implementada`);
     return true;
   });
 }

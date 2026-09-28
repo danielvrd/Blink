@@ -95,18 +95,6 @@ function mostrarPrincipal() {
   janela.focus();
 }
 
-/**
- * Abre a janela de uma ferramenta que ainda nao existe.
- *
- * O SQL Formatter nao passa por aqui: ele so mexe na area de transferencia
- * (veja ferramenta-sql.js). O Diff Checker tem a abrirDiff() abaixo.
- *
- * TODO etapa 3: a janela do Fast Note.
- */
-function abrirFerramenta(nome) {
-  console.log(`[janelas] abrirFerramenta("${nome}") ainda nao implementado`);
-}
-
 // --- Janela do Diff Checker -------------------------------------------------
 
 /** Tamanho que a janela da comparacao gostaria de ter. */
@@ -187,12 +175,69 @@ function abrirDiff(linhas) {
   return diff;
 }
 
+
+// --- Janela do Fast Note ----------------------------------------------------
+
+/** Tamanho do bloco de notas, fixo como no design. */
+const LARGURA_NOTA = 320;
+const ALTURA_NOTA = 380;
+
+let nota = null;
+
+/**
+ * Abre o bloco de notas.
+ *
+ * Fica no monitor onde o mouse esta: a bind e usada no meio de outra coisa,
+ * entao a janela precisa aparecer onde a pessoa esta olhando.
+ */
+function abrirNota() {
+  if (nota && !nota.isDestroyed()) {
+    // Ja esta aberto: recarrega para a lista de arquivos vir atualizada,
+    // caso algum .md tenha sido criado ou apagado por fora.
+    nota.reload();
+    nota.show();
+    nota.focus();
+    return nota;
+  }
+
+  nota = new BrowserWindow({
+    width: LARGURA_NOTA,
+    height: ALTURA_NOTA,
+    show: false,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    alwaysOnTop: true,
+    icon: ICONE,
+    title: 'Fast Note',
+    webPreferences: {
+      preload: PRELOAD,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  nota.loadFile(path.join(RENDERER, 'note', 'index.html'));
+
+  nota.once('ready-to-show', () => {
+    nota.show();
+    nota.focus();
+  });
+
+  nota.on('closed', () => {
+    nota = null;
+  });
+
+  return nota;
+}
+
 module.exports = {
   criarPrincipal,
   obterPrincipal,
   mostrarPrincipal,
-  abrirFerramenta,
   abrirDiff,
+  abrirNota,
   obterLinhasDiff,
   permitirEncerrar,
 };

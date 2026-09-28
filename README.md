@@ -70,8 +70,8 @@ especificação visual completa (`README.md`). É a fonte da verdade para cores,
 | 1 | Bandeja, janela principal com as 3 abas, configurações salvas | pronta |
 | 2 | Captura da seleção e SQL Formatter funcionando | pronta |
 | 4 | Diff Checker funcionando | pronta |
+| 3 | Fast Note funcionando | pronta |
 | 2b | Tela de demonstração do SQL Formatter | a fazer |
-| 3 | Fast Note funcionando | a fazer |
 | 5 | Menu da bandeja, iniciar com o Windows, instalador | a fazer |
 
 ### Como testar o SQL Formatter
@@ -106,6 +106,35 @@ janela o guardado também é descartado, então o próximo par começa limpo.
 
 O botão "Abrir demonstração" da aba abre a mesma janela com dois textos de
 exemplo, sem capturar nada.
+
+### Como testar o Fast Note
+
+1. `npm start` e pressione `Ctrl + Alt + N`. Na primeira vez o Windows pergunta
+   onde guardar os arquivos.
+2. Escreva algo e pressione `Enter`. `Shift + Enter` quebra a linha dentro do
+   mesmo tópico.
+3. Escolha outro arquivo no seletor, ou "+ Criar nova nota" para começar um.
+
+Apagar (`×`), arrastar para reordenar e a vassoura (limpar tudo) regravam o
+arquivo na hora. `Esc` fecha.
+
+**Sobre os arquivos `.md`:** o Blink só cuida das linhas que começam com `- `.
+Título, parágrafo, tabela, qualquer outra coisa que você escrever no arquivo
+por fora fica onde está — dá para apontar o Blink para uma pasta de notas que
+você já usa.
+
+Os tópicos ficam no arquivo em ordem cronológica, com o mais novo no fim, para
+o `.md` se ler como um diário. Na janela eles aparecem ao contrário, com o mais
+recente em cima.
+
+```markdown
+# Trabalho              <- o Blink não toca
+
+Anotações da sprint.    <- o Blink não toca
+
+- Rever PR #142         <- mais antigo
+- Call com cliente      <- mais novo (em cima na janela)
+```
 
 ### Quando o atalho não faz nada
 

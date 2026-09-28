@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:;">
+  <title>Fast Note</title>
+
+  <link rel="stylesheet" href="../comum/tokens.css">
+  <link rel="stylesheet" href="../comum/base.css">
+  <link rel="stylesheet" href="note.css">
+</head>
+<body>
+
+  <div class="modal">
+
+    <header class="cabecalho">
+      <div class="titulo">
+        <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" stroke="currentColor" stroke-width="1.4" fill="none"></path>
+          <circle cx="12" cy="12" r="4.4" fill="#e0263b"></circle>
+          <circle cx="12" cy="12" r="2" fill="#1a0508"></circle>
+          <circle cx="13.2" cy="10.7" r="1" fill="#ffffff" opacity="0.9"></circle>
+        </svg>
+        <span>Fast Note</span>
+      </div>
+      <button class="botao-x" id="btn-fechar" title="Fechar" aria-label="Fechar">×</button>
+    </header>
+
+    <div class="corpo">
+
+      <!-- Escolha do arquivo e o botao de limpar tudo -->
+      <div class="linha-arquivo">
+        <select class="campo-select" id="select-arquivo"></select>
+
+        <button class="botao-limpar" id="btn-limpar" title="Limpar tudo" aria-label="Limpar todas as notas">
+          <!-- vassoura -->
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+            <line x1="18" y1="2" x2="12.2" y2="12" stroke="#f5eceb" stroke-width="2" stroke-linecap="round"></line>
+            <path d="M9 11 L15.5 11 L18.5 21 L5.5 21 Z" fill="#f5eceb"></path>
+            <rect x="9" y="10.2" width="6.5" height="2" rx="0.6" fill="#5a1a1b"></rect>
+            <line x1="9.7" y1="13.2" x2="8" y2="21" stroke="#a8393a" stroke-width="1"></line>
+            <line x1="12.3" y1="13.2" x2="12" y2="21" stroke="#a8393a" stroke-width="1"></line>
+            <line x1="14.9" y1="13.2" x2="16.3" y2="21" stroke="#a8393a" stroke-width="1"></line>
+          </svg>
+        </button>
+
+        <!-- Confirmacao do limpar tudo, ancorada ao botao -->
+        <div class="popover" id="popover-limpar" hidden>
+          <div class="pergunta">Limpar todas as notas deste arquivo?</div>
+          <div class="botoes">
+            <button class="botao-primario" id="btn-limpar-sim">Limpar</button>
+            <button class="botao-fantasma" id="btn-limpar-nao">Não</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Só aparece quando "+ Criar nova nota" está escolhido -->
+      <input class="campo-nome" id="campo-nome" placeholder="nome-da-nota.md" hidden>
+
+      <div class="lista" id="lista"></div>
+
+      <textarea class="rascunho" id="rascunho" placeholder="Escreva e pressione Enter…" spellcheck="false"></textarea>
+
+      <div class="dica" id="dica"></div>
+
+    </div>
+  </div>
+
+  <script src="../comum/ui.js"></script>
+  <script src="note.js"></script>
+</body>
+</html>

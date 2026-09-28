@@ -20,18 +20,26 @@ const atalhos = require('./atalhos');
 const ipc = require('./ipc');
 const ferramentaSql = require('./ferramenta-sql');
 const ferramentaDiff = require('./ferramenta-diff');
+const ferramentaNote = require('./ferramenta-note');
 
 /**
  * O que cada bind faz.
  *
  * O SQL Formatter nao abre janela: formata a selecao e deixa na area de
  * transferencia. O Diff Checker funciona em dois tempos - a primeira bind
- * guarda o texto, a segunda compara e abre a janela.
+ * guarda o texto, a segunda compara e abre a janela. O Fast Note so abre o
+ * bloco de notas.
  */
+const FERRAMENTAS = {
+  sql: () => ferramentaSql.executar(),
+  diff: () => ferramentaDiff.executar(),
+  note: () => ferramentaNote.executar(),
+};
+
 function acionarFerramenta(nome) {
-  if (nome === 'sql') return ferramentaSql.executar();
-  if (nome === 'diff') return ferramentaDiff.executar();
-  return janelas.abrirFerramenta(nome);
+  const acao = FERRAMENTAS[nome];
+  if (acao) return acao();
+  console.warn(`[blink] ferramenta desconhecida: ${nome}`);
 }
 
 /**

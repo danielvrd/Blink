@@ -113,6 +113,19 @@ button {
   outline-offset: 2px;
 }
 
+/*
+  Campos de texto sao a excecao. Varias telas dao foco a um campo assim que
+  abrem (o rascunho do Fast Note, por exemplo), e um anel grosso e permanente
+  ao redor dele nao existe no design. Nos campos o foco aparece so pela
+  borda, que ja esta la.
+*/
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: rgba(168, 57, 58, 0.55);
+}
+
 /* --- Barra de rolagem ----------------------------------------------------- */
 
 ::-webkit-scrollbar {
