@@ -88,7 +88,7 @@ window.Blink = window.Blink || {};
 
       window.Blink.pecas.rodape({
         ferramenta: 'sql',
-        legenda: 'Selecione a SQL em qualquer lugar e use a bind: o texto é substituído já formatado.',
+        legenda: 'Selecione a SQL em qualquer lugar e use a bind: a versão formatada fica pronta para colar.',
       }),
     ]);
   }

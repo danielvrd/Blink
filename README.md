@@ -5,7 +5,7 @@ acionadas por atalhos globais:
 
 1. **Diff Checker** — captura dois textos selecionados em qualquer programa e abre um comparador lado a lado.
 2. **Fast Note** — abre um mini bloco de notas que grava tópicos em arquivos `.md` de uma pasta escolhida.
-3. **SQL Formatter** — formata a SQL selecionada em qualquer programa e substitui a seleção pelo resultado.
+3. **SQL Formatter** — formata a SQL selecionada em qualquer programa e deixa o resultado pronto para colar.
 
 Tudo roda localmente. Não há servidor, API ou envio de dados para fora da máquina.
 
@@ -81,9 +81,11 @@ especificação visual completa (`README.md`). É a fonte da verdade para cores,
 3. Escreva uma SQL em uma linha só, por exemplo:
    `select a,b from t where x=1 order by a`
 4. Selecione o texto e pressione `Ctrl + Alt + F`
+5. Vá para outro arquivo e cole com `Ctrl + V`
 
-A seleção deve ser substituída pela SQL formatada. Se nada acontecer, veja
-"Quando o atalho não faz nada" abaixo.
+O arquivo de origem **não é alterado**. A bind formata e deixa o resultado na
+área de transferência; uma notificação do Windows confirma. Se nada acontecer,
+veja "Quando o atalho não faz nada" abaixo.
 
 ### Quando o atalho não faz nada
 

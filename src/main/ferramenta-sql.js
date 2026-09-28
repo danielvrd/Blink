@@ -1,10 +1,14 @@
 /**
  * SQL Formatter.
  *
- * No uso real nao abre janela nenhuma: a bind pega a SQL selecionada,
- * formata e devolve o texto formatado no lugar da selecao.
+ * Nao abre janela nenhuma. A bind pega a SQL selecionada, formata e deixa o
+ * resultado na area de transferencia, pronto para colar.
+ *
+ * O arquivo de origem nao e tocado de proposito: a ideia e selecionar a SQL
+ * onde ela esta, apertar a bind e colar a versao formatada em outro lugar.
  */
 
+const { clipboard } = require('electron');
 const { format } = require('sql-formatter');
 
 const config = require('./config');
@@ -63,20 +67,29 @@ async function executar() {
 
     const resultado = formatar(original);
 
-    // SQL invalida: nao cola nada e deixa a selecao como estava.
+    // SQL invalida: nao mexe na area de transferencia, para nao atropelar o
+    // que o usuario tinha copiado por causa de um erro de digitacao.
     if (!resultado.ok) {
       aviso.mostrar('Não foi possível formatar: a seleção não parece ser uma SQL válida.');
       return;
     }
 
-    // Ja estava formatada. Colar de novo so sujaria o historico de desfazer
-    // do editor sem mudar uma virgula.
-    if (resultado.texto === original) return;
+    // O capturar() devolveu a area de transferencia ao que era antes; agora
+    // ela passa a ser o resultado, que e o que o usuario vai colar.
+    await clipboard.writeText(resultado.texto);
 
-    await selecao.substituir(resultado.texto);
+    // Sem este aviso a bind nao daria nenhum sinal de vida: o arquivo de
+    // origem fica igual e a area de transferencia nao aparece na tela.
+    aviso.mostrar(
+      resultado.texto === original
+        ? 'A SQL já estava formatada. Copiada para colar.'
+        : 'SQL formatada e copiada. Cole onde quiser com Ctrl + V.'
+    );
   } catch (erro) {
     console.error('[ferramenta-sql] falhou:', erro);
     aviso.mostrar('Algo deu errado ao formatar a SQL.');
+    // Nao mexe na area de transferencia aqui: o capturar() ja devolveu ela
+    // ao que era, mesmo tendo dado erro.
   } finally {
     ocupado = false;
   }

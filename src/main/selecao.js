@@ -1,5 +1,5 @@
 /**
- * Ler e substituir o texto selecionado em qualquer programa do Windows.
+ * Ler o texto selecionado em qualquer programa do Windows.
  *
  * O Windows nao deixa um programa perguntar "o que esta selecionado ali?".
  * O jeito que funciona e o que todo app de atalho usa: simular Ctrl+C,
@@ -38,15 +38,6 @@ const LIMITE_CAPTURA = 800;
  * um respiro antes de seguir.
  */
 const PAUSA_APOS_SOLTAR = 90;
-
-/**
- * Tempo que o texto novo fica na area de transferencia antes de ela ser
- * devolvida ao que era.
- *
- * O Ctrl+V so avisa o programa da frente; ler a area de transferencia leva
- * mais um tempinho. Devolver cedo demais faz ele colar o conteudo antigo.
- */
-const PAUSA_APOS_COLAR = 180;
 
 const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -135,23 +126,4 @@ async function capturar() {
   }
 }
 
-/**
- * Troca o texto selecionado no programa da frente pelo texto passado.
- *
- * Pressupoe que a selecao continua de pe - e o caso, porque o Ctrl+C da
- * captura nao a desfaz.
- */
-async function substituir(texto) {
-  const guardado = await guardarAreaDeTransferencia();
-
-  try {
-    await clipboard.writeText(texto);
-    soltarModificadores();
-    libnut.keyTap('v', ['control']);
-    await esperar(PAUSA_APOS_COLAR);
-  } finally {
-    await devolverAreaDeTransferencia(guardado);
-  }
-}
-
-module.exports = { capturar, substituir };
+module.exports = { capturar };
