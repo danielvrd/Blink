@@ -74,10 +74,13 @@ Três detalhes que ele resolve, cada um por causa de um erro que já aconteceu:
   "já está atualizado" para sempre.
 - **Nada pode estar pendente de commit.** A tag aponta para o commit atual; com mudanças soltas, a
   tag e o instalador não batem com o repositório.
-- **O `electron-builder` perde arquivos em silêncio.** Ele envia os arquivos em paralelo, e quando a
-  Release ainda não existe cada envio tenta criá-la: um ganha, e o arquivo do outro some sem erro
-  nenhum — o comando termina com sucesso e a Release fica sem o instalador ou sem o `latest.yml`.
-  Aconteceu três vezes seguidas. Por isso o último passo confere a Release e envia o que faltou.
+- **O `electron-builder` perde arquivos — e às vezes cria Releases duplicadas — em silêncio.** Ele
+  envia os arquivos em paralelo, e quando a Release ainda não existe cada envio tenta criá-la. Às vezes
+  um arquivo some; às vezes nascem **duas Releases para a mesma tag**, cada uma com parte dos arquivos,
+  e o GitHub mostra a incompleta como a mais recente. O comando termina com sucesso nos dois casos.
+  Por isso o último passo lista **todas** as Releases da tag, apaga as duplicadas, completa a que
+  fica e baixa o `latest.yml` pelo mesmo endereço público que o app instalado usa. Consultar "a
+  Release da tag" pela API não basta: ela devolve só uma das duplicadas e esconde a outra.
 
 Se uma Release já publicada estiver incompleta, dá para conferir e completar sem empacotar de novo
 (o `dist/` precisa ser o daquela versão):

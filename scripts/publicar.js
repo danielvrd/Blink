@@ -21,10 +21,12 @@
  * - A tag aponta para o commit atual. Se houver mudanca nao commitada, a
  *   tag e o instalador nao batem com o que esta no repositorio.
  * - O electron-builder envia os arquivos em paralelo, e quando a Release
- *   ainda nao existe cada envio tenta cria-la. Um ganha, e o arquivo do
- *   outro se perde SEM erro nenhum - o comando termina com sucesso e a
- *   Release fica sem o instalador ou sem o latest.yml. Aconteceu na 0.1.1,
- *   na 0.1.2 e na 0.2.0. O passo 5 confere e completa.
+ *   ainda nao existe cada envio tenta cria-la. As vezes um arquivo se perde;
+ *   as vezes nascem DUAS Releases para a mesma tag, cada uma com parte dos
+ *   arquivos - e o GitHub pode mostrar a incompleta como a mais recente.
+ *   Tudo SEM erro: o comando termina com sucesso. Aconteceu na 0.1.1, 0.1.2,
+ *   0.2.0 e 0.3.0. O passo 5 apaga as duplicadas, completa a que fica e
+ *   confere o latest.yml pelo mesmo endereco que o app instalado usa.
  *
  * Para so conferir e completar uma Release que ja foi publicada:
  *
@@ -88,13 +90,36 @@ function cabecalhos(extra = {}) {
   };
 }
 
-async function buscarRelease() {
-  const resposta = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/tags/${tag}`, {
+/**
+ * TODAS as Releases desta tag.
+ *
+ * Normalmente e uma so. Mas a disputa do electron-builder pode criar DUAS
+ * para a mesma tag, no mesmo segundo - aconteceu na 0.3.0. Buscar "a
+ * Release da tag" pela API devolve so uma delas e esconde o problema: o
+ * script dizia "completa" enquanto a outra, incompleta, era a que o GitHub
+ * mostrava como a mais recente.
+ */
+async function buscarReleasesDaTag() {
+  const resposta = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=100`, {
     headers: cabecalhos(),
   });
-  if (resposta.status === 404) return null;
-  if (!resposta.ok) throw new Error(`GitHub respondeu ${resposta.status} ao buscar a Release`);
-  return resposta.json();
+  if (!resposta.ok) throw new Error(`GitHub respondeu ${resposta.status} ao listar as Releases`);
+  return (await resposta.json()).filter((r) => r.tag_name === tag);
+}
+
+/** Quantos dos arquivos esperados a Release ja tem, completos. */
+function arquivosCompletos(release) {
+  return release.assets.filter((a) => a.state === 'uploaded' && ARQUIVOS_DA_RELEASE.includes(a.name)).length;
+}
+
+async function apagarRelease(release) {
+  const resposta = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/${release.id}`, {
+    method: 'DELETE',
+    headers: cabecalhos(),
+  });
+  if (!resposta.ok && resposta.status !== 404) {
+    throw new Error(`GitHub respondeu ${resposta.status} ao apagar a Release duplicada`);
+  }
 }
 
 async function enviarArquivo(release, nome) {
@@ -126,22 +151,27 @@ async function conferirRelease() {
   }
 
   // A API pode demorar alguns segundos para mostrar o que acabou de subir.
-  let release = null;
-  for (let tentativa = 0; tentativa < 5 && !release; tentativa++) {
-    release = await buscarRelease();
-    if (!release) await esperar(2000);
+  let releases = [];
+  for (let tentativa = 0; tentativa < 5 && releases.length === 0; tentativa++) {
+    releases = await buscarReleasesDaTag();
+    if (releases.length === 0) await esperar(2000);
   }
-  if (!release) desistir(`A Release ${tag} nao apareceu no GitHub.`);
+  if (releases.length === 0) desistir(`A Release ${tag} nao apareceu no GitHub.`);
+
+  // Fica a mais completa; empate, a criada primeiro. As outras sao copias
+  // parciais da disputa e saem - senao o GitHub pode mostrar uma delas
+  // como a mais recente, e o app instalado le a incompleta.
+  releases.sort((a, b) => arquivosCompletos(b) - arquivosCompletos(a) || a.id - b.id);
+  const [release, ...duplicadas] = releases;
+  for (const duplicada of duplicadas) {
+    console.log(`  Release duplicada da ${tag} (${arquivosCompletos(duplicada)} arquivo(s)) - apagando`);
+    await apagarRelease(duplicada);
+  }
 
   const presentes = new Set(
     release.assets.filter((a) => a.state === 'uploaded').map((a) => a.name)
   );
   const faltando = ARQUIVOS_DA_RELEASE.filter((nome) => !presentes.has(nome));
-
-  if (faltando.length === 0) {
-    console.log('  todos os arquivos estao la');
-    return;
-  }
 
   for (const nome of faltando) {
     // Um envio que morreu no meio pode ter deixado o arquivo pela metade
@@ -158,12 +188,24 @@ async function conferirRelease() {
     await enviarArquivo(release, nome);
   }
 
-  const conferida = await buscarRelease();
-  const agora = new Set(conferida.assets.filter((a) => a.state === 'uploaded').map((a) => a.name));
+  // --- conferencia final, do jeito que o app instalado enxerga ---
+
+  const finais = await buscarReleasesDaTag();
+  if (finais.length !== 1) desistir(`Continuam existindo ${finais.length} Releases para ${tag}.`);
+  const agora = new Set(finais[0].assets.filter((a) => a.state === 'uploaded').map((a) => a.name));
   const aindaFaltando = ARQUIVOS_DA_RELEASE.filter((nome) => !agora.has(nome));
   if (aindaFaltando.length > 0) desistir(`Continuam faltando: ${aindaFaltando.join(', ')}`);
 
-  console.log('  Release completa');
+  // O app instalado baixa o latest.yml pelo endereco publico da tag. E
+  // esse endereco - e nao a API - que tem que responder com esta versao.
+  const publico = await fetch(`https://github.com/${owner}/${repo}/releases/download/${tag}/latest.yml`);
+  const conteudo = publico.ok ? await publico.text() : '';
+  if (!conteudo.includes(`version: ${versao}`)) {
+    desistir(`O latest.yml publico da ${tag} nao responde com a versao ${versao} (HTTP ${publico.status}).`);
+  }
+
+  console.log(faltando.length === 0 && duplicadas.length === 0 ? '  todos os arquivos estao la' : '  Release completa');
+  console.log('  o endereco publico do latest.yml responde com a versao certa');
 }
 
 // --- Publicacao -------------------------------------------------------------------
