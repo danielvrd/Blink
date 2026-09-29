@@ -21,6 +21,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const { shell } = require('electron');
 
 const config = require('./config');
 
@@ -240,6 +241,29 @@ async function adicionar(arquivo, texto) {
   return gravou ? nome : null;
 }
 
+/**
+ * Exclui um arquivo de nota, mandando para a Lixeira do Windows.
+ *
+ * Lixeira e nao apagar de vez: uma nota excluida por engano volta com dois
+ * cliques, e o Blink nao precisa de um "desfazer" proprio para isso.
+ *
+ * O caminhoDe() e a mesma trava das outras operacoes: um nome que tente
+ * sair da pasta de notas nem chega a virar caminho.
+ */
+async function excluir(arquivo) {
+  const completo = caminhoDe(arquivo);
+  if (!completo) return false;
+
+  try {
+    await fs.access(completo);
+  } catch (erro) {
+    return false;
+  }
+
+  await shell.trashItem(completo);
+  return true;
+}
+
 /** Apaga todos os topicos de um arquivo, preservando o resto. */
 async function limpar(arquivo) {
   return salvarTopicos(arquivo, []);
@@ -252,6 +276,7 @@ module.exports = {
   adicionar,
   salvarTopicos,
   limpar,
+  excluir,
   nomeDeArquivo,
   caminhoDe,
   // exportados para teste

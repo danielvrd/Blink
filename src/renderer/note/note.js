@@ -23,7 +23,10 @@
   const rascunho = document.getElementById('rascunho');
   const dica = document.getElementById('dica');
   const botaoLimpar = document.getElementById('btn-limpar');
-  const popover = document.getElementById('popover-limpar');
+  const botaoExcluir = document.getElementById('btn-excluir');
+  const popoverLimpar = document.getElementById('popover-limpar');
+  const popoverExcluir = document.getElementById('popover-excluir');
+  const perguntaExcluir = document.getElementById('pergunta-excluir');
 
   /** Pasta configurada, so para mostrar na dica. */
   let pasta = '';
@@ -117,7 +120,9 @@
   function desenhar() {
     campoNome.hidden = arquivo !== NOVO;
     botaoLimpar.disabled = arquivo === NOVO || topicos.length === 0;
-    if (botaoLimpar.disabled) fecharPopover();
+    botaoExcluir.disabled = arquivo === NOVO;
+    if (botaoLimpar.disabled) popoverLimpar.hidden = true;
+    if (botaoExcluir.disabled) popoverExcluir.hidden = true;
 
     desenharLista();
     desenharDica();
@@ -128,7 +133,7 @@
   /** Troca o arquivo mostrado e carrega os topicos dele. */
   async function escolherArquivo(valor) {
     arquivo = valor;
-    fecharPopover();
+    fecharPopovers();
     recemCriado = null;
 
     if (arquivo === NOVO) {
@@ -188,7 +193,7 @@
   }
 
   async function limparTudo() {
-    fecharPopover();
+    fecharPopovers();
     topicos = [];
     recemCriado = null;
     desenhar();
@@ -265,10 +270,35 @@
     });
   }
 
-  // --- Confirmacao do limpar ------------------------------------------------
+  /**
+   * Manda o arquivo aberto para a Lixeira e cai no proximo que sobrar - ou
+   * em "+ Criar nova nota", se a pasta ficou vazia.
+   */
+  async function excluirArquivo() {
+    fecharPopovers();
+    if (arquivo === NOVO) return;
 
-  function fecharPopover() {
-    popover.hidden = true;
+    await window.blink.notas.excluir(arquivo);
+
+    const estado = await window.blink.notas.estado();
+    arquivo = estado.arquivos.length > 0 ? estado.arquivos[0] : NOVO;
+    desenharSelect(estado.arquivos);
+    await escolherArquivo(arquivo);
+  }
+
+  // --- Confirmacoes (limpar tudo e excluir) ----------------------------------
+
+  /** Fecha as duas confirmacoes. Uma aberta nunca fica por cima da outra. */
+  function fecharPopovers() {
+    popoverLimpar.hidden = true;
+    popoverExcluir.hidden = true;
+  }
+
+  /** Abre uma confirmacao fechando a outra, ou fecha se ja estava aberta. */
+  function alternarPopover(qual) {
+    const abrir = qual.hidden;
+    fecharPopovers();
+    qual.hidden = !abrir;
   }
 
   // --- Arrastar para reordenar ----------------------------------------------
@@ -352,20 +382,30 @@
 
   botaoLimpar.addEventListener('click', () => {
     if (botaoLimpar.disabled) return;
-    popover.hidden = !popover.hidden;
+    alternarPopover(popoverLimpar);
+  });
+
+  botaoExcluir.addEventListener('click', () => {
+    if (botaoExcluir.disabled) return;
+    // A pergunta cita o nome: excluir e mais serio que limpar, entao vale
+    // deixar claro qual arquivo vai embora.
+    perguntaExcluir.textContent = `Excluir o arquivo ${arquivo}?`;
+    alternarPopover(popoverExcluir);
   });
 
   document.getElementById('btn-limpar-sim').addEventListener('click', limparTudo);
-  document.getElementById('btn-limpar-nao').addEventListener('click', fecharPopover);
+  document.getElementById('btn-limpar-nao').addEventListener('click', fecharPopovers);
+  document.getElementById('btn-excluir-sim').addEventListener('click', excluirArquivo);
+  document.getElementById('btn-excluir-nao').addEventListener('click', fecharPopovers);
 
   document.getElementById('btn-fechar').addEventListener('click', () => window.blink.janela.fechar());
 
   window.addEventListener('keydown', (evento) => {
     if (evento.key !== 'Escape') return;
 
-    // Esc com a confirmacao aberta so fecha ela.
-    if (!popover.hidden) {
-      fecharPopover();
+    // Esc com uma confirmacao aberta so fecha ela.
+    if (!popoverLimpar.hidden || !popoverExcluir.hidden) {
+      fecharPopovers();
       return;
     }
     window.blink.janela.fechar();

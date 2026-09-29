@@ -47,6 +47,8 @@ contextBridge.exposeInMainWorld('blink', {
     /** Regrava a lista inteira: usado por apagar e reordenar. */
     salvar: (arquivo, topicos) => ipcRenderer.invoke('notas:salvar', arquivo, topicos),
     limpar: (arquivo) => ipcRenderer.invoke('notas:limpar', arquivo),
+    /** Manda o arquivo para a Lixeira do Windows. */
+    excluir: (arquivo) => ipcRenderer.invoke('notas:excluir', arquivo),
   },
 
   areaTransferencia: {

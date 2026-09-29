@@ -73,8 +73,9 @@ primeiro, para você não comparar com algo que capturou e esqueceu.
 3. Escolha outro arquivo no seletor, ou **"+ Criar nova nota"** para começar um.
 
 Para **editar** um tópico, clique no texto dele: `Enter` ou clicar fora salva, `Esc` desiste.
-Apagar (`×`), arrastar para reordenar e a vassoura (limpar tudo) gravam na hora. `Esc` fecha a
-janela.
+Apagar (`×`), arrastar para reordenar e a vassoura (limpar tudo) gravam na hora. A lixeira ao lado
+da vassoura exclui o arquivo inteiro — ele vai para a Lixeira do Windows, então dá para recuperar.
+`Esc` fecha a janela.
 
 O Blink só mexe nas linhas que começam com `- ` dos seus arquivos. Título, parágrafo ou qualquer
 outra coisa que você escrever no arquivo por fora fica onde está — dá para usar uma pasta de notas

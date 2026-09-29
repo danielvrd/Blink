@@ -88,7 +88,15 @@ body {
   color-scheme: dark;
 }
 
-.botao-limpar {
+/* Vassoura e lixeira, lado a lado a direita do seletor. */
+.acoes-arquivo {
+  flex: none;
+  display: flex;
+  gap: 8px;
+  align-self: center;
+}
+
+.botao-acao {
   width: 20px;
   height: 20px;
   flex: none;
@@ -102,8 +110,8 @@ body {
   background: var(--destaque);
 }
 
-/* Sem topicos nao ha o que limpar. */
-.botao-limpar[disabled] {
+/* Sem topicos nao ha o que limpar; em "+ Criar nova nota" nao ha o que excluir. */
+.botao-acao[disabled] {
   opacity: 0.35;
   cursor: default;
 }

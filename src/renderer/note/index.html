@@ -29,21 +29,34 @@
 
     <div class="corpo">
 
-      <!-- Escolha do arquivo e o botao de limpar tudo -->
+      <!-- Escolha do arquivo, e os botoes de limpar tudo e excluir -->
       <div class="linha-arquivo">
         <select class="campo-select" id="select-arquivo"></select>
 
-        <button class="botao-limpar" id="btn-limpar" title="Limpar tudo" aria-label="Limpar todas as notas">
-          <!-- vassoura -->
-          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-            <line x1="18" y1="2" x2="12.2" y2="12" stroke="#f5eceb" stroke-width="2" stroke-linecap="round"></line>
-            <path d="M9 11 L15.5 11 L18.5 21 L5.5 21 Z" fill="#f5eceb"></path>
-            <rect x="9" y="10.2" width="6.5" height="2" rx="0.6" fill="#5a1a1b"></rect>
-            <line x1="9.7" y1="13.2" x2="8" y2="21" stroke="#a8393a" stroke-width="1"></line>
-            <line x1="12.3" y1="13.2" x2="12" y2="21" stroke="#a8393a" stroke-width="1"></line>
-            <line x1="14.9" y1="13.2" x2="16.3" y2="21" stroke="#a8393a" stroke-width="1"></line>
-          </svg>
-        </button>
+        <div class="acoes-arquivo">
+          <button class="botao-acao" id="btn-limpar" title="Limpar tudo" aria-label="Limpar todas as notas">
+            <!-- vassoura -->
+            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+              <line x1="18" y1="2" x2="12.2" y2="12" stroke="#f5eceb" stroke-width="2" stroke-linecap="round"></line>
+              <path d="M9 11 L15.5 11 L18.5 21 L5.5 21 Z" fill="#f5eceb"></path>
+              <rect x="9" y="10.2" width="6.5" height="2" rx="0.6" fill="#5a1a1b"></rect>
+              <line x1="9.7" y1="13.2" x2="8" y2="21" stroke="#a8393a" stroke-width="1"></line>
+              <line x1="12.3" y1="13.2" x2="12" y2="21" stroke="#a8393a" stroke-width="1"></line>
+              <line x1="14.9" y1="13.2" x2="16.3" y2="21" stroke="#a8393a" stroke-width="1"></line>
+            </svg>
+          </button>
+
+          <button class="botao-acao" id="btn-excluir" title="Excluir arquivo" aria-label="Excluir este arquivo">
+            <!-- lixeira -->
+            <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6.5 H20" stroke="#f5eceb" stroke-width="2.2" stroke-linecap="round"></path>
+              <path d="M9.5 6 V4.2 Q9.5 3 10.7 3 H13.3 Q14.5 3 14.5 4.2 V6" stroke="#f5eceb" stroke-width="2" fill="none"></path>
+              <path d="M6 8.5 L7.2 20 Q7.4 21.5 9 21.5 H15 Q16.6 21.5 16.8 20 L18 8.5 Z" fill="#f5eceb"></path>
+              <line x1="10" y1="11.5" x2="10.4" y2="18.5" stroke="#a8393a" stroke-width="1.3"></line>
+              <line x1="14" y1="11.5" x2="13.6" y2="18.5" stroke="#a8393a" stroke-width="1.3"></line>
+            </svg>
+          </button>
+        </div>
 
         <!-- Confirmacao do limpar tudo, ancorada ao botao -->
         <div class="popover" id="popover-limpar" hidden>
@@ -51,6 +64,15 @@
           <div class="botoes">
             <button class="botao-primario" id="btn-limpar-sim">Limpar</button>
             <button class="botao-fantasma" id="btn-limpar-nao">Não</button>
+          </div>
+        </div>
+
+        <!-- Confirmacao de excluir o arquivo, no mesmo formato -->
+        <div class="popover" id="popover-excluir" hidden>
+          <div class="pergunta" id="pergunta-excluir">Excluir este arquivo?</div>
+          <div class="botoes">
+            <button class="botao-primario" id="btn-excluir-sim">Excluir</button>
+            <button class="botao-fantasma" id="btn-excluir-nao">Não</button>
           </div>
         </div>
       </div>

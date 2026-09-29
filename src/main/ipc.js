@@ -97,6 +97,12 @@ function registrar() {
     return notas.limpar(arquivo);
   });
 
+  // Manda o arquivo para a Lixeira: recuperavel se foi engano.
+  ipcMain.handle('notas:excluir', async (_evento, arquivo) => {
+    if (typeof arquivo !== 'string') return false;
+    return notas.excluir(arquivo);
+  });
+
   // --- Area de transferencia -----------------------------------------------
 
   // O navigator.clipboard do navegador nao e confiavel em paginas abertas
