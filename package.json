@@ -12,7 +12,7 @@
     "gerar-icone": "node scripts/gerar-icone.js",
     "empacotar": "electron-builder --win",
     "empacotar-pasta": "electron-builder --win --dir",
-    "publicar": "electron-builder --win --publish always"
+    "publicar": "node scripts/publicar.js"
   },
   "dependencies": {
     "@nut-tree-fork/libnut-win32": "2.7.5",

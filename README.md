@@ -83,10 +83,21 @@ Feche e reabra o terminal depois disso.
 npm run publicar
 ```
 
-Isso empacota e cria a Release no GitHub com o instalador e o `latest.yml`.
+O comando cria a tag da versão, envia para o GitHub, limpa o `dist/`, empacota e
+publica a Release com o instalador e o `latest.yml`.
 
-A Release sai publicada, não como rascunho — o app não enxerga rascunho, então
-uma Release em rascunho nunca chegaria em ninguém.
+Três detalhes que ele resolve, cada um por causa de um erro que já aconteceu:
+
+- **A tag precisa existir.** O GitHub recusa criar uma Release publicada sem uma
+  tag no repositório (`Published releases must have a valid tag`). Sem ela, o
+  empacotamento inteiro roda e só falha no fim.
+- **O `dist/` precisa estar limpo.** Ele guarda o `latest.yml` do empacotamento
+  anterior. Se a publicação falhar no meio, sobra o arquivo velho apontando para
+  a versão passada — e o app lê "já está atualizado" para sempre.
+- **Nada pode estar pendente de commit.** A tag aponta para o commit atual; com
+  mudanças soltas, a tag e o instalador não batem com o repositório.
+
+A Release sai publicada, não como rascunho — o app não enxerga rascunho.
 
 Pronto. O Blink instalado de cada pessoa vai encontrar a versão nova na próxima
 vez que abrir, ou em até 6 horas se já estiver aberto.
