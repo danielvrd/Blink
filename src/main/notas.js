@@ -278,6 +278,15 @@ async function excluir(arquivo) {
   if (mesmoArquivo(config.obter('notaPrincipal'), path.basename(completo))) {
     config.definirNotaPrincipal('');
   }
+
+  // O mesmo para o relogio: nao faz sentido a lista continuar citando um
+  // arquivo que foi para a Lixeira.
+  const nomeExcluido = path.basename(completo);
+  const marcadosHistorico = config.obter('notasHistorico') || [];
+  if (marcadosHistorico.some((h) => mesmoArquivo(h, nomeExcluido))) {
+    config.definirHistoricoArquivos(marcadosHistorico.filter((h) => !mesmoArquivo(h, nomeExcluido)));
+  }
+
   return true;
 }
 
@@ -421,6 +430,279 @@ async function limpar(arquivo) {
   return salvarTopicos(arquivo, []);
 }
 
+// --- Historico diario (o relogio) ----------------------------------------------
+
+/**
+ * Um arquivo com o historico ligado guarda um registro por dia:
+ *
+ *     Meu diario
+ *
+ *     ## 2026-09-15
+ *
+ *       - entrada antiga
+ *       - outra, com
+ *         quebra de linha
+ *
+ *     ## 2026-09-29
+ *
+ *       - topico de hoje
+ *
+ * A diferenca para uma nota comum e que o topico do dia vem INDENTADO
+ * ("  - texto", nunca "-" na coluna 0). Isso e o que faz o modo comum
+ * (separar/montar, sem nenhuma mudanca) nunca enxergar esses topicos: a
+ * LINHA_TOPICO exige o traco na coluna 0, entao uma secao de dia inteira cai
+ * dentro do cabecalho ou do rodape do modo comum, preservada ao pe da letra.
+ * E assim que desligar o relogio nao apaga nada.
+ *
+ * Um topico solto (coluna 0), em qualquer parte do arquivo, e sempre tratado
+ * como "ainda sem dia" - nunca uma posicao no arquivo decide isso, so a
+ * indentacao. Isso importa porque o modo comum sempre acrescenta um topico
+ * novo DEPOIS do que ja existia (o rodape entra depois dos topicos, veja
+ * montar()); um criterio por posicao leria esse topico novo como pertencente
+ * ao ultimo dia visto, e ganharia uma data que nao devia.
+ */
+const CABECALHO_DIA = /^## (\d{4}-\d{2}-\d{2})\s*$/;
+const LINHA_TOPICO_DIA = /^\s{2,}-\s+(.*)$/;
+const LINHA_CONTINUACAO_DIA = /^\s{2,}(.*)$/;
+
+/**
+ * Separa o conteudo de um arquivo de historico em quatro partes.
+ *
+ *   cabecalho  linhas antes do primeiro topico ou cabecalho de dia
+ *   correntes  topicos soltos (coluna 0) - "ainda sem dia", viram hoje
+ *   dias       [{ data, topicos }], na ordem do arquivo
+ *   rodape     linhas que nao sao nada disso, preservadas
+ */
+function separarHistorico(conteudo) {
+  const linhas = conteudo.replace(/^﻿/, '').split(/\r?\n/);
+
+  const cabecalho = [];
+  const correntes = [];
+  const dias = [];
+  const rodape = [];
+  let diaAtual = null;
+  let achouAlgo = false;
+  let ultimoTopico = null;
+
+  for (const linha of linhas) {
+    const cabecalhoDia = linha.match(CABECALHO_DIA);
+    if (cabecalhoDia) {
+      achouAlgo = true;
+      diaAtual = { data: cabecalhoDia[1], topicos: [] };
+      dias.push(diaAtual);
+      ultimoTopico = null; // um cabecalho novo encerra a continuacao pendente
+      continue;
+    }
+
+    const solto = linha.match(LINHA_TOPICO);
+    if (solto) {
+      achouAlgo = true;
+      correntes.push(solto[1]);
+      ultimoTopico = correntes;
+      continue;
+    }
+
+    const doDia = linha.match(LINHA_TOPICO_DIA);
+    if (doDia && diaAtual) {
+      achouAlgo = true;
+      diaAtual.topicos.push(doDia[1]);
+      ultimoTopico = diaAtual.topicos;
+      continue;
+    }
+
+    if (!achouAlgo) {
+      cabecalho.push(linha);
+      continue;
+    }
+
+    const continuacao = linha.match(LINHA_CONTINUACAO_DIA);
+    if (continuacao && ultimoTopico && ultimoTopico.length > 0) {
+      ultimoTopico[ultimoTopico.length - 1] += '\n' + continuacao[1];
+      continue;
+    }
+
+    if (linha.trim() !== '') rodape.push(linha);
+  }
+
+  while (cabecalho.length > 0 && cabecalho[cabecalho.length - 1].trim() === '') {
+    cabecalho.pop();
+  }
+
+  return { cabecalho, correntes, dias, rodape };
+}
+
+/** Um topico de dia vira "  - texto", com as quebras de linha indentadas por baixo. */
+function escreverTopicoDia(texto) {
+  return '  - ' + texto.split('\n').join('\n    ');
+}
+
+/**
+ * Junta cabecalho, dias e rodape de volta em um arquivo.
+ *
+ * Nunca recebe "correntes": quem chama ja dobrou os soltos em "hoje" antes
+ * (veja dobrarHoje) - um arquivo de historico gravado nunca fica com topico
+ * solto, sempre com data.
+ */
+function montarHistorico({ cabecalho, dias, rodape }) {
+  const partes = [];
+  if (cabecalho.length > 0) partes.push(cabecalho.join('\n'), '');
+
+  for (const dia of dias) {
+    // Dia esvaziado (ultimo topico apagado) nao deixa um cabecalho fantasma.
+    if (dia.topicos.length === 0) continue;
+    partes.push(`## ${dia.data}`, '', dia.topicos.map(escreverTopicoDia).join('\n'), '');
+  }
+
+  if (rodape.length > 0) partes.push(rodape.join('\n'));
+
+  const texto = partes.join('\n').replace(/\n{3,}/g, '\n\n');
+  return texto.endsWith('\n') ? texto : texto + '\n';
+}
+
+/** A data de hoje no formato usado nos cabecalhos, "AAAA-MM-DD". */
+function dataDeHoje() {
+  const agora = new Date();
+  const mes = String(agora.getMonth() + 1).padStart(2, '0');
+  const dia = String(agora.getDate()).padStart(2, '0');
+  return `${agora.getFullYear()}-${mes}-${dia}`;
+}
+
+/**
+ * Dobra os topicos soltos ("correntes") dentro do dia de hoje, sem tocar
+ * disco. Nao importa de onde os soltos vieram - a primeira vez que o
+ * relogio liga, ou uma semana inteira escrita com o relogio desligado -
+ * eles nunca ganham uma data retroativa, sempre caem em hoje.
+ */
+function dobrarHoje({ correntes, dias }) {
+  const copia = dias.map((d) => ({ data: d.data, topicos: [...d.topicos] }));
+
+  if (correntes.length > 0) {
+    const hoje = dataDeHoje();
+    let diaHoje = copia.find((d) => d.data === hoje);
+    if (!diaHoje) {
+      diaHoje = { data: hoje, topicos: [] };
+      copia.push(diaHoje);
+    }
+    diaHoje.topicos.push(...correntes);
+  }
+
+  return copia.sort((a, b) => a.data.localeCompare(b.data));
+}
+
+/** Os arquivos com o relogio ligado que ainda existem na pasta. */
+async function arquivosComHistorico() {
+  const marcados = config.obter('notasHistorico') || [];
+  const arquivos = await listar();
+  return marcados.map((m) => arquivos.find((a) => mesmoArquivo(a, m))).filter(Boolean);
+}
+
+/** Le o historico de um arquivo, ja com os soltos dobrados em hoje. */
+async function lerHistorico(arquivo) {
+  const completo = caminhoDe(arquivo);
+  if (!completo) return { dias: [] };
+
+  try {
+    const conteudo = await fs.readFile(completo, 'utf8');
+    return { dias: dobrarHoje(separarHistorico(conteudo)) };
+  } catch (erro) {
+    if (erro.code === 'ENOENT') return { dias: [] };
+    throw erro;
+  }
+}
+
+/**
+ * Regrava os topicos de UM dia, preservando os outros dias, o cabecalho e o
+ * rodape. Dia sem nenhum topico some do arquivo (montarHistorico cuida
+ * disso).
+ */
+async function salvarDiaHistorico(arquivo, data, topicos) {
+  const completo = caminhoDe(arquivo);
+  if (!completo) return false;
+
+  let partes = { cabecalho: [], correntes: [], dias: [], rodape: [] };
+  try {
+    partes = separarHistorico(await fs.readFile(completo, 'utf8'));
+  } catch (erro) {
+    if (erro.code !== 'ENOENT') throw erro;
+  }
+
+  const dias = dobrarHoje(partes).filter((d) => d.data !== data);
+  if (topicos.length > 0) dias.push({ data, topicos });
+  dias.sort((a, b) => a.data.localeCompare(b.data));
+
+  await fs.writeFile(
+    completo,
+    montarHistorico({ cabecalho: partes.cabecalho, dias, rodape: partes.rodape }),
+    'utf8'
+  );
+  return true;
+}
+
+/** Acrescenta um topico no dia indicado, criando o arquivo/dia se preciso. */
+async function adicionarHistorico(arquivo, data, texto) {
+  const nome = nomeDeArquivo(arquivo);
+  if (!nome) return false;
+
+  const { dias } = await lerHistorico(nome);
+  const dia = dias.find((d) => d.data === data);
+  return salvarDiaHistorico(nome, data, dia ? [...dia.topicos, texto] : [texto]);
+}
+
+/**
+ * Migra o arquivo para o formato de historico: le, dobra os soltos em hoje
+ * e regrava. Chamada uma vez, ao ligar o relogio, para o passado ja
+ * aparecer na hora - sem isso o usuario so veria "hoje" ate escrever algo.
+ */
+async function migrarParaHistorico(arquivo) {
+  const completo = caminhoDe(arquivo);
+  if (!completo) return false;
+
+  let partes = { cabecalho: [], correntes: [], dias: [], rodape: [] };
+  try {
+    partes = separarHistorico(await fs.readFile(completo, 'utf8'));
+  } catch (erro) {
+    if (erro.code !== 'ENOENT') throw erro;
+  }
+
+  const dias = dobrarHoje(partes);
+  await fs.writeFile(
+    completo,
+    montarHistorico({ cabecalho: partes.cabecalho, dias, rodape: partes.rodape }),
+    'utf8'
+  );
+  return true;
+}
+
+/**
+ * Liga ou desliga o relogio de um arquivo. O task.md e sempre recusado: ja
+ * tem o proprio formato de secoes (A fazer/Concluidas), misturar os dois
+ * nao faz sentido.
+ *
+ * Desligar so tira o nome da lista guardada no config - o arquivo em disco
+ * nao muda. Ligar de novo (mesmo depois de um tempo desligado) volta a
+ * mostrar tudo, com um buraco nas datas do periodo desligado: o que foi
+ * escrito nesse meio tempo (modo comum) esta em "correntes" e cai em hoje
+ * na proxima leitura/migracao, nunca em uma data antiga.
+ */
+async function definirHistorico(arquivo, ligado) {
+  const nome = nomeDeArquivo(arquivo);
+  if (!nome) return false;
+  if (mesmoArquivo(nome, ARQUIVO_TAREFAS)) return false;
+
+  const existente = (await listar()).find((a) => mesmoArquivo(a, nome));
+  if (!existente) return false;
+
+  const atuais = config.obter('notasHistorico') || [];
+  const jaLigado = atuais.some((a) => mesmoArquivo(a, existente));
+  const novaLista = ligado
+    ? [...atuais.filter((a) => !mesmoArquivo(a, existente)), existente]
+    : atuais.filter((a) => !mesmoArquivo(a, existente));
+
+  if (!config.definirHistoricoArquivos(novaLista)) return false;
+  if (ligado && !jaLigado) await migrarParaHistorico(existente);
+  return true;
+}
+
 module.exports = {
   pasta,
   listar,
@@ -437,9 +719,17 @@ module.exports = {
   lerTarefas,
   salvarTarefas,
   adicionarTarefa,
+  arquivosComHistorico,
+  definirHistorico,
+  lerHistorico,
+  salvarDiaHistorico,
+  adicionarHistorico,
+  dataDeHoje,
   // exportados para teste
   separar,
   montar,
   separarTarefas,
   montarTarefas,
+  separarHistorico,
+  montarHistorico,
 };

@@ -58,6 +58,15 @@ contextBridge.exposeInMainWorld('blink', {
     lerTarefas: () => ipcRenderer.invoke('notas:lerTarefas'),
     adicionarTarefa: (texto) => ipcRenderer.invoke('notas:adicionarTarefa', texto),
     salvarTarefas: (tarefas) => ipcRenderer.invoke('notas:salvarTarefas', tarefas),
+
+    /** Liga ou desliga o relogio (historico diario) de um arquivo. */
+    definirHistorico: (nome, ligado) => ipcRenderer.invoke('notas:definirHistorico', nome, ligado),
+    /** Dias com topico de um arquivo de historico: { dias: [{data, topicos}] }. */
+    lerHistorico: (arquivo) => ipcRenderer.invoke('notas:lerHistorico', arquivo),
+    /** Regrava os topicos de UM dia (AAAA-MM-DD), preservando os outros. */
+    salvarDiaHistorico: (arquivo, data, topicos) => ipcRenderer.invoke('notas:salvarDiaHistorico', arquivo, data, topicos),
+    /** Acrescenta um topico no dia indicado. */
+    adicionarHistorico: (arquivo, data, texto) => ipcRenderer.invoke('notas:adicionarHistorico', arquivo, data, texto),
   },
 
   areaTransferencia: {

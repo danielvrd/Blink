@@ -79,6 +79,8 @@ function registrar() {
     arquivoTarefas: notas.ARQUIVO_TAREFAS,
     // O arquivo da estrela, que a janela abre primeiro.
     principal: await notas.principal(),
+    // Os arquivos com o relogio (historico diario) ligado.
+    historico: await notas.arquivosComHistorico(),
   }));
 
   // Marca ou tira a estrela. '' = nenhum principal.
@@ -134,6 +136,35 @@ function registrar() {
   ipcMain.handle('notas:excluir', async (_evento, arquivo) => {
     if (typeof arquivo !== 'string') return false;
     return notas.excluir(arquivo);
+  });
+
+  // --- Historico diario (o relogio) -----------------------------------------
+
+  const DATA_AAAAMMDD = /^\d{4}-\d{2}-\d{2}$/;
+
+  // Liga ou desliga o relogio de um arquivo. task.md e sempre recusado.
+  ipcMain.handle('notas:definirHistorico', async (_evento, nome, ligado) => {
+    if (typeof nome !== 'string' || typeof ligado !== 'boolean') return false;
+    return notas.definirHistorico(nome, ligado);
+  });
+
+  ipcMain.handle('notas:lerHistorico', async (_evento, arquivo) => {
+    if (typeof arquivo !== 'string') return { dias: [] };
+    return notas.lerHistorico(arquivo);
+  });
+
+  // Regrava os topicos de UM dia. Usado por apagar, reordenar e "limpar tudo".
+  ipcMain.handle('notas:salvarDiaHistorico', async (_evento, arquivo, data, topicos) => {
+    if (typeof arquivo !== 'string' || !DATA_AAAAMMDD.test(data) || !Array.isArray(topicos)) return false;
+    if (!topicos.every((t) => typeof t === 'string')) return false;
+    return notas.salvarDiaHistorico(arquivo, data, topicos);
+  });
+
+  ipcMain.handle('notas:adicionarHistorico', async (_evento, arquivo, data, texto) => {
+    if (typeof arquivo !== 'string' || !DATA_AAAAMMDD.test(data) || typeof texto !== 'string') return false;
+    const limpo = texto.trim();
+    if (limpo === '') return false;
+    return notas.adicionarHistorico(arquivo, data, limpo);
   });
 
   // --- Area de transferencia -----------------------------------------------

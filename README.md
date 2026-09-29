@@ -115,6 +115,22 @@ Com o `task.md` aberto, basta escrever e dar `Enter`, sem o `/task`. Só `/task`
 tarefas. O `task.md` aparece sempre primeiro no seletor e usa o formato de checklist do Markdown,
 então dá para abri-lo no VS Code ou no GitHub e ver as caixinhas.
 
+#### Histórico diário
+
+Abra o seletor de arquivos: ao lado da estrela, cada arquivo também tem um relógio. Clique nele
+para ligar o **histórico diário** — o arquivo passa a guardar um registro por dia, e um campo de
+calendário aparece ao lado do seletor para escolher qual dia ver. Pode haver vários arquivos com o
+relógio ligado ao mesmo tempo, cada um funcionando como um diário próprio.
+
+Escolher um dia no calendário mostra os tópicos daquele dia — editar, apagar e adicionar funcionam
+normalmente em qualquer dia, não só em hoje. Dias com anotação aparecem com uma bolinha na grade;
+dias futuros não são clicáveis. **"Limpar tudo"**, nesse modo, limpa só o dia escolhido — para
+apagar o arquivo inteiro, use a lixeira.
+
+Desligar o relógio não apaga nada: o arquivo volta a se comportar como uma nota comum, e ligar de
+novo (mesmo depois de um tempo) traz o histórico de volta, com um buraco nas datas do período em
+que ficou desligado. O `task.md` não tem relógio — já tem o próprio formato de tarefas.
+
 #### Mandar para outra nota com `/`
 
 De qualquer arquivo, digite `/` no campo de escrita: abre uma lista com todas as suas notas.

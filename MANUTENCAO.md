@@ -175,6 +175,43 @@ caminho do SQL fica intacto. A biblioteca `xml-formatter` roda em **modo estrito
 quebrado ou cortado no meio — o comum em log — era "consertado" em silêncio, com a estrutura
 inventada. Ao desescapar, o `&amp;` é trocado por último: `&amp;lt;` no original é o texto `&lt;`.
 
+### Histórico diário (o relógio)
+
+Igual ao `task.md`, é um recurso especial com parser e canais IPC próprios (`separarHistorico`/
+`montarHistorico` em `src/main/notas.js`), que não mexem em `separar()`/`montar()` genéricos.
+
+O arquivo guarda um registro por dia:
+
+```
+Cabeçalho livre
+
+## 2026-09-15
+
+  - entrada antiga
+
+## 2026-09-29
+
+  - tópico de hoje
+```
+
+O detalhe que sustenta tudo: o tópico de um dia vem **indentado** (`  - texto`), nunca `-` na
+coluna 0. A `LINHA_TOPICO` do modo comum exige o traço na coluna 0, então uma seção de dia inteira
+cai dentro do cabeçalho ou do rodapé do modo comum — preservada ao pé da letra. É por isso que
+**desligar o relógio não apaga nada**: o arquivo nem muda, só a lista `notasHistorico` no
+`config.json` deixa de citar o nome.
+
+Um tópico solto (coluna 0), em qualquer parte do arquivo, é sempre "ainda sem dia" — nunca uma
+posição no arquivo decide isso, só a indentação. Isso importa porque o modo comum sempre grava um
+tópico novo **depois** do que já existia (o rodapé entra depois dos tópicos, em `montar()`); um
+critério por posição leria esse tópico novo como pertencente ao último dia visto, e uma edição
+feita com o relógio desligado ganharia uma data que não devia. Ao religar (`definirHistorico`),
+qualquer tópico solto — de uma primeira ativação ou de um período inteiro desligado — vira **hoje**
+(`dobrarHoje`), nunca uma data antiga. É o que cria o "buraco" nas datas do período desligado.
+
+O calendário (`src/renderer/note/calendario.js`) é um componente próprio, no mesmo espírito do
+`seletor.js`: o `<input type="date">` do Chromium tem um popup nativo que não é estilizável no
+tema escuro do app.
+
 ### Testes que mexem no teclado
 
 **Nunca rode um teste que chame `selecao.capturar()` com o teclado de verdade.** Ele manda

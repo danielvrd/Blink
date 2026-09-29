@@ -19,6 +19,9 @@ const PADROES = {
   pastaNotas: '',
   // O arquivo da estrela no Fast Note, que o Ctrl+Alt+N abre. Vazio = nenhum.
   notaPrincipal: '',
+  // Arquivos do Fast Note com o historico diario (o relogio) ligado. Pode
+  // ter varios ao mesmo tempo - diferente da estrela, que e so um.
+  notasHistorico: [],
   sql: {
     dialeto: 'transactsql',
     palavrasChave: 'upper',
@@ -62,6 +65,7 @@ const ESQUEMA = {
   },
   pastaNotas: { type: 'string' },
   notaPrincipal: { type: 'string' },
+  notasHistorico: { type: 'array', items: { type: 'string' } },
   sql: {
     type: 'object',
     properties: {
@@ -197,6 +201,19 @@ module.exports = {
   definirNotaPrincipal(nome) {
     if (typeof nome !== 'string') return false;
     store.set('notaPrincipal', nome);
+    return true;
+  },
+
+  /**
+   * Grava a lista de arquivos do Fast Note com o historico diario ligado.
+   *
+   * Fora dos CAMINHOS_GRAVAVEIS pelo mesmo motivo do notaPrincipal: quem
+   * chama e o processo principal, depois de validar cada nome contra a
+   * pasta de notas.
+   */
+  definirHistoricoArquivos(lista) {
+    if (!Array.isArray(lista) || !lista.every((v) => typeof v === 'string')) return false;
+    store.set('notasHistorico', lista);
     return true;
   },
 

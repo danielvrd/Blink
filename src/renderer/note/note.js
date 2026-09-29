@@ -16,8 +16,13 @@
  *   'topicos'     notas comuns
  *   'pendentes'   tarefas a fazer
  *   'concluidas'  tarefas feitas
+ *   'historico'   topicos do dia escolhido, num arquivo com o relogio ligado
  *
- * Apagar, editar e arrastar funcionam igual nos tres; so a gravacao muda.
+ * Apagar, editar e arrastar funcionam igual em todos; so a gravacao muda.
+ *
+ * Um arquivo com o relogio ligado (historico diario) guarda um registro por
+ * dia; o campo do calendario (calendario.js), ao lado do seletor, escolhe
+ * qual dia esta na tela. Ver o formato em disco em src/main/notas.js.
  */
 
 (function () {
@@ -31,14 +36,27 @@
 
   const campoNome = document.getElementById('campo-nome');
 
-  /** O seletor de arquivos com as estrelas (seletor.js). */
+  /** O seletor de arquivos com as estrelas e os relogios (seletor.js). */
   const seletor = window.Blink.seletor.criar(document.getElementById('seletor-arquivo'), {
     valorNovo: NOVO,
     rotuloNovo: '+ Criar nova nota',
     aoEscolher: (valor) => escolherArquivo(valor),
     aoMarcar: (valor) => alternarPrincipal(valor),
-    // A lista e as confirmacoes nunca ficam abertas juntas.
-    aoAbrir: () => fecharPopovers(),
+    aoAlternarHistorico: (valor) => alternarHistorico(valor),
+    // A lista, o calendario e as confirmacoes nunca ficam abertos juntos.
+    aoAbrir: () => { fecharPopovers(); calendario.fechar(); },
+  });
+  const calendarioEl = document.getElementById('calendario-historico');
+  /** O calendario do historico diario (calendario.js). So aparece com o
+   * relogio ligado no arquivo aberto. */
+  const calendario = window.Blink.calendario.criar(calendarioEl, {
+    aoEscolher: (data) => {
+      dataSelecionada = data;
+      recemCriado = null;
+      desenhar();
+      rascunho.focus();
+    },
+    aoAbrir: () => { seletor.fechar(); fecharPopovers(); },
   });
   const lista = document.getElementById('lista');
   const rascunho = document.getElementById('rascunho');
@@ -47,6 +65,7 @@
   const botaoExcluir = document.getElementById('btn-excluir');
   const popoverLimpar = document.getElementById('popover-limpar');
   const popoverExcluir = document.getElementById('popover-excluir');
+  const perguntaLimpar = document.getElementById('pergunta-limpar');
   const perguntaExcluir = document.getElementById('pergunta-excluir');
 
   /**
@@ -75,6 +94,9 @@
   /** O arquivo da estrela, que o Ctrl+Alt+N abre. '' = nenhum. */
   let principal = '';
 
+  /** Arquivos com o relogio (historico diario) ligado. */
+  let historico = [];
+
   /** Arquivo escolhido agora, ou NOVO. */
   let arquivo = NOVO;
 
@@ -83,6 +105,12 @@
 
   /** Tarefas do task.md, tambem na ordem da tela. */
   let tarefas = { pendentes: [], concluidas: [] };
+
+  /** Dias do arquivo de historico aberto: [{ data, topicos }], topicos na ordem da tela. */
+  let diasHistorico = [];
+
+  /** O dia mostrado agora, "AAAA-MM-DD", quando ehHistorico(). */
+  let dataSelecionada = '';
 
   /** O item recem-criado, para ele piscar: { grupo, indice } ou null. */
   let recemCriado = null;
@@ -101,13 +129,50 @@
     return arquivo !== NOVO && arquivo.toLowerCase() === arquivoTarefas;
   }
 
+  /** O arquivo aberto tem o relogio (historico diario) ligado? */
+  function ehHistorico() {
+    return arquivo !== NOVO && historico.some((h) => h.toLowerCase() === arquivo.toLowerCase());
+  }
+
+  /** A data de hoje, "AAAA-MM-DD" - mesmo formato usado no arquivo. */
+  function dataDeHoje() {
+    const agora = new Date();
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const dia = String(agora.getDate()).padStart(2, '0');
+    return `${agora.getFullYear()}-${mes}-${dia}`;
+  }
+
+  /** "AAAA-MM-DD" -> "DD/MM/AAAA", so para mostrar numa pergunta. */
+  function formatarDataBR(data) {
+    const [ano, mes, dia] = data.split('-');
+    return `${dia}/${mes}/${ano}`;
+  }
+
+  /**
+   * Os topicos do dia selecionado, na ordem da tela. Cria o "balde" do dia
+   * na hora se ele ainda nao existe - assim apagar/editar/arrastar sempre
+   * mexem na referencia certa dentro de diasHistorico.
+   */
+  function historicoAtual() {
+    let dia = diasHistorico.find((d) => d.data === dataSelecionada);
+    if (!dia) {
+      dia = { data: dataSelecionada, topicos: [] };
+      diasHistorico.push(dia);
+    }
+    return dia.topicos;
+  }
+
   /** A lista que um grupo representa. */
   function listaDo(grupo) {
-    return grupo === 'topicos' ? topicos : tarefas[grupo];
+    if (grupo === 'topicos') return topicos;
+    if (grupo === 'historico') return historicoAtual();
+    return tarefas[grupo];
   }
 
   function totalDeItens() {
-    return ehTarefas() ? tarefas.pendentes.length + tarefas.concluidas.length : topicos.length;
+    if (ehTarefas()) return tarefas.pendentes.length + tarefas.concluidas.length;
+    if (ehHistorico()) return historicoAtual().length;
+    return topicos.length;
   }
 
   /**
@@ -127,11 +192,19 @@
   async function carregar() {
     topicos = [];
     tarefas = { pendentes: [], concluidas: [] };
+    diasHistorico = [];
     if (arquivo === NOVO) return;
 
     if (ehTarefas()) {
       const lido = await window.blink.notas.lerTarefas();
       tarefas = { pendentes: lido.pendentes.reverse(), concluidas: lido.concluidas.reverse() };
+      return;
+    }
+
+    if (ehHistorico()) {
+      const { dias } = await window.blink.notas.lerHistorico(arquivo);
+      diasHistorico = dias.map((d) => ({ data: d.data, topicos: [...d.topicos].reverse() }));
+      if (!dataSelecionada) dataSelecionada = dataDeHoje();
       return;
     }
 
@@ -151,6 +224,11 @@
       return;
     }
 
+    if (ehHistorico()) {
+      await window.blink.notas.salvarDiaHistorico(arquivo, dataSelecionada, [...historicoAtual()].reverse());
+      return;
+    }
+
     await window.blink.notas.salvar(arquivo, [...topicos].reverse());
   }
 
@@ -160,6 +238,7 @@
     pasta = estado.pasta;
     arquivoTarefas = estado.arquivoTarefas;
     principal = estado.principal;
+    historico = estado.historico;
     desenharSelect(estado.arquivos);
     return estado.arquivos;
   }
@@ -171,9 +250,9 @@
     atualizarSeletor();
   }
 
-  /** Mostra no seletor o arquivo aberto e a estrela, sem reler a pasta. */
+  /** Mostra no seletor o arquivo aberto, a estrela e o relogio, sem reler a pasta. */
   function atualizarSeletor() {
-    seletor.definir({ arquivos, atual: arquivo, principal });
+    seletor.definir({ arquivos, atual: arquivo, principal, historico, arquivoTarefas });
   }
 
   /**
@@ -187,6 +266,29 @@
     atualizarSeletor();
   }
 
+  /**
+   * Clicou no relogio: liga ou desliga o historico diario do arquivo. Pode
+   * haver varios arquivos com o relogio ligado ao mesmo tempo - diferente
+   * da estrela, aqui nao ha "so um por vez".
+   */
+  async function alternarHistorico(nome) {
+    const ligado = historico.some((h) => h.toLowerCase() === nome.toLowerCase());
+    const gravou = await window.blink.notas.definirHistorico(nome, !ligado);
+    if (!gravou) return;
+
+    historico = ligado
+      ? historico.filter((h) => h.toLowerCase() !== nome.toLowerCase())
+      : [...historico, nome];
+    atualizarSeletor();
+
+    // Se era o arquivo aberto, a tela precisa recarregar no novo modo.
+    if (arquivo.toLowerCase() === nome.toLowerCase()) {
+      dataSelecionada = dataDeHoje();
+      await carregar();
+      desenhar();
+    }
+  }
+
   function vazio(texto) {
     lista.appendChild(el('div', { class: 'vazio', texto }));
   }
@@ -198,7 +300,7 @@
    * Tarefa: alca, bolinha (marca e desmarca), texto, apagar.
    */
   function montarItem(grupo, indice, texto) {
-    const ehTarefa = grupo !== 'topicos';
+    const ehTarefa = grupo === 'pendentes' || grupo === 'concluidas';
     const feita = grupo === 'concluidas';
     const piscando = recemCriado && recemCriado.grupo === grupo && recemCriado.indice === indice;
 
@@ -269,12 +371,15 @@
       return;
     }
 
-    if (arquivo === NOVO || topicos.length === 0) {
-      vazio('Nenhum tópico ainda — escreva abaixo.');
+    const grupo = ehHistorico() ? 'historico' : 'topicos';
+    const itens = listaDo(grupo);
+
+    if (arquivo === NOVO || itens.length === 0) {
+      vazio(ehHistorico() ? 'Nenhum tópico neste dia — escreva abaixo.' : 'Nenhum tópico ainda — escreva abaixo.');
       return;
     }
 
-    topicos.forEach((texto, indice) => lista.appendChild(montarItem('topicos', indice, texto)));
+    itens.forEach((texto, indice) => lista.appendChild(montarItem(grupo, indice, texto)));
   }
 
   function desenharDica() {
@@ -294,6 +399,14 @@
     botaoExcluir.disabled = arquivo === NOVO;
     if (botaoLimpar.disabled) popoverLimpar.hidden = true;
     if (botaoExcluir.disabled) popoverExcluir.hidden = true;
+
+    calendarioEl.hidden = !ehHistorico();
+    if (ehHistorico()) {
+      calendario.definir({
+        atual: dataSelecionada,
+        datas: diasHistorico.filter((d) => d.topicos.length > 0).map((d) => d.data),
+      });
+    }
 
     desenharLista();
     desenharDica();
@@ -318,17 +431,22 @@
   async function escolherArquivo(valor) {
     arquivo = valor;
     fecharPopovers();
+    calendario.fechar();
     recemCriado = null;
     atualizarSeletor();
 
     if (arquivo === NOVO) {
       topicos = [];
       tarefas = { pendentes: [], concluidas: [] };
+      diasHistorico = [];
       campoNome.value = '';
       desenhar();
       campoNome.focus();
       return;
     }
+
+    // Trocar de arquivo sempre volta o calendario para hoje.
+    if (ehHistorico()) dataSelecionada = dataDeHoje();
 
     await carregar();
     desenhar();
@@ -417,8 +535,9 @@
   }
 
   /**
-   * Grava um topico numa nota comum e mostra ela, com o topico novo
-   * piscando. Texto vazio so troca para a nota.
+   * Grava um topico numa nota comum (ou no dia certo, se o destino tiver o
+   * relogio ligado) e mostra ela, com o topico novo piscando. Texto vazio
+   * so troca para a nota.
    */
   async function gravarTopico(destino, texto) {
     if (texto === '') {
@@ -426,15 +545,26 @@
       return true;
     }
 
-    const gravado = await window.blink.notas.adicionar(destino, texto);
+    const destinoHistorico = historico.some((h) => h.toLowerCase() === destino.toLowerCase());
+    // Escrevendo no proprio arquivo de historico aberto, respeita o dia que
+    // esta selecionado no calendario; vindo de outro lugar (um "/nome" para
+    // um arquivo que nao e o aberto), nao ha "dia selecionado" para ele - e
+    // sempre hoje.
+    const mesmoArquivoAberto = arquivo.toLowerCase() === destino.toLowerCase();
+    const data = destinoHistorico && mesmoArquivoAberto ? dataSelecionada : dataDeHoje();
+
+    const gravado = destinoHistorico
+      ? (await window.blink.notas.adicionarHistorico(destino, data, texto)) && destino
+      : await window.blink.notas.adicionar(destino, texto);
     if (!gravado) return false;
 
     arquivo = gravado;
     await recarregarSeletor();
+    if (destinoHistorico) dataSelecionada = data;
     await carregar();
 
     // O mais novo e sempre o primeiro da tela.
-    recemCriado = { grupo: 'topicos', indice: 0 };
+    recemCriado = { grupo: destinoHistorico ? 'historico' : 'topicos', indice: 0 };
     desenhar();
     rascunho.focus();
     agendarFimDoPiscar();
@@ -519,6 +649,17 @@
       return;
     }
 
+    // No historico, a vassoura limpa so o dia selecionado - o arquivo
+    // inteiro (todos os dias) so sai pela lixeira, que ja pede confirmacao
+    // por perder muito mais.
+    if (ehHistorico()) {
+      const dia = diasHistorico.find((d) => d.data === dataSelecionada);
+      if (dia) dia.topicos = [];
+      desenhar();
+      await window.blink.notas.salvarDiaHistorico(arquivo, dataSelecionada, []);
+      return;
+    }
+
     topicos = [];
     desenhar();
     await window.blink.notas.limpar(arquivo);
@@ -535,8 +676,10 @@
     await window.blink.notas.excluir(arquivo);
 
     const estado = await window.blink.notas.estado();
-    // Se o excluido era o principal, o processo principal ja tirou a estrela.
+    // Se o excluido era o principal (ou tinha o relogio ligado), o processo
+    // principal ja tirou a marca.
     principal = estado.principal;
+    historico = estado.historico;
     arquivo = primeiroArquivo(estado.arquivos);
     desenharSelect(estado.arquivos);
     await escolherArquivo(arquivo);
@@ -625,6 +768,7 @@
     const abrir = qual.hidden;
     fecharPopovers();
     seletor.fechar();
+    calendario.fechar();
     qual.hidden = !abrir;
   }
 
@@ -714,6 +858,10 @@
 
   botaoLimpar.addEventListener('click', () => {
     if (botaoLimpar.disabled) return;
+    // No historico a pergunta cita o dia: "limpar tudo" ali limpa so ele.
+    perguntaLimpar.textContent = ehHistorico()
+      ? `Limpar as notas do dia ${formatarDataBR(dataSelecionada)}?`
+      : 'Limpar todas as notas deste arquivo?';
     alternarPopover(popoverLimpar);
   });
 
@@ -741,6 +889,12 @@
       return;
     }
 
+    // Esc com o calendario aberto so fecha ele.
+    if (calendario.estaAberto()) {
+      calendario.fechar();
+      return;
+    }
+
     // Esc com uma confirmacao aberta so fecha ela.
     if (!popoverLimpar.hidden || !popoverExcluir.hidden) {
       fecharPopovers();
@@ -756,9 +910,11 @@
     pasta = estado.pasta;
     arquivoTarefas = estado.arquivoTarefas;
     principal = estado.principal;
+    historico = estado.historico;
 
     // Abre no arquivo da estrela. Sem estrela, o de sempre.
     arquivo = principal || primeiroArquivo(estado.arquivos);
+    if (ehHistorico()) dataSelecionada = dataDeHoje();
     desenharSelect(estado.arquivos);
     await carregar();
 

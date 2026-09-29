@@ -31,8 +31,12 @@
 
       <!-- Escolha do arquivo, e os botoes de limpar tudo e excluir -->
       <div class="linha-arquivo">
-        <!-- Seletor de arquivos com a estrela do principal (seletor.js) -->
+        <!-- Seletor de arquivos com a estrela do principal e o relogio do
+             historico diario (seletor.js) -->
         <div class="seletor" id="seletor-arquivo"></div>
+
+        <!-- So aparece com o relogio ligado no arquivo aberto (calendario.js) -->
+        <div class="calendario" id="calendario-historico" hidden></div>
 
         <div class="acoes-arquivo">
           <button class="botao-acao" id="btn-limpar" title="Limpar tudo" aria-label="Limpar todas as notas">
@@ -61,7 +65,7 @@
 
         <!-- Confirmacao do limpar tudo, ancorada ao botao -->
         <div class="popover" id="popover-limpar" hidden>
-          <div class="pergunta">Limpar todas as notas deste arquivo?</div>
+          <div class="pergunta" id="pergunta-limpar">Limpar todas as notas deste arquivo?</div>
           <div class="botoes">
             <button class="botao-primario" id="btn-limpar-sim">Limpar</button>
             <button class="botao-fantasma" id="btn-limpar-nao">Não</button>
@@ -96,6 +100,7 @@
 
   <script src="../comum/ui.js"></script>
   <script src="seletor.js"></script>
+  <script src="calendario.js"></script>
   <script src="autocompletar.js"></script>
   <script src="note.js"></script>
 </body>
