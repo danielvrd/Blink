@@ -29,13 +29,20 @@ const RAIZ = path.join(__dirname, '..');
 const versao = require('../package.json').version;
 const tag = `v${versao}`;
 
-/** Roda um comando e devolve a saida. Levanta erro se o comando falhar. */
-function rodar(comando, argumentos, { silencioso = false } = {}) {
+/**
+ * Roda um comando e devolve a saida. Levanta erro se o comando falhar.
+ *
+ * `shell` so vale para o npx, que no Windows e um .cmd e nao um executavel.
+ * Nao da para ligar para todos: com shell, os argumentos sao coladas sem
+ * aspas, e um -m "Blink 0.1.1" viraria -m Blink mais um 0.1.1 solto, que o
+ * git tenta interpretar como referencia.
+ */
+function rodar(comando, argumentos, { silencioso = false, shell = false } = {}) {
   return execFileSync(comando, argumentos, {
     cwd: RAIZ,
     encoding: 'utf8',
     stdio: silencioso ? 'pipe' : 'inherit',
-    shell: process.platform === 'win32',
+    shell,
   });
 }
 
@@ -92,6 +99,6 @@ if (!process.env.GH_TOKEN) {
 }
 
 console.log('\n  empacotando e publicando...\n');
-rodar('npx', ['electron-builder', '--win', '--publish', 'always']);
+rodar('npx', ['electron-builder', '--win', '--publish', 'always'], { shell: true });
 
 console.log(`\n  Pronto: https://github.com/danielvrd/Blink/releases/tag/${tag}\n`);
