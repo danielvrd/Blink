@@ -180,9 +180,22 @@ function obterPrincipal() {
   return principal;
 }
 
-/** Mostra e traz a janela principal para a frente. */
-function mostrarPrincipal() {
+/**
+ * Mostra e traz a janela principal para a frente.
+ *
+ * Com `aba` ('diff', 'note', 'sql', 'i18n'), abre ja nela: e o olho do
+ * cabecalho de uma ferramenta. A aba vai por dois caminhos - gravada no
+ * config (vale se a tela ainda esta carregando: ela le na abertura) e
+ * mandada para a tela, que so le o config uma vez e ja pode estar aberta.
+ */
+function mostrarPrincipal(aba) {
   const janela = obterPrincipal();
+
+  if (aba) {
+    config.definir('abaAtiva', aba);
+    janela.webContents.send('principal:aba', aba);
+  }
+
   if (janela.isMinimized()) janela.restore();
   janela.show();
   janela.focus();

@@ -39,6 +39,25 @@ body {
   color: var(--texto-forte);
 }
 
+/* O olho do titulo: clicavel, abre as configuracoes do Blink. Sem o no-drag
+   o clique viraria arrasto da janela (o cabecalho todo e area de arrasto). */
+.botao-olho {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  margin: -4px 0 -4px -4px;
+  border: none;
+  border-radius: var(--raio-item);
+  background: transparent;
+  color: var(--texto-forte);
+  -webkit-app-region: no-drag;
+}
+
+.botao-olho:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .botao-x {
   width: 24px;
   height: 24px;

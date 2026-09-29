@@ -38,6 +38,9 @@ app na mão toda vez que ligar o computador.
 As atualizações chegam sozinhas: o app avisa por notificação quando há uma versão nova e se
 atualiza quando você fechar.
 
+Dentro do Fast Note e do Diff Checker, o **olho** do cabeçalho é um botão: clicar nele abre as
+configurações do Blink já na aba daquela ferramenta e fecha a janela dela.
+
 ## Como usar
 
 ### SQL Formatter — `Ctrl + Alt + F`
@@ -112,6 +115,13 @@ Abra o seletor de arquivos: cada um tem uma estrela à direita. Clique na estrel
 **principal** — ela fica amarela, e o `Ctrl + Alt + N` passa a abrir sempre nele. Só um arquivo
 pode ser o principal; marcar outro troca a estrela de lugar, e clicar na amarela desmarca. Com a
 lista fechada, a estrela aparece ao lado do nome quando o arquivo aberto é o principal.
+
+#### Último arquivo
+
+Sem estrela, o `Ctrl + Alt + N` abre no **último arquivo em que você esteve**: fechou o Fast Note
+no `daily`, ele volta no `daily`; fechou no `avaliação`, volta no `avaliação` (o `task.md` também
+vale). Com uma estrela marcada, ela sempre vence e abre no arquivo dela. Se o último arquivo foi
+apagado, abre no primeiro da lista.
 
 #### Tarefas com `/task`
 

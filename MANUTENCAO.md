@@ -212,6 +212,24 @@ O calendário (`src/renderer/note/calendario.js`) é um componente próprio, no 
 `seletor.js`: o `<input type="date">` do Chromium tem um popup nativo que não é estilizável no
 tema escuro do app.
 
+### Fast Note: qual arquivo abre, e o olho do cabeçalho
+
+**Precedência ao abrir:** estrela (`notaPrincipal`) → último arquivo (`ultimaNota`) → primeiro da
+pasta (`primeiroArquivo()` em `note.js`). O `ultimaNota` é gravado pelo renderer a cada troca
+(`lembrarArquivo()`), e não só ao fechar, de propósito: o `Ctrl + Alt + N` com a janela já aberta
+faz `nota.reload()` (`janelas.abrirNota`), que roda o `iniciar()` de novo — o recarregamento tem que
+cair no arquivo que estava na tela. Como o `arquivo` muda em vários lugares (seletor, `/task`,
+gravação em nota nova ou em outra nota), o gancho fica em cada um, não só em `escolherArquivo`.
+Como a estrela, o `ultimaNota` é revalidado contra a pasta (`notas.ultima()`) e limpo ao excluir o
+arquivo, e só o processo principal grava (fora dos `CAMINHOS_GRAVAVEIS`).
+
+**O olho** do cabeçalho do Fast Note e do Diff é um botão (`.botao-olho`, com `no-drag`: o cabeçalho
+inteiro é área de arrasto e o clique nunca chegaria ao JS). Chama `janela:abrirPrincipal`, que só
+aceita nomes de ferramenta conhecidos, mostra a principal (`mostrarPrincipal(aba)`) e **fecha** a
+janela da ferramenta — elas são `alwaysOnTop` e a principal não, então a principal apareceria
+escondida atrás. A aba vai gravada em `abaAtiva` (vale se a principal ainda carrega) e também
+mandada pelo canal `principal:aba`, porque a principal só lê o config uma vez, ao abrir.
+
 ### I18n
 
 Segue o mesmo molde do SQL Formatter (`src/main/ferramenta-i18n.js`): sem janela própria, a bind

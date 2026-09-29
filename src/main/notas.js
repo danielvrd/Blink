@@ -279,6 +279,12 @@ async function excluir(arquivo) {
     config.definirNotaPrincipal('');
   }
 
+  // O mesmo para o "ultimo arquivo": nao adianta abrir num arquivo que foi
+  // para a Lixeira.
+  if (mesmoArquivo(config.obter('ultimaNota'), path.basename(completo))) {
+    config.definirUltimaNota('');
+  }
+
   // O mesmo para o relogio: nao faz sentido a lista continuar citando um
   // arquivo que foi para a Lixeira.
   const nomeExcluido = path.basename(completo);
@@ -423,6 +429,32 @@ async function definirPrincipal(nome) {
   if (!existente) return false;
 
   return config.definirNotaPrincipal(existente);
+}
+
+/**
+ * O ultimo arquivo aberto, se ainda existir na pasta. Sem estrela, e nele
+ * que o Fast Note abre. Apagado ou renomeado por fora conta como nenhum.
+ */
+async function ultima() {
+  const nome = config.obter('ultimaNota');
+  if (!nome) return '';
+  const arquivos = await listar();
+  return arquivos.find((a) => mesmoArquivo(a, nome)) || '';
+}
+
+/**
+ * Guarda o ultimo arquivo aberto. '' esquece. Recusa nome que nao seja de um
+ * arquivo que existe na pasta.
+ */
+async function definirUltima(nome) {
+  if (nome === '') return config.definirUltimaNota('');
+
+  const valido = nomeDeArquivo(nome);
+  if (!valido) return false;
+  const existente = (await listar()).find((a) => mesmoArquivo(a, valido));
+  if (!existente) return false;
+
+  return config.definirUltimaNota(existente);
 }
 
 /** Apaga todos os topicos de um arquivo, preservando o resto. */
@@ -716,6 +748,8 @@ module.exports = {
   ARQUIVO_TAREFAS,
   principal,
   definirPrincipal,
+  ultima,
+  definirUltima,
   lerTarefas,
   salvarTarefas,
   adicionarTarefa,

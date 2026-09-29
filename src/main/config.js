@@ -21,6 +21,9 @@ const PADROES = {
   pastaNotas: '',
   // O arquivo da estrela no Fast Note, que o Ctrl+Alt+N abre. Vazio = nenhum.
   notaPrincipal: '',
+  // O ultimo arquivo aberto no Fast Note. Sem estrela, o Ctrl+Alt+N volta
+  // para ele. Vazio = nenhum ainda.
+  ultimaNota: '',
   // Arquivos do Fast Note com o historico diario (o relogio) ligado. Pode
   // ter varios ao mesmo tempo - diferente da estrela, que e so um.
   notasHistorico: [],
@@ -68,6 +71,7 @@ const ESQUEMA = {
   },
   pastaNotas: { type: 'string' },
   notaPrincipal: { type: 'string' },
+  ultimaNota: { type: 'string' },
   notasHistorico: { type: 'array', items: { type: 'string' } },
   sql: {
     type: 'object',
@@ -234,6 +238,18 @@ module.exports = {
   definirNotaPrincipal(nome) {
     if (typeof nome !== 'string') return false;
     store.set('notaPrincipal', nome);
+    return true;
+  },
+
+  /**
+   * Grava o ultimo arquivo aberto no Fast Note ('' = nenhum).
+   *
+   * Fora dos CAMINHOS_GRAVAVEIS pelo mesmo motivo do notaPrincipal: quem
+   * chama e o processo principal, depois de conferir que o arquivo existe.
+   */
+  definirUltimaNota(nome) {
+    if (typeof nome !== 'string') return false;
+    store.set('ultimaNota', nome);
     return true;
   },
 

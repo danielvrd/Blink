@@ -20,7 +20,18 @@
   <div class="modal">
 
     <header class="cabecalho">
-      <div class="titulo">Comparação de texto</div>
+      <div class="titulo">
+        <!-- O olho abre as configuracoes do Blink, na aba do Diff Checker -->
+        <button class="botao-olho" id="btn-olho" title="Abrir as configurações do Blink" aria-label="Abrir as configurações do Blink">
+          <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" stroke="currentColor" stroke-width="1.4" fill="none"></path>
+            <circle cx="12" cy="12" r="4.4" fill="#e0263b"></circle>
+            <circle cx="12" cy="12" r="2" fill="#1a0508"></circle>
+            <circle cx="13.2" cy="10.7" r="1" fill="#ffffff" opacity="0.9"></circle>
+          </svg>
+        </button>
+        <span>Comparação de texto</span>
+      </div>
       <div class="acoes">
         <button class="botao-contorno" id="btn-copiar">Copiar texto</button>
         <button class="botao-x" id="btn-fechar" title="Fechar" aria-label="Fechar">×</button>

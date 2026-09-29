@@ -445,12 +445,27 @@
       return;
     }
 
+    lembrarArquivo();
+
     // Trocar de arquivo sempre volta o calendario para hoje.
     if (ehHistorico()) dataSelecionada = dataDeHoje();
 
     await carregar();
     desenhar();
     rascunho.focus();
+  }
+
+  /**
+   * Guarda o arquivo aberto como o "ultimo": sem estrela, e nele que o
+   * Fast Note abre da proxima vez. Guarda a cada troca, e nao so ao fechar -
+   * o Ctrl+Alt+N com a janela aberta recarrega a tela (janelas.abrirNota),
+   * e o recarregamento tem que cair no arquivo que estava na tela.
+   *
+   * "Criar nova nota" ainda nao e um arquivo, entao nao entra.
+   */
+  function lembrarArquivo() {
+    if (arquivo === NOVO) return;
+    window.blink.notas.definirUltima(arquivo);
   }
 
   /**
@@ -468,6 +483,7 @@
     }
 
     arquivo = arquivoTarefas;
+    lembrarArquivo();
     await recarregarSeletor();
     await carregar();
 
@@ -559,6 +575,7 @@
     if (!gravado) return false;
 
     arquivo = gravado;
+    lembrarArquivo();
     await recarregarSeletor();
     if (destinoHistorico) dataSelecionada = data;
     await carregar();
@@ -880,6 +897,9 @@
 
   document.getElementById('btn-fechar').addEventListener('click', () => window.blink.janela.fechar());
 
+  // O olho: abre as configuracoes na aba do Fast Note e fecha esta janela.
+  document.getElementById('btn-olho').addEventListener('click', () => window.blink.janela.abrirPrincipal('note'));
+
   window.addEventListener('keydown', (evento) => {
     if (evento.key !== 'Escape') return;
 
@@ -912,8 +932,9 @@
     principal = estado.principal;
     historico = estado.historico;
 
-    // Abre no arquivo da estrela. Sem estrela, o de sempre.
-    arquivo = principal || primeiroArquivo(estado.arquivos);
+    // Abre no arquivo da estrela. Sem estrela, no ultimo que estava aberto.
+    // Sem nenhum dos dois, o de sempre.
+    arquivo = principal || estado.ultima || primeiroArquivo(estado.arquivos);
     if (ehHistorico()) dataSelecionada = dataDeHoje();
     desenharSelect(estado.arquivos);
     await carregar();

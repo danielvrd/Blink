@@ -64,6 +64,17 @@ function registrar() {
     janelaDoEvento(evento)?.close();
   });
 
+  // O olho do cabecalho de uma ferramenta: abre as configuracoes na aba dela
+  // e fecha a janela da ferramenta (ela fica sempre por cima, e a principal
+  // apareceria escondida atras). Nome de aba desconhecido e recusado sem
+  // fechar nada.
+  ipcMain.handle('janela:abrirPrincipal', (evento, aba) => {
+    if (typeof aba !== 'string' || !atalhos.FERRAMENTAS.includes(aba)) return false;
+    janelas.mostrarPrincipal(aba);
+    janelaDoEvento(evento)?.close();
+    return true;
+  });
+
   // --- Comparacao de texto -------------------------------------------------
 
   // A janela do diff pede as linhas assim que carrega. Elas nao vao na URL
@@ -81,6 +92,8 @@ function registrar() {
     arquivoTarefas: notas.ARQUIVO_TAREFAS,
     // O arquivo da estrela, que a janela abre primeiro.
     principal: await notas.principal(),
+    // O ultimo arquivo aberto: sem estrela, e onde a janela abre.
+    ultima: await notas.ultima(),
     // Os arquivos com o relogio (historico diario) ligado.
     historico: await notas.arquivosComHistorico(),
   }));
@@ -89,6 +102,12 @@ function registrar() {
   ipcMain.handle('notas:definirPrincipal', async (_evento, nome) => {
     if (typeof nome !== 'string') return false;
     return notas.definirPrincipal(nome);
+  });
+
+  // Lembra o arquivo que ficou aberto, para a proxima abertura cair nele.
+  ipcMain.handle('notas:definirUltima', async (_evento, nome) => {
+    if (typeof nome !== 'string') return false;
+    return notas.definirUltima(nome);
   });
 
   ipcMain.handle('notas:ler', async (_evento, arquivo) => {

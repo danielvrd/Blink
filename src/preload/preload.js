@@ -32,6 +32,13 @@ contextBridge.exposeInMainWorld('blink', {
     alternarMaximizar: () => ipcRenderer.invoke('janela:alternarMaximizar'),
     /** O X e o Esc das janelas das ferramentas: fecham de verdade. */
     fechar: () => ipcRenderer.invoke('janela:fechar'),
+    /** O olho do cabecalho de uma ferramenta: abre as configuracoes na aba dela e fecha esta janela. */
+    abrirPrincipal: (aba) => ipcRenderer.invoke('janela:abrirPrincipal', aba),
+  },
+
+  principal: {
+    /** So a janela principal usa: o processo principal pede para trocar de aba. */
+    aoTrocarAba: (callback) => ipcRenderer.on('principal:aba', (_evento, id) => callback(id)),
   },
 
   diff: {
@@ -51,6 +58,8 @@ contextBridge.exposeInMainWorld('blink', {
     limpar: (arquivo) => ipcRenderer.invoke('notas:limpar', arquivo),
     /** Marca o arquivo principal (a estrela). '' tira a marca. */
     definirPrincipal: (nome) => ipcRenderer.invoke('notas:definirPrincipal', nome),
+    /** Lembra o arquivo aberto agora: sem estrela, a proxima abertura cai nele. */
+    definirUltima: (nome) => ipcRenderer.invoke('notas:definirUltima', nome),
     /** Manda o arquivo para a Lixeira do Windows. */
     excluir: (arquivo) => ipcRenderer.invoke('notas:excluir', arquivo),
 

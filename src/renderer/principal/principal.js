@@ -84,6 +84,10 @@
     ligarBarraTitulo();
     montarBarraAbas();
     mostrarAba(estado.valores.abaAtiva);
+
+    // O olho do cabecalho de uma ferramenta pede para abrir numa aba: a
+    // janela principal pode estar escondida ha tempo, ja carregada.
+    window.blink.principal.aoTrocarAba((id) => mostrarAba(id));
   }
 
   iniciar();
