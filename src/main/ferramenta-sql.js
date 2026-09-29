@@ -14,6 +14,7 @@ const { format } = require('sql-formatter');
 const config = require('./config');
 const selecao = require('./selecao');
 const aviso = require('./aviso');
+const diagnostico = require('./diagnostico');
 
 /**
  * Evita dois formatadores rodando ao mesmo tempo.
@@ -23,6 +24,64 @@ const aviso = require('./aviso');
  * devolveriam conteudo trocado.
  */
 let ocupado = false;
+
+/**
+ * Por quanto tempo vigiar a area de transferencia depois de gravar a SQL
+ * formatada, e de quanto em quanto tempo olhar.
+ */
+const TEMPO_DE_GUARDA = 3000;
+const INTERVALO_DA_GUARDA = 150;
+
+/**
+ * Qual guarda esta valendo. Cada formatacao nova troca o numero e a guarda
+ * anterior percebe e para - senao duas guardas brigariam pela area de
+ * transferencia, cada uma regravando a sua SQL.
+ */
+let guardaAtual = 0;
+
+const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Protege a SQL formatada de ser atropelada pela copia remota.
+ *
+ * Numa Area de Trabalho Remota a copia do servidor pode chegar aqui atrasada
+ * - depois de o Blink ja ter gravado a versao formatada - e sobrescrever com
+ * a SQL crua. Por alguns segundos, se a area de transferencia voltar a ter
+ * exatamente o texto cru, a formatada e gravada de novo.
+ *
+ * So age se o conteudo for exatamente o cru: se o usuario copiar outra
+ * coisa nesse meio tempo, a guarda sai de cena e nao atropela nada.
+ *
+ * Nao e esperada por ninguem: roda em segundo plano, para a bind ficar livre
+ * enquanto isso.
+ */
+async function guardarContraSobrescrita(cru, formatado) {
+  const minha = ++guardaAtual;
+
+  // Ja estava formatada: cru e formatado sao o mesmo texto, nao ha o que
+  // proteger.
+  if (cru === formatado) return 0;
+
+  const fim = Date.now() + TEMPO_DE_GUARDA;
+  let regravacoes = 0;
+
+  while (Date.now() < fim && minha === guardaAtual) {
+    await esperar(INTERVALO_DA_GUARDA);
+    if (minha !== guardaAtual) break;
+
+    const atual = await clipboard.readText();
+    if (atual === cru) {
+      await clipboard.writeText(formatado);
+      regravacoes += 1;
+    } else if (atual !== formatado) {
+      // O usuario copiou outra coisa: nao e mais problema nosso.
+      break;
+    }
+  }
+
+  if (regravacoes > 0) diagnostico.registrar('sql-guarda', { regravacoes });
+  return regravacoes;
+}
 
 /** Traduz as opcoes salvas para o que a sql-formatter espera. */
 function opcoes() {
@@ -77,6 +136,9 @@ async function executar() {
     // O capturar() devolveu a area de transferencia ao que era antes; agora
     // ela passa a ser o resultado, que e o que o usuario vai colar.
     await clipboard.writeText(resultado.texto);
+    guardarContraSobrescrita(original, resultado.texto).catch((erro) => {
+      console.warn('[ferramenta-sql] guarda falhou:', erro.message);
+    });
 
     // Sem este aviso a bind nao daria nenhum sinal de vida: o arquivo de
     // origem fica igual e a area de transferencia nao aparece na tela.
@@ -95,4 +157,4 @@ async function executar() {
   }
 }
 
-module.exports = { executar, formatar, opcoes };
+module.exports = { executar, formatar, opcoes, guardarContraSobrescrita };

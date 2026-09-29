@@ -157,6 +157,11 @@ programa já usa essa combinação. Troque por outra.
 **Funciona em quase tudo, menos num programa específico.** Se esse programa roda como
 administrador, o Windows impede que o Blink converse com ele. Rode os dois no mesmo nível.
 
+**O SQL Formatter ou o Diff Checker não pegam o texto dentro de uma Área de Trabalho Remota.** O
+Blink espera mais quando reconhece a janela remota, mas numa conexão lenta a cópia ainda pode se
+perder. Se acontecer, mande o arquivo `%APPDATA%\Blink\blink.log` junto com o relato: ele registra
+quanto tempo cada cópia levou e de que janela veio — nunca o texto copiado.
+
 **Abri o Blink e nada apareceu.** Ele abre escondido na bandeja — procure o olho ao lado do
 relógio (às vezes dentro da setinha `^`).
 

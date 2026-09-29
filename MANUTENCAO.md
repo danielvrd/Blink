@@ -120,6 +120,29 @@ O Windows não permite perguntar a outro programa o que está selecionado. O Bli
 lê a área de transferência e devolve ela como estava (`src/main/selecao.js`). As esperas estão em
 constantes no começo do arquivo, com o porquê de cada número.
 
+**Área de Trabalho Remota.** Numa sessão remota o `Ctrl + C` acontece no servidor e a cópia
+atravessa a rede antes de chegar aqui — pode passar de um segundo. Por isso:
+
+- quando o título da janela da frente é de acesso remoto, as esperas são maiores;
+- depois do limite, uma **espera tardia** ainda aceita a cópia atrasada — cobre clientes que o
+  título não entrega (Citrix, VMware);
+- depois de gravar a SQL formatada, uma **guarda** vigia por 3s e regrava a formatada se a cópia
+  crua chegar atrasada e sobrescrever.
+
+O `libnut` lê o título da janela **estragando os acentos** (`Produção` chega como `Produ??o`). Por
+isso o padrão que reconhece o mstsc em português é `Trabalho Remota`, sem acento.
+
+Cada captura grava uma linha em `%APPDATA%\Blink\blink.log`: janela, se era remota, quanto tempo
+levou, quantos caracteres. Nunca o conteúdo copiado. É o que permite investigar um problema
+relatado por alguém numa rede que não dá para reproduzir.
+
+### Testes que mexem no teclado
+
+**Nunca rode um teste que chame `selecao.capturar()` com o teclado de verdade.** Ele manda
+`Ctrl + C` para a janela que estiver na frente — que pode ser um cliente de banco conectado em
+produção. Substitua o `libnut` no cache do `require` por um objeto falso antes de carregar o
+`selecao.js`, e confira que as teclas foram parar no falso antes de capturar qualquer coisa.
+
 ### Regenerar o ícone da bandeja
 
 O arquivo `src/assets/icones/blink.ico` é versionado. Só precisa rodar este comando se o desenho do
