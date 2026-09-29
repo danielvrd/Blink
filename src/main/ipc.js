@@ -49,6 +49,13 @@ function registrar() {
     janelaDoEvento(evento)?.hide();
   });
 
+  ipcMain.handle('janela:alternarMaximizar', (evento) => {
+    const janela = janelaDoEvento(evento);
+    if (!janela) return;
+    if (janela.isMaximized()) janela.unmaximize();
+    else janela.maximize();
+  });
+
   // Fecha de verdade. E o X e o Esc das janelas das ferramentas, que sao
   // descartaveis - ao contrario da janela principal, que so esconde.
   ipcMain.handle('janela:fechar', (evento) => {

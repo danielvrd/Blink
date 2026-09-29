@@ -101,6 +101,19 @@ src/
 direto no navegador do Electron, sem passo de build. As bibliotecas do npm ficam todas no processo
 `main` e são acessadas pelas telas através do `preload`. Os comentários estão em português.
 
+### Por que as janelas não são transparentes
+
+O design pede cantos de 16px (principal), 14px (diff) e 20px (Fast Note). A única forma de ter
+cantos próprios numa janela sem moldura é deixá-la transparente — e o Electron não permite
+redimensionar janela transparente (*"Transparent windows are not resizable"*, na documentação).
+
+Como redimensionar pesou mais, as janelas são opacas e o Windows 11 cuida do canto (~8px), da borda
+e da sombra. Por isso as caixas externas no CSS (`.janela`, `.modal`) não têm `border-radius` nem
+`border`: se tivessem, apareceriam quinas escuras dentro do canto do sistema.
+
+O tamanho de cada janela fica em `janelas` no `config.json`, gravado no evento `resized` (fim do
+arrasto). Os mínimos estão em `TAMANHOS`, no `src/main/janelas.js`.
+
 ### A captura da seleção
 
 O Windows não permite perguntar a outro programa o que está selecionado. O Blink simula `Ctrl + C`,

@@ -18,10 +18,9 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--fundo);
-  border: 1px solid var(--borda-janela);
-  border-radius: var(--raio-janela);
-  /* Corta o que passar do canto arredondado: a barra de titulo e retangular
-     e encostaria no canto sem isto. */
+  /* Sem borda nem canto proprios: a janela nao e transparente, entao quem
+     arredonda o canto e desenha a borda e a sombra e o Windows 11. Um canto
+     arredondado aqui deixaria quinas escuras dentro do canto do sistema. */
   overflow: hidden;
 }
 

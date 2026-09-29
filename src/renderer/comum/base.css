@@ -74,9 +74,7 @@ body {
 
 body {
   font-family: var(--fonte);
-  /* O fundo fica por conta de cada tela: a janela e transparente para o
-     canto arredondado aparecer. */
-  background: transparent;
+  background: var(--fundo);
   color: var(--texto);
   /* Nada de selecionar texto da interface como se fosse uma pagina web.
      Onde faz sentido selecionar (campos, notas, SQL), a regra e desfeita. */

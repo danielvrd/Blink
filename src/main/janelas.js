@@ -3,25 +3,117 @@
  *
  * Cada janela e criada uma vez e guardada aqui. Se ja existir, a gente reusa
  * em vez de abrir outra.
+ *
+ * As tres janelas sao sem moldura (a barra de titulo e desenhada no HTML) e
+ * redimensionaveis por qualquer borda. O tamanho que o usuario deixar fica
+ * salvo e volta na proxima abertura.
+ *
+ * Elas NAO sao transparentes. Transparencia era o que dava os cantos de
+ * 16px do design, mas o Electron nao deixa redimensionar janela
+ * transparente ("Transparent windows are not resizable", na documentacao).
+ * Sem ela, o Windows 11 arredonda os cantos e desenha a sombra sozinho.
  */
 
 const path = require('path');
 const { BrowserWindow, screen } = require('electron');
+
+const config = require('./config');
 
 const PRELOAD = path.join(__dirname, '..', 'preload', 'preload.js');
 const RENDERER = path.join(__dirname, '..', 'renderer');
 const ICONE = path.join(__dirname, '..', 'assets', 'icones', 'blink.ico');
 
 /**
- * Tamanho da janela principal.
+ * Tamanho padrao e minimo de cada janela.
  *
- * O design pede 460px de largura e "altura pelo conteudo". Como a aba do SQL
- * Formatter e bem mais alta que as outras duas, a janela usa a altura dela e
- * o rodape de cada aba fica colado embaixo (veja `margin-top: auto` no CSS).
- * Assim a janela nao muda de tamanho a cada troca de aba.
+ * Principal: o design pede 460px de largura. A altura e a da aba do SQL
+ * Formatter, a mais alta; abaixo desse minimo o rodape das abas encavala no
+ * conteudo.
+ *
+ * Diff: grande, porque sao dois textos lado a lado. O padrao e reduzido se o
+ * monitor for menor.
+ *
+ * Nota: pequena, e um bloco de notas rapido.
  */
-const LARGURA_PRINCIPAL = 460;
-const ALTURA_PRINCIPAL = 471;
+const TAMANHOS = {
+  principal: { largura: 460, altura: 471, minLargura: 460, minAltura: 471 },
+  diff: { largura: 1040, altura: 680, minLargura: 520, minAltura: 320 },
+  nota: { largura: 320, altura: 380, minLargura: 300, minAltura: 320 },
+};
+
+/**
+ * Nunca abrir maior que isso da area util do monitor. Protege o caso de o
+ * tamanho ter sido salvo num monitor grande e a janela abrir agora num
+ * notebook.
+ */
+const LIMITE_DA_TELA = 0.95;
+
+/** Mesma cor do fundo das telas: aparece por um instante antes do HTML carregar. */
+const COR_DE_FUNDO = '#0a0a0a';
+
+/** Opcoes que valem para as tres janelas. */
+const OPCOES_COMUNS = {
+  show: false,
+  // Sem a moldura do Windows: a barra de titulo e desenhada por nos, no HTML.
+  frame: false,
+  backgroundColor: COR_DE_FUNDO,
+  resizable: true,
+  icon: ICONE,
+  webPreferences: {
+    preload: PRELOAD,
+    // As telas nao tem acesso ao Node. Tudo que elas podem fazer passa
+    // pelo preload, que expoe uma lista curta de funcoes.
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: true,
+  },
+};
+
+/**
+ * Tamanho e posicao para abrir uma janela.
+ *
+ * Usa o tamanho salvo, se houver, limitado ao minimo da janela e ao tamanho
+ * da tela. Centraliza no monitor onde o mouse esta: a pessoa acabou de usar
+ * um atalho ou clicar na bandeja, entao e ali que ela esta olhando.
+ */
+function posicaoInicial(nome) {
+  const padrao = TAMANHOS[nome];
+  const salvo = config.obterTamanho(nome);
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+
+  const maxLargura = Math.round(area.width * LIMITE_DA_TELA);
+  const maxAltura = Math.round(area.height * LIMITE_DA_TELA);
+
+  const largura = Math.max(padrao.minLargura, Math.min(salvo ? salvo.largura : padrao.largura, maxLargura));
+  const altura = Math.max(padrao.minAltura, Math.min(salvo ? salvo.altura : padrao.altura, maxAltura));
+
+  return {
+    width: largura,
+    height: altura,
+    minWidth: padrao.minLargura,
+    minHeight: padrao.minAltura,
+    x: Math.round(area.x + (area.width - largura) / 2),
+    y: Math.round(area.y + (area.height - altura) / 2),
+  };
+}
+
+/**
+ * Guarda o tamanho quando o usuario termina de redimensionar.
+ *
+ * O evento 'resized' chega uma vez, no fim do arrasto - e nao a cada pixel
+ * como o 'resize', que gravaria o arquivo dezenas de vezes por segundo.
+ * Janela maximizada nao conta: o tamanho a lembrar e o de antes de
+ * maximizar.
+ */
+function lembrarTamanho(janela, nome) {
+  janela.on('resized', () => {
+    if (janela.isDestroyed() || janela.isMaximized()) return;
+    const [largura, altura] = janela.getSize();
+    config.salvarTamanho(nome, largura, altura);
+  });
+}
+
+// --- Janela principal -------------------------------------------------------
 
 let principal = null;
 
@@ -41,30 +133,14 @@ function permitirEncerrar() {
 /** Cria a janela principal (escondida). Nao mostra: quem mostra e a bandeja. */
 function criarPrincipal() {
   principal = new BrowserWindow({
-    width: LARGURA_PRINCIPAL,
-    height: ALTURA_PRINCIPAL,
-    show: false,
-    // Sem a moldura do Windows: a barra de titulo e desenhada por nos, no HTML.
-    frame: false,
-    // Deixa o fundo da janela vazar, que e o que permite o canto arredondado
-    // de 16px do design. Em troca a janela perde a sombra do sistema.
-    transparent: true,
-    resizable: false,
-    maximizable: false,
+    ...OPCOES_COMUNS,
+    ...posicaoInicial('principal'),
     fullscreenable: false,
-    icon: ICONE,
     title: 'Blink',
-    webPreferences: {
-      preload: PRELOAD,
-      // As telas nao tem acesso ao Node. Tudo que elas podem fazer passa
-      // pelo preload, que expoe uma lista curta de funcoes.
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
   });
 
   principal.loadFile(path.join(RENDERER, 'principal', 'index.html'));
+  lembrarTamanho(principal, 'principal');
 
   // O X da barra de titulo esconde, nao fecha. Sair e so pela bandeja.
   principal.on('close', (evento) => {
@@ -97,10 +173,6 @@ function mostrarPrincipal() {
 
 // --- Janela do Diff Checker -------------------------------------------------
 
-/** Tamanho que a janela da comparacao gostaria de ter. */
-const LARGURA_DIFF = 1040;
-const ALTURA_DIFF = 680;
-
 let diff = null;
 
 /**
@@ -116,12 +188,7 @@ function obterLinhasDiff() {
   return linhasDiff;
 }
 
-/**
- * Abre a janela de comparacao com as linhas passadas.
- *
- * Fica no monitor onde o mouse esta, e nao sempre no principal: a pessoa
- * acabou de selecionar um texto la, entao e onde ela esta olhando.
- */
+/** Abre a janela de comparacao com as linhas passadas. */
 function abrirDiff(linhas) {
   linhasDiff = linhas;
 
@@ -134,32 +201,17 @@ function abrirDiff(linhas) {
     return diff;
   }
 
-  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workAreaSize;
-  const largura = Math.min(LARGURA_DIFF, Math.round(area.width * 0.9));
-  const altura = Math.min(ALTURA_DIFF, Math.round(area.height * 0.8));
-
   diff = new BrowserWindow({
-    width: largura,
-    height: altura,
-    minWidth: 520,
-    minHeight: 320,
-    show: false,
-    frame: false,
-    transparent: true,
+    ...OPCOES_COMUNS,
+    ...posicaoInicial('diff'),
     // Sempre no topo: a bind e usada de dentro de outro programa e a
     // comparacao precisa aparecer na frente dele.
     alwaysOnTop: true,
-    icon: ICONE,
     title: 'Comparação de texto',
-    webPreferences: {
-      preload: PRELOAD,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
   });
 
   diff.loadFile(path.join(RENDERER, 'diff', 'index.html'));
+  lembrarTamanho(diff, 'diff');
 
   diff.once('ready-to-show', () => {
     diff.show();
@@ -175,21 +227,11 @@ function abrirDiff(linhas) {
   return diff;
 }
 
-
 // --- Janela do Fast Note ----------------------------------------------------
-
-/** Tamanho do bloco de notas, fixo como no design. */
-const LARGURA_NOTA = 320;
-const ALTURA_NOTA = 380;
 
 let nota = null;
 
-/**
- * Abre o bloco de notas.
- *
- * Fica no monitor onde o mouse esta: a bind e usada no meio de outra coisa,
- * entao a janela precisa aparecer onde a pessoa esta olhando.
- */
+/** Abre o bloco de notas. */
 function abrirNota() {
   if (nota && !nota.isDestroyed()) {
     // Ja esta aberto: recarrega para a lista de arquivos vir atualizada,
@@ -201,24 +243,14 @@ function abrirNota() {
   }
 
   nota = new BrowserWindow({
-    width: LARGURA_NOTA,
-    height: ALTURA_NOTA,
-    show: false,
-    frame: false,
-    transparent: true,
-    resizable: false,
+    ...OPCOES_COMUNS,
+    ...posicaoInicial('nota'),
     alwaysOnTop: true,
-    icon: ICONE,
     title: 'Fast Note',
-    webPreferences: {
-      preload: PRELOAD,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
   });
 
   nota.loadFile(path.join(RENDERER, 'note', 'index.html'));
+  lembrarTamanho(nota, 'nota');
 
   nota.once('ready-to-show', () => {
     nota.show();
@@ -233,6 +265,7 @@ function abrirNota() {
 }
 
 module.exports = {
+  TAMANHOS,
   criarPrincipal,
   obterPrincipal,
   mostrarPrincipal,

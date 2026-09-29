@@ -13,8 +13,7 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--fundo);
-  border: 1px solid var(--borda-modal-nota);
-  border-radius: var(--raio-modal-nota);
+  /* Canto, borda e sombra sao do Windows: a janela nao e transparente. */
   overflow: hidden;
 }
 

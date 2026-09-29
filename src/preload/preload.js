@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('blink', {
     minimizar: () => ipcRenderer.invoke('janela:minimizar'),
     /** O X da janela principal: esconde na bandeja, nao encerra o app. */
     esconder: () => ipcRenderer.invoke('janela:esconder'),
+    /** Maximiza, ou restaura se ja estiver maximizada. */
+    alternarMaximizar: () => ipcRenderer.invoke('janela:alternarMaximizar'),
     /** O X e o Esc das janelas das ferramentas: fecham de verdade. */
     fechar: () => ipcRenderer.invoke('janela:fechar'),
   },

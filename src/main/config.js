@@ -23,6 +23,20 @@ const PADROES = {
     indentacao: '4',
   },
   abaAtiva: 'diff',
+  // Tamanho de cada janela, depois que o usuario redimensiona. Vazio =
+  // tamanho padrao do design.
+  janelas: {},
+};
+
+/** Formato de um tamanho de janela salvo. Reaproveitado para as tres janelas. */
+const TAMANHO = {
+  type: 'object',
+  properties: {
+    largura: { type: 'integer', minimum: 100 },
+    altura: { type: 'integer', minimum: 100 },
+  },
+  required: ['largura', 'altura'],
+  additionalProperties: false,
 };
 
 /**
@@ -65,7 +79,19 @@ const ESQUEMA = {
     type: 'string',
     enum: ['diff', 'note', 'sql'],
   },
+  janelas: {
+    type: 'object',
+    properties: {
+      principal: TAMANHO,
+      diff: TAMANHO,
+      nota: TAMANHO,
+    },
+    additionalProperties: false,
+  },
 };
+
+/** As janelas que tem tamanho salvo. */
+const JANELAS = new Set(['principal', 'diff', 'nota']);
 
 /**
  * Unicos caminhos que as telas podem gravar.
@@ -116,6 +142,42 @@ module.exports = {
     }
     store.set(caminho, valor);
     return true;
+  },
+
+  /**
+   * Tamanho salvo de uma janela: { largura, altura }, ou null se o usuario
+   * nunca redimensionou.
+   */
+  obterTamanho(janela) {
+    if (!JANELAS.has(janela)) return null;
+    return store.get(`janelas.${janela}`) || null;
+  },
+
+  /**
+   * Guarda o tamanho de uma janela.
+   *
+   * Fica fora dos CAMINHOS_GRAVAVEIS de proposito: quem chama e o processo
+   * principal, quando a janela termina de ser redimensionada. As telas nao
+   * tem por que mexer nisso.
+   */
+  salvarTamanho(janela, largura, altura) {
+    if (!JANELAS.has(janela)) return false;
+    if (!Number.isFinite(largura) || !Number.isFinite(altura)) return false;
+
+    const tamanho = { largura: Math.round(largura), altura: Math.round(altura) };
+
+    // Confere antes em vez de deixar o schema recusar: o electron-store
+    // recusa lancando excecao, e uma excecao dentro do tratador de 'resized'
+    // viraria uma caixa de erro do Electron na cara do usuario.
+    if (tamanho.largura < 100 || tamanho.altura < 100) return false;
+
+    try {
+      store.set(`janelas.${janela}`, tamanho);
+      return true;
+    } catch (erro) {
+      console.warn('[config] nao consegui salvar o tamanho da janela:', erro.message);
+      return false;
+    }
   },
 
   /** Caminho do config.json em disco, util para depurar. */

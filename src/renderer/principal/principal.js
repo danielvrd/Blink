@@ -69,8 +69,12 @@
       window.blink.janela.esconder();
     });
 
-    // O botao de maximizar existe so por fidelidade ao design e esta
-    // desabilitado no HTML: a janela tem tamanho fixo.
+    // Maximiza, ou volta ao tamanho de antes se ja estiver maximizada.
+    // Clicar duas vezes na barra de titulo faz o mesmo - isso o Windows
+    // resolve sozinho.
+    document.getElementById('btn-maximizar').addEventListener('click', () => {
+      window.blink.janela.alternarMaximizar();
+    });
   }
 
   async function iniciar() {

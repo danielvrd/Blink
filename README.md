@@ -108,6 +108,12 @@ Anotações da sprint.    <- o Blink não toca
 - Call com cliente      <- mais novo (aparece em cima na janela)
 ```
 
+## Tamanho das janelas
+
+Todas as janelas do Blink podem ser redimensionadas puxando qualquer borda ou canto, como qualquer
+janela do Windows. O tamanho que você deixar volta na próxima vez que ela abrir. A janela de
+configurações também maximiza, pelo botão ou com dois cliques na barra de título.
+
 ## Menu do ícone na bandeja
 
 Clique com o botão direito no olho, ao lado do relógio:
