@@ -114,6 +114,15 @@ e da sombra. Por isso as caixas externas no CSS (`.janela`, `.modal`) não têm 
 O tamanho de cada janela fica em `janelas` no `config.json`, gravado no evento `resized` (fim do
 arrasto). Os mínimos estão em `TAMANHOS`, no `src/main/janelas.js`.
 
+**Monitores com escalas diferentes.** Com um monitor em 100% e outro em 125%, o Electron cria a
+janela numa escala e converte para a outra, e o arredondamento a faz nascer maior que o pedido
+(465×523 para um pedido de 460×516). O `acertarTamanho()` reaplica o tamanho depois de posicionar e
+reduz o erro para 1–3px — que não se acumula: o `resized` nunca dispara sozinho, só quando alguém
+arrasta a borda. A altura mínima da janela principal tem alguns pixels de folga por causa disso.
+
+Para medir se uma aba cabe, não compare o fim do rodapé com o fim da área: o rodapé tem
+`margin-top: auto` e sempre termina rente à borda. Meça o espaço entre a última seção e o rodapé.
+
 ### A captura da seleção
 
 O Windows não permite perguntar a outro programa o que está selecionado. O Blink simula `Ctrl + C`,
@@ -135,6 +144,16 @@ isso o padrão que reconhece o mstsc em português é `Trabalho Remota`, sem ace
 Cada captura grava uma linha em `%APPDATA%\Blink\blink.log`: janela, se era remota, quanto tempo
 levou, quantos caracteres. Nunca o conteúdo copiado. É o que permite investigar um problema
 relatado por alguém numa rede que não dá para reproduzir.
+
+**Modo automático** (`src/main/monitor-sql.js`). Em tela cheia a Área de Trabalho Remota captura
+todas as combinações de teclas, então nenhum atalho global chega — nem o do Blink, nem os do
+AutoHotkey ou do PowerToys. O monitor resolve sem atalho: olha a área de transferência a cada 400ms
+**só enquanto a janela da frente é remota** (e por 5s depois de sair dela), e formata sozinho o que
+chegar começando com `SELECT`, `INSERT`, `UPDATE`, `DELETE` ou `WITH`. Fora da janela remota ele
+nem lê a área de transferência.
+
+Ele pergunta `selecao.emUso()` antes de agir: durante a captura de um atalho (e 1,5s depois) a área
+de transferência é mexida pelo próprio Blink, e reagir a isso quebraria a captura.
 
 ### Testes que mexem no teclado
 

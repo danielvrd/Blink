@@ -21,6 +21,9 @@ const PADROES = {
     dialeto: 'transactsql',
     palavrasChave: 'upper',
     indentacao: '4',
+    // Formatar sozinho a SQL copiada de dentro de uma Area de Trabalho
+    // Remota, sem precisar do atalho (veja monitor-sql.js).
+    autoRemoto: true,
   },
   abaAtiva: 'diff',
   // Tamanho de cada janela, depois que o usuario redimensiona. Vazio =
@@ -71,6 +74,7 @@ const ESQUEMA = {
         type: 'string',
         enum: ['2', '4', 'tab'],
       },
+      autoRemoto: { type: 'boolean' },
     },
     required: ['dialeto', 'palavrasChave', 'indentacao'],
     additionalProperties: false,
@@ -108,6 +112,7 @@ const CAMINHOS_GRAVAVEIS = new Set([
   'sql.dialeto',
   'sql.palavrasChave',
   'sql.indentacao',
+  'sql.autoRemoto',
   'abaAtiva',
 ]);
 

@@ -49,6 +49,16 @@ O texto de origem **não é alterado**: a versão formatada vai para a área de 
 notificação confirma. O dialeto, a caixa das palavras-chave e a indentação são escolhidos na aba
 SQL Formatter das configurações.
 
+#### Copiando de uma Área de Trabalho Remota
+
+Em tela cheia, a Área de Trabalho Remota do Windows fica com todas as combinações de teclas para
+o servidor, e o atalho nunca chega ao Blink. Para esse caso existe o **modo automático**, que vem
+ligado: dê `Ctrl + C` normal dentro do servidor e, se o texto começar com `SELECT`, `INSERT`,
+`UPDATE`, `DELETE` ou `WITH`, ele chega aqui já formatado. Uma notificação avisa.
+
+Só vale para cópias vindas da Área de Trabalho Remota do Windows — cópias feitas na sua própria
+máquina nunca são formatadas sozinhas. Dá para desligar na aba SQL Formatter.
+
 ### Diff Checker — `Ctrl + Alt + D`
 
 O atalho funciona em **dois tempos**:

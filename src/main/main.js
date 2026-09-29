@@ -23,6 +23,7 @@ const ferramentaDiff = require('./ferramenta-diff');
 const ferramentaNote = require('./ferramenta-note');
 const aviso = require('./aviso');
 const atualizacao = require('./atualizacao');
+const monitorSql = require('./monitor-sql');
 
 /**
  * O que cada bind faz.
@@ -89,6 +90,10 @@ if (!app.requestSingleInstanceLock()) {
     // redesenhado a cada mudanca de estado.
     atualizacao.definirAoMudar(() => bandeja.atualizarMenu());
     atualizacao.iniciar();
+
+    // Formata sozinho a SQL copiada da Area de Trabalho Remota, onde o
+    // atalho nao chega em tela cheia.
+    monitorSql.iniciar();
 
     console.log(`[blink] pronto. Configuracoes em: ${config.caminhoArquivo()}`);
   });

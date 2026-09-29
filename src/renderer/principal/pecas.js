@@ -56,5 +56,34 @@ window.Blink = window.Blink || {};
     return caixa;
   }
 
-  window.Blink.pecas = { rodape, segmentado };
+  /**
+   * Interruptor liga/desliga, com o texto a esquerda.
+   *
+   * rotulo    o que a opcao faz
+   * ligado    estado atual
+   * aoTrocar  recebe o novo estado (true/false)
+   */
+  function interruptor({ rotulo, ligado, aoTrocar }) {
+    let estado = ligado;
+
+    const botao = el('button', {
+      class: estado ? 'interruptor ligado' : 'interruptor',
+      role: 'switch',
+      'aria-checked': String(estado),
+      'aria-label': rotulo,
+      onclick: () => {
+        estado = !estado;
+        botao.classList.toggle('ligado', estado);
+        botao.setAttribute('aria-checked', String(estado));
+        aoTrocar(estado);
+      },
+    });
+
+    return el('label', { class: 'linha-interruptor' }, [
+      el('span', { class: 'texto-interruptor', texto: rotulo }),
+      botao,
+    ]);
+  }
+
+  window.Blink.pecas = { rodape, segmentado, interruptor };
 })();

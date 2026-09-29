@@ -178,6 +178,27 @@ function ehAcessoRemoto(titulo) {
 }
 
 /**
+ * Uma captura esta em andamento? E quando terminou a ultima?
+ *
+ * Durante a captura a area de transferencia e esvaziada, recebe a copia e
+ * volta ao que era - tres mudancas que nao sao do usuario. O modo
+ * automatico do SQL Formatter pergunta emUso() para nao reagir a elas.
+ */
+let capturando = false;
+let fimDaUltimaCaptura = 0;
+
+/**
+ * Folga depois do fim de uma captura: a copia remota atrasada ainda pode
+ * chegar logo depois, e tambem nao e uma copia do usuario.
+ */
+const FOLGA_APOS_CAPTURA = 1500;
+
+/** A area de transferencia esta sendo mexida pela propria captura? */
+function emUso() {
+  return capturando || Date.now() - fimDaUltimaCaptura < FOLGA_APOS_CAPTURA;
+}
+
+/**
  * Le o texto selecionado no programa da frente.
  *
  * Devolve string vazia quando nada estava selecionado. A area de
@@ -193,6 +214,16 @@ function ehAcessoRemoto(titulo) {
  *   3. vigia mais um pouco - se a copia chegar atrasada, ainda vale.
  */
 async function capturar() {
+  capturando = true;
+  try {
+    return await capturarTexto();
+  } finally {
+    capturando = false;
+    fimDaUltimaCaptura = Date.now();
+  }
+}
+
+async function capturarTexto() {
   const titulo = tituloDaJanelaAtiva();
   const remoto = ehAcessoRemoto(titulo);
   const limite = remoto ? LIMITE_CAPTURA_REMOTO : LIMITE_CAPTURA;
@@ -236,4 +267,4 @@ async function capturar() {
   return texto;
 }
 
-module.exports = { capturar, ehAcessoRemoto };
+module.exports = { capturar, emUso, ehAcessoRemoto, tituloDaJanelaAtiva };

@@ -27,8 +27,8 @@ const ICONE = path.join(__dirname, '..', 'assets', 'icones', 'blink.ico');
  * Tamanho padrao e minimo de cada janela.
  *
  * Principal: o design pede 460px de largura. A altura e a da aba do SQL
- * Formatter, a mais alta; abaixo desse minimo o rodape das abas encavala no
- * conteudo.
+ * Formatter, a mais alta (com o interruptor do modo automatico); abaixo
+ * desse minimo o rodape das abas encavala no conteudo.
  *
  * Diff: grande, porque sao dois textos lado a lado. O padrao e reduzido se o
  * monitor for menor.
@@ -36,7 +36,7 @@ const ICONE = path.join(__dirname, '..', 'assets', 'icones', 'blink.ico');
  * Nota: pequena, e um bloco de notas rapido.
  */
 const TAMANHOS = {
-  principal: { largura: 460, altura: 471, minLargura: 460, minAltura: 471 },
+  principal: { largura: 460, altura: 490, minLargura: 460, minAltura: 490 },
   diff: { largura: 1040, altura: 680, minLargura: 520, minAltura: 320 },
   nota: { largura: 320, altura: 380, minLargura: 300, minAltura: 320 },
 };
@@ -98,6 +98,19 @@ function posicaoInicial(nome) {
 }
 
 /**
+ * Reaplica o tamanho depois que a janela ja esta no monitor certo.
+ *
+ * Com dois monitores de escalas diferentes (um em 100%, outro em 125%), o
+ * Electron cria a janela na escala de um e a converte para a do outro - e o
+ * arredondamento faz ela nascer 5 ou 6 pixels maior que o pedido. Aplicar o
+ * tamanho de novo, com a janela ja posicionada, acerta.
+ */
+function acertarTamanho(janela, { width, height }) {
+  const [largura, altura] = janela.getContentSize();
+  if (largura !== width || altura !== height) janela.setContentSize(width, height);
+}
+
+/**
  * Guarda o tamanho quando o usuario termina de redimensionar.
  *
  * O evento 'resized' chega uma vez, no fim do arrasto - e nao a cada pixel
@@ -108,7 +121,9 @@ function posicaoInicial(nome) {
 function lembrarTamanho(janela, nome) {
   janela.on('resized', () => {
     if (janela.isDestroyed() || janela.isMaximized()) return;
-    const [largura, altura] = janela.getSize();
+    // Tamanho do conteudo, nao da janela: e o mesmo que se pede ao criar,
+    // entao reabrir devolve exatamente o que o usuario deixou.
+    const [largura, altura] = janela.getContentSize();
     config.salvarTamanho(nome, largura, altura);
   });
 }
@@ -132,13 +147,15 @@ function permitirEncerrar() {
 
 /** Cria a janela principal (escondida). Nao mostra: quem mostra e a bandeja. */
 function criarPrincipal() {
+  const inicial = posicaoInicial('principal');
   principal = new BrowserWindow({
     ...OPCOES_COMUNS,
-    ...posicaoInicial('principal'),
+    ...inicial,
     fullscreenable: false,
     title: 'Blink',
   });
 
+  acertarTamanho(principal, inicial);
   principal.loadFile(path.join(RENDERER, 'principal', 'index.html'));
   lembrarTamanho(principal, 'principal');
 
@@ -201,15 +218,17 @@ function abrirDiff(linhas) {
     return diff;
   }
 
+  const inicial = posicaoInicial('diff');
   diff = new BrowserWindow({
     ...OPCOES_COMUNS,
-    ...posicaoInicial('diff'),
+    ...inicial,
     // Sempre no topo: a bind e usada de dentro de outro programa e a
     // comparacao precisa aparecer na frente dele.
     alwaysOnTop: true,
     title: 'Comparação de texto',
   });
 
+  acertarTamanho(diff, inicial);
   diff.loadFile(path.join(RENDERER, 'diff', 'index.html'));
   lembrarTamanho(diff, 'diff');
 
@@ -242,13 +261,15 @@ function abrirNota() {
     return nota;
   }
 
+  const inicial = posicaoInicial('nota');
   nota = new BrowserWindow({
     ...OPCOES_COMUNS,
-    ...posicaoInicial('nota'),
+    ...inicial,
     alwaysOnTop: true,
     title: 'Fast Note',
   });
 
+  acertarTamanho(nota, inicial);
   nota.loadFile(path.join(RENDERER, 'note', 'index.html'));
   lembrarTamanho(nota, 'nota');
 
