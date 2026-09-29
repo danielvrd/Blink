@@ -74,6 +74,17 @@ Três detalhes que ele resolve, cada um por causa de um erro que já aconteceu:
   "já está atualizado" para sempre.
 - **Nada pode estar pendente de commit.** A tag aponta para o commit atual; com mudanças soltas, a
   tag e o instalador não batem com o repositório.
+- **O `electron-builder` perde arquivos em silêncio.** Ele envia os arquivos em paralelo, e quando a
+  Release ainda não existe cada envio tenta criá-la: um ganha, e o arquivo do outro some sem erro
+  nenhum — o comando termina com sucesso e a Release fica sem o instalador ou sem o `latest.yml`.
+  Aconteceu três vezes seguidas. Por isso o último passo confere a Release e envia o que faltou.
+
+Se uma Release já publicada estiver incompleta, dá para conferir e completar sem empacotar de novo
+(o `dist/` precisa ser o daquela versão):
+
+```
+node scripts/publicar.js --so-conferir
+```
 
 A Release sai publicada, não como rascunho — o app não enxerga rascunho.
 
