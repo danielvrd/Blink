@@ -91,7 +91,7 @@ window.Blink = window.Blink || {};
   function mensagemDeErro(resultado) {
     switch (resultado.motivo) {
       case 'duplicado': {
-        const nomes = { diff: 'Diff Checker', note: 'Fast Note', sql: 'SQL Formatter' };
+        const nomes = { diff: 'Diff Checker', note: 'Fast Note', sql: 'SQL Formatter', i18n: 'I18n' };
         return `Este atalho já é o do ${nomes[resultado.ferramenta] || 'outro recurso'}.`;
       }
       case 'em-uso':
@@ -107,7 +107,7 @@ window.Blink = window.Blink || {};
    * Monta o campo.
    *
    * Parametros:
-   *   ferramenta  'diff' | 'note' | 'sql'
+   *   ferramenta  'diff' | 'note' | 'sql' | 'i18n'
    *   rotulo      texto do rotulo da secao
    *   acelerador  atalho atual, ex.: 'Ctrl+Alt+D'
    *   registrado  false quando outro programa ja tomou este atalho

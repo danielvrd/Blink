@@ -1,11 +1,12 @@
 # Blink
 
-App para Windows que fica na bandeja do sistema e oferece três ferramentas acionadas por atalhos
+App para Windows que fica na bandeja do sistema e oferece quatro ferramentas acionadas por atalhos
 de teclado, de dentro de qualquer programa:
 
 1. **Diff Checker** — compara dois textos selecionados e mostra as diferenças lado a lado.
 2. **Fast Note** — um bloco de notas rápido que grava tópicos em arquivos `.md` numa pasta sua.
 3. **SQL Formatter** — formata a SQL selecionada e deixa o resultado pronto para colar.
+4. **I18n** — troca acentos e alguns outros caracteres por sequências de escape do JavaScript.
 
 Tudo roda na sua máquina. Não há servidor, conta nem envio de dados para fora.
 
@@ -63,6 +64,19 @@ ligado: dê `Ctrl + C` normal dentro do servidor e, se o texto começar com `SEL
 
 Só vale para cópias vindas da Área de Trabalho Remota do Windows — cópias feitas na sua própria
 máquina nunca são formatadas sozinhas. Dá para desligar na aba SQL Formatter.
+
+### I18n — `Ctrl + Alt + I`
+
+Troca letras acentuadas (e alguns outros caracteres, como `&`) pela sequência de escape `\uXXXX`
+do JavaScript — útil para colar texto em português dentro de strings de código sem quebrar a
+codificação. A tabela completa está em `src/main/ferramenta-i18n.js`.
+
+1. Selecione um texto em qualquer programa.
+2. Pressione `Ctrl + Alt + I`.
+3. Cole onde quiser com `Ctrl + V`.
+
+O texto de origem **não é alterado**, e uma notificação confirma a conversão. Texto sem nenhum
+caractere da tabela é copiado sem mudanças, e a notificação avisa disso.
 
 ### Diff Checker — `Ctrl + Alt + D`
 
@@ -176,12 +190,13 @@ Clique com o botão direito no olho, ao lado do relógio:
 | Diff Checker | abre uma comparação de exemplo |
 | Fast Note | abre o bloco de notas |
 | SQL Formatter | lembra qual é o atalho |
+| I18n | lembra qual é o atalho |
 | Procurar atualizações | consulta na hora se há versão nova |
 | Iniciar com o Windows | liga ou desliga a inicialização automática |
 | Sair | encerra o Blink |
 
-Pelo menu, o Diff Checker e o SQL Formatter não capturam texto: clicar num item de menu tira o
-foco do programa onde a seleção estava. Para eles, use os atalhos.
+Pelo menu, o Diff Checker, o SQL Formatter e o I18n não capturam texto: clicar num item de menu
+tira o foco do programa onde a seleção estava. Para eles, use os atalhos.
 
 ## Atalhos
 
@@ -190,6 +205,7 @@ foco do programa onde a seleção estava. Para eles, use os atalhos.
 | Diff Checker | `Ctrl + Alt + D` |
 | Fast Note | `Ctrl + Alt + N` |
 | SQL Formatter | `Ctrl + Alt + F` |
+| I18n | `Ctrl + Alt + I` |
 
 Todos podem ser trocados na janela de configurações, em **"Alterar"**. Se o campo ficar vermelho,
 outro programa já usa aquela combinação — escolha outra.

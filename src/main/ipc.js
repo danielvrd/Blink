@@ -16,7 +16,9 @@ const atalhos = require('./atalhos');
 const janelas = require('./janelas');
 const ferramentaDiff = require('./ferramenta-diff');
 const ferramentaNote = require('./ferramenta-note');
+const ferramentaI18n = require('./ferramenta-i18n');
 const notas = require('./notas');
+const aviso = require('./aviso');
 
 /** A janela que enviou a mensagem, ou null se ela ja tiver sido fechada. */
 function janelaDoEvento(evento) {
@@ -224,6 +226,14 @@ function registrar() {
     // de verdade, igual a bind.
     if (nome === 'note') {
       ferramentaNote.executar();
+      return true;
+    }
+
+    // O I18n nao tem janela nem estado proprio: a demonstracao roda a
+    // tabela numa frase fixa e mostra o antes/depois por notificacao.
+    if (nome === 'i18n') {
+      const EXEMPLO = 'Configuração & ‘aspas’ não têm acento.';
+      aviso.mostrar(`${EXEMPLO}\n${ferramentaI18n.traduzir(EXEMPLO)}`, { titulo: 'Exemplo do I18n' });
       return true;
     }
 

@@ -13,7 +13,7 @@
 const { globalShortcut } = require('electron');
 const config = require('./config');
 
-const FERRAMENTAS = ['diff', 'note', 'sql'];
+const FERRAMENTAS = ['diff', 'note', 'sql', 'i18n'];
 
 /** Qual bind conseguiu se registrar: { diff: true, note: false, sql: true }. */
 let situacao = {};

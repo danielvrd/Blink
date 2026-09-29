@@ -98,6 +98,12 @@ function montarMenu() {
       // lembra qual e o atalho.
       click: () => acionarFerramenta('sql-ajuda'),
     },
+    {
+      label: 'I18n',
+      // Mesmo motivo do SQL Formatter: sem selecao pelo menu, o clique so
+      // lembra qual e o atalho.
+      click: () => acionarFerramenta('i18n-ajuda'),
+    },
     { type: 'separator' },
     itemDeAtualizacao(),
     {

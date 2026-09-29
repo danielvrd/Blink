@@ -212,6 +212,51 @@ O calendário (`src/renderer/note/calendario.js`) é um componente próprio, no 
 `seletor.js`: o `<input type="date">` do Chromium tem um popup nativo que não é estilizável no
 tema escuro do app.
 
+### I18n
+
+Segue o mesmo molde do SQL Formatter (`src/main/ferramenta-i18n.js`): sem janela própria, a bind
+captura a seleção com `selecao.capturar()`, troca os caracteres e grava na área de transferência.
+Diferente do SQL, a transformação nunca falha — qualquer texto é válido — então não existe o
+branch de "seleção inválida".
+
+**A tabela `TRADUCOES` nunca deve ter uma sequência de escape digitada direto no fonte.** Escrever
+algo como uma string com uma contra-barra, um "u" e quatro dígitos hexadecimais faz o próprio
+JavaScript decodificar aquilo na hora de carregar o arquivo e virar o caractere de volta — o
+oposto do que a ferramenta precisa produzir (o texto da sequência de escape, pronto para colar em
+outro código). A função `escape(hex)` do arquivo monta a contra-barra com `String.fromCharCode(92)`
+em vez disso, exatamente para tirar essa pegadinha do caminho. Para acrescentar um caractere novo à
+tabela, é só uma linha `'x': escape('00xx'),` — nunca uma string com a sequência escrita à mão.
+
+A última linha da tabela (a aspa curva simples esquerda) é a única exceção de propósito: troca por
+**outro** caractere (o apóstrofo reto), não pelo escape de si mesma. Qualquer entrada nova que
+seguir esse padrão deveria ganhar um comentário como o que já está lá, para não parecer erro de
+digitação.
+
+**Cuidado ao escrever testes que capturam texto acentuado com o teclado falso.** Um
+`clipboard.writeText()` disparado por um `setTimeout` separado, concorrendo com o poll de 25ms do
+`esperarTexto()` de verdade (`selecao.js`), pode fazer o Electron devolver o texto corrompido numa
+leitura entre as duas chamadas — um bug de corrida do próprio Electron nesta combinação de
+Windows/versão, não do código do Blink (confirmado isolando `clipboard.writeText`/`readText` fora
+de qualquer código do projeto). Só aparece com caracteres fora do ASCII; testes com SQL em inglês
+nunca esbarraram nisso. O jeito confiável de simular o `Ctrl + C` nos testes é escrever no
+`clipboard` **na hora**, dentro do próprio `keyTap` falso, sem `setTimeout` no meio — veja o
+`libnutFalso` de `.verif/teste-i18n.js`.
+
+### Acrescentar um campo obrigatório novo no schema do config.json
+
+O `clearInvalidConfig: true` do electron-store (`src/main/config.js`) só cobre um caso: o
+`config.json` virar um JSON inválido (erro de sintaxe). Um `config.json` de uma versão anterior,
+que continua sendo JSON válido mas não bate mais com um `ESQUEMA` que ganhou uma exigência nova
+— por exemplo, uma bind nova adicionada ao `required` de `binds` — faz o `new Store(...)` lançar
+exceção mesmo assim, e essa exceção quebraria o app inteiro na abertura (antes de qualquer janela
+existir). Foi o que aconteceu ao acrescentar a bind do I18n: qualquer `config.json` salvo antes
+dessa versão não tinha `binds.i18n`, e o app não subia mais.
+
+`criarStore()`, em `config.js`, cobre esse segundo caso também: se o `Store` com schema falhar na
+abertura, ele apaga o `config.json` antigo e recomeça dos padrões — a mesma intenção do
+`clearInvalidConfig`, só que também para "JSON válido, schema desatualizado". Ao adicionar um novo
+campo `required` no futuro, esse caminho já cobre sozinho; não precisa de nenhuma migração manual.
+
 ### Testes que mexem no teclado
 
 **Nunca rode um teste que chame `selecao.capturar()` com o teclado de verdade.** Ele manda

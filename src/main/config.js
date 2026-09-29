@@ -6,6 +6,7 @@
  * diante a biblioteca so existe como modulo ES e nao da para usar require().
  */
 
+const fs = require('fs');
 const Store = require('electron-store');
 
 /** Valores usados na primeira execucao e sempre que um campo faltar. */
@@ -14,6 +15,7 @@ const PADROES = {
     diff: 'Ctrl+Alt+D',
     note: 'Ctrl+Alt+N',
     sql: 'Ctrl+Alt+F',
+    i18n: 'Ctrl+Alt+I',
   },
   // Vazio = o usuario ainda nao escolheu a pasta das notas.
   pastaNotas: '',
@@ -59,8 +61,9 @@ const ESQUEMA = {
       diff: { type: 'string' },
       note: { type: 'string' },
       sql: { type: 'string' },
+      i18n: { type: 'string' },
     },
-    required: ['diff', 'note', 'sql'],
+    required: ['diff', 'note', 'sql', 'i18n'],
     additionalProperties: false,
   },
   pastaNotas: { type: 'string' },
@@ -88,7 +91,7 @@ const ESQUEMA = {
   },
   abaAtiva: {
     type: 'string',
-    enum: ['diff', 'note', 'sql'],
+    enum: ['diff', 'note', 'sql', 'i18n'],
   },
   janelas: {
     type: 'object',
@@ -115,6 +118,7 @@ const CAMINHOS_GRAVAVEIS = new Set([
   'binds.diff',
   'binds.note',
   'binds.sql',
+  'binds.i18n',
   'pastaNotas',
   'sql.dialeto',
   'sql.palavrasChave',
@@ -123,11 +127,40 @@ const CAMINHOS_GRAVAVEIS = new Set([
   'abaAtiva',
 ]);
 
-const store = new Store({
-  defaults: PADROES,
-  schema: ESQUEMA,
-  clearInvalidConfig: true,
-});
+/**
+ * Cria o Store, com uma segunda camada de protecao alem do clearInvalidConfig
+ * da propria biblioteca.
+ *
+ * O clearInvalidConfig do electron-store so cobre um caso: o config.json
+ * virar um JSON invalido (erro de sintaxe). Um arquivo que continua sendo
+ * JSON valido, mas que nao bate mais com um ESQUEMA que ganhou uma exigencia
+ * nova (por exemplo, uma bind nova que passou a ser obrigatoria dentro de
+ * "binds"), faz o construtor do Store lancar excecao mesmo assim - e essa
+ * excecao aconteceria na abertura do app inteiro, antes de qualquer janela
+ * existir. Aqui a mesma intencao do clearInvalidConfig (comecar dos padroes
+ * em vez de quebrar) e aplicada tambem para esse segundo caso.
+ */
+function criarStore() {
+  try {
+    return new Store({ defaults: PADROES, schema: ESQUEMA, clearInvalidConfig: true });
+  } catch (erro) {
+    console.warn('[config] config.json nao bate mais com o schema atual, recomecando dos padroes:', erro.message);
+
+    try {
+      // Sem schema, o Store so calcula o caminho do arquivo - nao le nem
+      // valida nada. E o unico jeito de descobrir o caminho certo (depende
+      // do nome do app) sem cair na mesma excecao de novo.
+      const semSchema = new Store();
+      fs.rmSync(semSchema.path, { force: true });
+    } catch (erroLimpeza) {
+      console.warn('[config] nao consegui apagar o config.json antigo:', erroLimpeza.message);
+    }
+
+    return new Store({ defaults: PADROES, schema: ESQUEMA, clearInvalidConfig: true });
+  }
+}
+
+const store = criarStore();
 
 module.exports = {
   PADROES,

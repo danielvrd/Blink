@@ -21,6 +21,7 @@ const ipc = require('./ipc');
 const ferramentaSql = require('./ferramenta-sql');
 const ferramentaDiff = require('./ferramenta-diff');
 const ferramentaNote = require('./ferramenta-note');
+const ferramentaI18n = require('./ferramenta-i18n');
 const aviso = require('./aviso');
 const atualizacao = require('./atualizacao');
 const monitorSql = require('./monitor-sql');
@@ -37,14 +38,19 @@ const FERRAMENTAS = {
   sql: () => ferramentaSql.executar(),
   diff: () => ferramentaDiff.executar(),
   note: () => ferramentaNote.executar(),
+  i18n: () => ferramentaI18n.executar(),
 
-  // Estes dois so vem do menu da bandeja. Clicar em um item de menu tira o
-  // foco do programa onde o texto estava selecionado, entao as duas
-  // ferramentas que dependem de selecao nao tem o que capturar por ali.
+  // Estes tres so vem do menu da bandeja. Clicar em um item de menu tira o
+  // foco do programa onde o texto estava selecionado, entao as ferramentas
+  // que dependem de selecao nao tem o que capturar por ali.
   'diff-exemplo': () => ferramentaDiff.abrirExemplo(),
   'sql-ajuda': () => {
     const bind = config.obter('binds').sql;
     aviso.mostrar(`Selecione uma SQL em qualquer programa e use ${bind}.`);
+  },
+  'i18n-ajuda': () => {
+    const bind = config.obter('binds').i18n;
+    aviso.mostrar(`Selecione um texto em qualquer programa e use ${bind}.`);
   },
 };
 

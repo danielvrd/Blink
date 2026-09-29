@@ -13,6 +13,7 @@
     { id: 'diff', rotulo: 'Diff Checker', montar: () => window.Blink.abaDiff.montar(estado) },
     { id: 'note', rotulo: 'Fast Note', montar: () => window.Blink.abaNote.montar(estado) },
     { id: 'sql', rotulo: 'SQL Formatter', montar: () => window.Blink.abaSql.montar(estado) },
+    { id: 'i18n', rotulo: 'I18n', montar: () => window.Blink.abaI18n.montar(estado) },
   ];
 
   /** Tudo que veio do processo principal: valores, situacao das binds etc. */
