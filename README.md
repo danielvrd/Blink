@@ -85,6 +85,9 @@ npm run publicar
 
 Isso empacota e cria a Release no GitHub com o instalador e o `latest.yml`.
 
+A Release sai publicada, não como rascunho — o app não enxerga rascunho, então
+uma Release em rascunho nunca chegaria em ninguém.
+
 Pronto. O Blink instalado de cada pessoa vai encontrar a versão nova na próxima
 vez que abrir, ou em até 6 horas se já estiver aberto.
 
