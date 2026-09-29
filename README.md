@@ -11,17 +11,33 @@ Tudo roda localmente. Não há servidor, API ou envio de dados para fora da máq
 
 ## Instalar
 
-Baixe o `Blink-Setup-0.1.0.exe` (113 MB) e execute. A instalação é por usuário,
-em `%LOCALAPPDATA%\Programs\Blink`, então não pede senha de administrador.
+**[Baixar a versão mais recente](https://github.com/danielvrd/Blink/releases/latest)**
 
-O Windows vai mostrar um aviso azul do SmartScreen dizendo que o app é de um
-editor desconhecido. É esperado: o instalador não tem assinatura digital, que é
-um certificado pago. Clique em "Mais informações" e depois em "Executar assim
-mesmo".
+Na página, em **Assets**, baixe o arquivo `Blink-Setup-<versão>.exe` (cerca de
+108 MB) e execute. Os outros arquivos da lista são para o próprio app se
+atualizar — você não precisa deles.
 
-Depois de instalado, o Blink sobe escondido na bandeja. Para ele iniciar junto
-com o Windows, clique com o botão direito no ícone e marque "Iniciar com o
-Windows".
+A instalação é por usuário, em `%LOCALAPPDATA%\Programs\Blink`, então **não pede
+senha de administrador**.
+
+### O aviso azul do Windows
+
+Na primeira execução o SmartScreen vai dizer que o app é de um "editor
+desconhecido" e esconder o botão de instalar. Isso é esperado: o instalador não
+tem assinatura digital, que exige um certificado pago.
+
+Clique em **"Mais informações"** e depois em **"Executar assim mesmo"**.
+
+### Depois de instalar
+
+O Blink abre escondido na bandeja do sistema, ao lado do relógio. Clique no olho
+para abrir as configurações.
+
+Vale marcar **"Iniciar com o Windows"** no menu do botão direito — sem isso você
+precisa abrir o app na mão toda vez que ligar o computador.
+
+As atualizações seguintes chegam sozinhas: o app avisa por notificação quando há
+uma versão nova e se atualiza quando você fechar.
 
 ## Como rodar durante o desenvolvimento
 
