@@ -95,6 +95,9 @@ function opcoes() {
     // ser so o tamanho visual da tabulacao.
     tabWidth: sql.indentacao === 'tab' ? 4 : Number(sql.indentacao),
     useTabs: sql.indentacao === 'tab',
+    // Logs de aplicacao mostram a SQL com "?" no lugar dos valores. Sem isto
+    // a biblioteca nao reconhece o "?" e recusa a SQL inteira.
+    paramTypes: { positional: true },
   };
 }
 
