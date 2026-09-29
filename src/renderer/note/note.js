@@ -41,6 +41,9 @@
   let arrastando = null;
   let alvo = null;
 
+  /** Um topico esta sendo editado agora? So um de cada vez. */
+  let editando = false;
+
   // --- Gravacao -------------------------------------------------------------
 
   /** Manda a lista para o disco, de volta na ordem do arquivo. */
@@ -80,7 +83,16 @@
         el('span', { class: 'alca', texto: '⋮⋮' }),
         el('div', { class: 'corpo-topico' }, [
           el('span', { class: 'traco', texto: '–' }),
-          el('span', { class: 'texto', texto }),
+          el('span', {
+            class: 'texto',
+            texto,
+            title: 'Clique para editar',
+            onclick: (evento) =>
+              editar(evento.currentTarget, item, texto, async (novo) => {
+                topicos[indice] = novo;
+                await gravarLista();
+              }),
+          }),
         ]),
         el('button', {
           class: 'botao-apagar',
@@ -181,6 +193,76 @@
     recemCriado = null;
     desenhar();
     await window.blink.notas.limpar(arquivo);
+  }
+
+  // --- Editar um topico ------------------------------------------------------
+
+  /** O campo de edicao cresce com o texto, como o proprio topico cresce. */
+  function ajustarAltura(campo) {
+    campo.style.height = 'auto';
+    campo.style.height = `${campo.scrollHeight}px`;
+  }
+
+  /**
+   * Troca o texto de um topico por um campo de edicao, no mesmo lugar.
+   *
+   *   Enter        salva
+   *   Shift+Enter  quebra linha, como no rascunho
+   *   Esc          desiste
+   *   clicar fora  salva
+   *
+   * Texto vazio ao salvar desfaz a edicao em vez de apagar o topico: apagar
+   * tem o proprio botao, e esvaziar sem querer nao deve custar um topico.
+   *
+   * `aoSalvar` recebe o texto novo e cuida de guardar: serve tanto para as
+   * notas comuns quanto para as tarefas.
+   */
+  function editar(spanTexto, item, original, aoSalvar) {
+    if (editando) return;
+    editando = true;
+
+    const campo = el('textarea', { class: 'campo-edicao', rows: '1', spellcheck: 'false' });
+    campo.value = original;
+
+    // Sem isto, selecionar texto dentro do campo arrastaria a linha inteira.
+    item.draggable = false;
+    item.classList.add('editando');
+
+    spanTexto.replaceWith(campo);
+    ajustarAltura(campo);
+    campo.focus();
+    campo.setSelectionRange(campo.value.length, campo.value.length);
+
+    // Enter e clicar fora podem chegar os dois; so o primeiro vale.
+    let terminado = false;
+
+    async function terminar(salvar) {
+      if (terminado) return;
+      terminado = true;
+      editando = false;
+
+      const novo = campo.value.trim();
+      const mudou = salvar && novo !== '' && novo !== original;
+
+      if (mudou) await aoSalvar(novo);
+      recemCriado = null;
+      desenhar();
+    }
+
+    campo.addEventListener('input', () => ajustarAltura(campo));
+    campo.addEventListener('blur', () => terminar(true));
+    campo.addEventListener('keydown', (evento) => {
+      if (evento.key === 'Enter' && !evento.shiftKey) {
+        evento.preventDefault();
+        terminar(true);
+      } else if (evento.key === 'Escape') {
+        // Sem o stopPropagation o Esc chegaria na janela e fecharia o Fast
+        // Note inteiro, em vez de so desistir da edicao.
+        evento.preventDefault();
+        evento.stopPropagation();
+        terminar(false);
+      }
+    });
   }
 
   // --- Confirmacao do limpar ------------------------------------------------

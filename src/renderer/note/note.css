@@ -241,6 +241,34 @@ body {
   user-select: text;
 }
 
+/* O texto do topico se edita com um clique. */
+.texto {
+  cursor: text;
+}
+
+.topico.editando {
+  cursor: default;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Campo que aparece no lugar do texto enquanto ele e editado: mesma fonte e
+   mesmo tamanho do topico, para nada pular na tela. */
+.campo-edicao {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  overflow: hidden;
+  padding: 1px 6px;
+  margin: -2px 0;
+  border: 1px solid rgba(168, 57, 58, 0.55);
+  border-radius: var(--raio-item);
+  background: var(--superficie);
+  font: 12px/1.5 var(--fonte-mono);
+  color: var(--texto-forte);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .botao-apagar {
   width: 22px;
   height: 22px;
