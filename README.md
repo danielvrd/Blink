@@ -77,6 +77,24 @@ Apagar (`×`), arrastar para reordenar e a vassoura (limpar tudo) gravam na hora
 da vassoura exclui o arquivo inteiro — ele vai para a Lixeira do Windows, então dá para recuperar.
 `Esc` fecha a janela.
 
+#### Tarefas com `/task`
+
+De qualquer arquivo, escreva `/task` seguido da tarefa e pressione `Enter`:
+
+```
+/task fazer 9.1 luis
+```
+
+O Fast Note troca para o arquivo `task.md` com a tarefa nova em vermelho, na seção **A fazer**.
+Clique na bolinha ao lado dela para concluir — ela desce para **Concluídas**, riscada. Clicar de
+novo na bolinha volta a tarefa para A fazer.
+
+Com o `task.md` aberto, basta escrever e dar `Enter`, sem o `/task`. Só `/task`, sem texto, abre as
+tarefas. O `task.md` aparece sempre primeiro no seletor e usa o formato de checklist do Markdown,
+então dá para abri-lo no VS Code ou no GitHub e ver as caixinhas.
+
+#### Seus arquivos
+
 O Blink só mexe nas linhas que começam com `- ` dos seus arquivos. Título, parágrafo ou qualquer
 outra coisa que você escrever no arquivo por fora fica onde está — dá para usar uma pasta de notas
 que você já tem.

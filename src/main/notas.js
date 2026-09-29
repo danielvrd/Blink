@@ -99,7 +99,13 @@ function caminhoDe(arquivo) {
   return completo;
 }
 
-/** Os arquivos .md da pasta, em ordem alfabetica. */
+/**
+ * O arquivo de tarefas do /task. Mora na raiz da pasta de notas, junto com
+ * os outros, e aparece sempre primeiro no seletor.
+ */
+const ARQUIVO_TAREFAS = 'task.md';
+
+/** Os arquivos .md da pasta, em ordem alfabetica - com o de tarefas no topo. */
 async function listar() {
   const raiz = pasta();
   if (!raiz) return [];
@@ -109,7 +115,12 @@ async function listar() {
     return entradas
       .filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.md'))
       .map((e) => e.name)
-      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      .sort((a, b) => {
+        // O task.md vem primeiro: e o arquivo que mais se abre.
+        if (a.toLowerCase() === ARQUIVO_TAREFAS) return -1;
+        if (b.toLowerCase() === ARQUIVO_TAREFAS) return 1;
+        return a.localeCompare(b, 'pt-BR');
+      });
   } catch (erro) {
     // Pasta apagada, renomeada ou em um drive que saiu do ar.
     console.warn('[notas] nao consegui ler a pasta:', erro.message);
@@ -264,6 +275,108 @@ async function excluir(arquivo) {
   return true;
 }
 
+// --- Tarefas (/task) ----------------------------------------------------------
+
+/**
+ * O task.md usa o formato de checklist do Markdown, que o VS Code e o
+ * GitHub ja mostram como caixinhas:
+ *
+ *     ## A fazer
+ *
+ *     - [ ] fazer 9.1 luis
+ *
+ *     ## Concluidas
+ *
+ *     - [x] deploy da v1.3
+ *
+ * Diferente das notas comuns, este arquivo e do Blink: ele e regravado
+ * inteiro nesse formato. A leitura e tolerante - aceita a caixinha em
+ * qualquer lugar do arquivo, e um "- " sem caixinha conta como pendente,
+ * para quem editar na mao nao perder nada.
+ */
+const LINHA_TAREFA = /^-\s+\[([ xX])\]\s*(.*)$/;
+
+/** Separa o conteudo do task.md em pendentes e concluidas, na ordem do arquivo. */
+function separarTarefas(conteudo) {
+  const pendentes = [];
+  const concluidas = [];
+  // A lista que recebeu o ultimo item, para as linhas de continuacao.
+  let ultima = null;
+
+  for (const linha of conteudo.replace(/^﻿/, '').split(/\r?\n/)) {
+    const tarefa = linha.match(LINHA_TAREFA);
+    if (tarefa) {
+      ultima = tarefa[1] === ' ' ? pendentes : concluidas;
+      ultima.push(tarefa[2]);
+      continue;
+    }
+
+    const solta = linha.match(LINHA_TOPICO);
+    if (solta) {
+      ultima = pendentes;
+      pendentes.push(solta[1]);
+      continue;
+    }
+
+    const continuacao = linha.match(LINHA_CONTINUACAO);
+    if (continuacao && ultima && ultima.length > 0) {
+      ultima[ultima.length - 1] += '\n' + continuacao[1];
+      continue;
+    }
+
+    // Titulo ou texto solto encerra a continuacao; linha em branco nao.
+    if (linha.trim() !== '') ultima = null;
+  }
+
+  return { pendentes, concluidas };
+}
+
+/** Uma tarefa vira "- [ ] texto", com as quebras de linha indentadas. */
+function escreverTarefa(texto, feita) {
+  return `- [${feita ? 'x' : ' '}] ` + texto.split('\n').join('\n  ');
+}
+
+/** Monta o task.md inteiro, sempre com as duas secoes. */
+function montarTarefas({ pendentes, concluidas }) {
+  const partes = ['## A fazer', ''];
+  if (pendentes.length > 0) {
+    partes.push(pendentes.map((t) => escreverTarefa(t, false)).join('\n'), '');
+  }
+  partes.push('## Concluídas', '');
+  if (concluidas.length > 0) {
+    partes.push(concluidas.map((t) => escreverTarefa(t, true)).join('\n'), '');
+  }
+  return partes.join('\n').replace(/\n+$/, '') + '\n';
+}
+
+/** Le o task.md. Arquivo que ainda nao existe volta vazio. */
+async function lerTarefas() {
+  const completo = caminhoDe(ARQUIVO_TAREFAS);
+  if (!completo) return { pendentes: [], concluidas: [] };
+
+  try {
+    return separarTarefas(await fs.readFile(completo, 'utf8'));
+  } catch (erro) {
+    if (erro.code === 'ENOENT') return { pendentes: [], concluidas: [] };
+    throw erro;
+  }
+}
+
+/** Regrava o task.md inteiro, criando se preciso. */
+async function salvarTarefas(tarefas) {
+  const completo = caminhoDe(ARQUIVO_TAREFAS);
+  if (!completo) return false;
+  await fs.writeFile(completo, montarTarefas(tarefas), 'utf8');
+  return true;
+}
+
+/** Acrescenta uma tarefa pendente no fim da lista do arquivo. */
+async function adicionarTarefa(texto) {
+  const tarefas = await lerTarefas();
+  tarefas.pendentes.push(texto);
+  return salvarTarefas(tarefas);
+}
+
 /** Apaga todos os topicos de um arquivo, preservando o resto. */
 async function limpar(arquivo) {
   return salvarTopicos(arquivo, []);
@@ -279,7 +392,13 @@ module.exports = {
   excluir,
   nomeDeArquivo,
   caminhoDe,
+  ARQUIVO_TAREFAS,
+  lerTarefas,
+  salvarTarefas,
+  adicionarTarefa,
   // exportados para teste
   separar,
   montar,
+  separarTarefas,
+  montarTarefas,
 };

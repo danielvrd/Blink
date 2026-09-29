@@ -49,6 +49,11 @@ contextBridge.exposeInMainWorld('blink', {
     limpar: (arquivo) => ipcRenderer.invoke('notas:limpar', arquivo),
     /** Manda o arquivo para a Lixeira do Windows. */
     excluir: (arquivo) => ipcRenderer.invoke('notas:excluir', arquivo),
+
+    /** Tarefas do task.md: { pendentes, concluidas }, na ordem do arquivo. */
+    lerTarefas: () => ipcRenderer.invoke('notas:lerTarefas'),
+    adicionarTarefa: (texto) => ipcRenderer.invoke('notas:adicionarTarefa', texto),
+    salvarTarefas: (tarefas) => ipcRenderer.invoke('notas:salvarTarefas', tarefas),
   },
 
   areaTransferencia: {

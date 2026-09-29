@@ -7,8 +7,17 @@
  * Uma inversao importante: no arquivo os topicos ficam em ordem
  * cronologica, com o mais novo no fim, para o .md se ler como um diario.
  * Na tela o mais novo aparece em cima, que e onde o olho vai primeiro.
- * Entao a lista daqui e sempre o inverso da lista do arquivo, e a conversao
- * acontece em dois lugares so: ao carregar e ao gravar.
+ * Entao as listas daqui sao sempre o inverso das do arquivo, e a conversao
+ * acontece em dois lugares so: carregar() e gravar().
+ *
+ * O task.md e um arquivo especial: em vez de uma lista de topicos, tem duas
+ * - tarefas a fazer e concluidas. Cada lista e um "grupo":
+ *
+ *   'topicos'     notas comuns
+ *   'pendentes'   tarefas a fazer
+ *   'concluidas'  tarefas feitas
+ *
+ * Apagar, editar e arrastar funcionam igual nos tres; so a gravacao muda.
  */
 
 (function () {
@@ -16,6 +25,15 @@
 
   /** Valor da opcao "+ Criar nova nota" do select. */
   const NOVO = '__novo__';
+
+  /**
+   * "/task texto" no rascunho manda o texto para o arquivo de tarefas, de
+   * qualquer arquivo que esteja aberto. "/task" sozinho so abre as tarefas.
+   */
+  const COMANDO_TAREFA = /^\/task(?:\s+([\s\S]*))?$/i;
+
+  /** Quanto tempo o item recem-criado fica destacado. */
+  const TEMPO_PISCANDO = 1600;
 
   const selectArquivo = document.getElementById('select-arquivo');
   const campoNome = document.getElementById('campo-nome');
@@ -31,31 +49,98 @@
   /** Pasta configurada, so para mostrar na dica. */
   let pasta = '';
 
+  /** Nome do arquivo de tarefas. Vem do processo principal. */
+  let arquivoTarefas = 'task.md';
+
   /** Arquivo escolhido agora, ou NOVO. */
   let arquivo = NOVO;
 
-  /** Topicos na ordem da TELA: o mais novo primeiro. */
+  /** Notas comuns, na ordem da TELA: o mais novo primeiro. */
   let topicos = [];
 
-  /** Indice do topico recem-criado, para ele piscar. */
+  /** Tarefas do task.md, tambem na ordem da tela. */
+  let tarefas = { pendentes: [], concluidas: [] };
+
+  /** O item recem-criado, para ele piscar: { grupo, indice } ou null. */
   let recemCriado = null;
 
-  /** Arrastar para reordenar. */
+  /** Arrastar para reordenar: { grupo, indice, item } de quem esta sendo arrastado. */
   let arrastando = null;
   let alvo = null;
 
-  /** Um topico esta sendo editado agora? So um de cada vez. */
+  /** Um item esta sendo editado agora? So um de cada vez. */
   let editando = false;
 
-  // --- Gravacao -------------------------------------------------------------
+  // --- Ajudantes --------------------------------------------------------------
 
-  /** Manda a lista para o disco, de volta na ordem do arquivo. */
-  async function gravarLista() {
+  /** O arquivo aberto e o de tarefas? Sem diferenciar maiuscula. */
+  function ehTarefas() {
+    return arquivo !== NOVO && arquivo.toLowerCase() === arquivoTarefas;
+  }
+
+  /** A lista que um grupo representa. */
+  function listaDo(grupo) {
+    return grupo === 'topicos' ? topicos : tarefas[grupo];
+  }
+
+  function totalDeItens() {
+    return ehTarefas() ? tarefas.pendentes.length + tarefas.concluidas.length : topicos.length;
+  }
+
+  /**
+   * Em que arquivo abrir: a primeira nota comum, que e onde se escreve no
+   * dia a dia. Sem notas comuns, as tarefas. Pasta vazia, "criar nova".
+   */
+  function primeiroArquivo(arquivos) {
+    const comuns = arquivos.filter((a) => a.toLowerCase() !== arquivoTarefas);
+    if (comuns.length > 0) return comuns[0];
+    const deTarefas = arquivos.find((a) => a.toLowerCase() === arquivoTarefas);
+    return deTarefas || NOVO;
+  }
+
+  // --- Disco ------------------------------------------------------------------
+
+  /** Le o arquivo aberto e inverte para a ordem da tela. */
+  async function carregar() {
+    topicos = [];
+    tarefas = { pendentes: [], concluidas: [] };
     if (arquivo === NOVO) return;
+
+    if (ehTarefas()) {
+      const lido = await window.blink.notas.lerTarefas();
+      tarefas = { pendentes: lido.pendentes.reverse(), concluidas: lido.concluidas.reverse() };
+      return;
+    }
+
+    const { topicos: doArquivo } = await window.blink.notas.ler(arquivo);
+    topicos = doArquivo.reverse();
+  }
+
+  /** Manda o que esta na tela para o disco, de volta na ordem do arquivo. */
+  async function gravar() {
+    if (arquivo === NOVO) return;
+
+    if (ehTarefas()) {
+      await window.blink.notas.salvarTarefas({
+        pendentes: [...tarefas.pendentes].reverse(),
+        concluidas: [...tarefas.concluidas].reverse(),
+      });
+      return;
+    }
+
     await window.blink.notas.salvar(arquivo, [...topicos].reverse());
   }
 
-  // --- Desenho --------------------------------------------------------------
+  /** Relê a lista de arquivos - pode ter nascido um - e redesenha o seletor. */
+  async function recarregarSeletor() {
+    const estado = await window.blink.notas.estado();
+    pasta = estado.pasta;
+    arquivoTarefas = estado.arquivoTarefas;
+    desenharSelect(estado.arquivos);
+    return estado.arquivos;
+  }
+
+  // --- Desenho ----------------------------------------------------------------
 
   function desenharSelect(arquivos) {
     limpar(selectArquivo);
@@ -68,58 +153,110 @@
     selectArquivo.value = arquivo;
   }
 
-  function desenharLista() {
-    limpar(lista);
+  function vazio(texto) {
+    lista.appendChild(el('div', { class: 'vazio', texto }));
+  }
 
-    if (arquivo === NOVO || topicos.length === 0) {
-      lista.appendChild(
-        el('div', { class: 'vazio', texto: 'Nenhum tópico ainda — escreva abaixo.' })
-      );
+  /**
+   * Monta a linha de um item.
+   *
+   * Nota comum: alca, traco, texto, apagar.
+   * Tarefa: alca, bolinha (marca e desmarca), texto, apagar.
+   */
+  function montarItem(grupo, indice, texto) {
+    const ehTarefa = grupo !== 'topicos';
+    const feita = grupo === 'concluidas';
+    const piscando = recemCriado && recemCriado.grupo === grupo && recemCriado.indice === indice;
+
+    const classes = ['topico'];
+    if (piscando) classes.push('novo');
+    if (ehTarefa) classes.push('tarefa', feita ? 'feita' : 'pendente');
+
+    const item = el('div', { class: classes.join(' '), draggable: 'true' });
+
+    const spanTexto = el('span', {
+      class: 'texto',
+      texto,
+      title: 'Clique para editar',
+      onclick: (evento) =>
+        editar(evento.currentTarget, item, texto, async (novoTexto) => {
+          listaDo(grupo)[indice] = novoTexto;
+          await gravar();
+        }),
+    });
+
+    const inicio = ehTarefa
+      ? el('button', {
+          class: 'marcador-tarefa',
+          title: feita ? 'Voltar para a fazer' : 'Marcar como concluída',
+          'aria-label': feita ? 'Voltar para a fazer' : 'Marcar como concluída',
+          onclick: () => alternarTarefa(grupo, indice),
+        })
+      : el('span', { class: 'traco', texto: '–' });
+
+    window.Blink.ui.anexar(item, [
+      el('span', { class: 'alca', texto: '⋮⋮' }),
+      el('div', { class: 'corpo-topico' }, [inicio, spanTexto]),
+      el('button', {
+        class: 'botao-apagar',
+        texto: '×',
+        title: ehTarefa ? 'Apagar tarefa' : 'Apagar tópico',
+        onclick: () => apagar(grupo, indice),
+      }),
+    ]);
+
+    ligarArrasto(item, grupo, indice);
+    return item;
+  }
+
+  /** As tarefas: a fazer em cima, uma linha divisoria, concluidas embaixo. */
+  function desenharTarefas() {
+    const { pendentes, concluidas } = tarefas;
+
+    if (pendentes.length === 0 && concluidas.length === 0) {
+      vazio('Nenhuma tarefa ainda — escreva abaixo.');
       return;
     }
 
-    topicos.forEach((texto, indice) => {
-      const item = el('div', {
-        class: 'topico' + (indice === recemCriado ? ' novo' : ''),
-        draggable: 'true',
-      }, [
-        el('span', { class: 'alca', texto: '⋮⋮' }),
-        el('div', { class: 'corpo-topico' }, [
-          el('span', { class: 'traco', texto: '–' }),
-          el('span', {
-            class: 'texto',
-            texto,
-            title: 'Clique para editar',
-            onclick: (evento) =>
-              editar(evento.currentTarget, item, texto, async (novo) => {
-                topicos[indice] = novo;
-                await gravarLista();
-              }),
-          }),
-        ]),
-        el('button', {
-          class: 'botao-apagar',
-          texto: '×',
-          title: 'Apagar tópico',
-          onclick: () => apagar(indice),
-        }),
-      ]);
+    if (pendentes.length === 0) vazio('Nada a fazer.');
+    pendentes.forEach((texto, indice) => lista.appendChild(montarItem('pendentes', indice, texto)));
 
-      ligarArrasto(item, indice);
-      lista.appendChild(item);
-    });
+    if (concluidas.length > 0) {
+      lista.appendChild(el('div', { class: 'divisor-tarefas', texto: `Concluídas (${concluidas.length})` }));
+      concluidas.forEach((texto, indice) => lista.appendChild(montarItem('concluidas', indice, texto)));
+    }
+  }
+
+  function desenharLista() {
+    limpar(lista);
+
+    if (ehTarefas()) {
+      desenharTarefas();
+      return;
+    }
+
+    if (arquivo === NOVO || topicos.length === 0) {
+      vazio('Nenhum tópico ainda — escreva abaixo.');
+      return;
+    }
+
+    topicos.forEach((texto, indice) => lista.appendChild(montarItem('topicos', indice, texto)));
   }
 
   function desenharDica() {
-    dica.textContent = pasta
-      ? `Enter adiciona um tópico · Pasta: ${pasta}`
-      : 'Enter adiciona um tópico';
+    const partes = [ehTarefas() ? 'Enter adiciona uma tarefa' : 'Enter adiciona · /task vira tarefa'];
+    if (pasta) partes.push(`Pasta: ${pasta}`);
+    dica.textContent = partes.join(' · ');
     dica.title = dica.textContent;
+
+    rascunho.placeholder = ehTarefas()
+      ? 'Escreva uma tarefa…'
+      : 'Escreva e pressione Enter…';
   }
 
   function desenhar() {
     campoNome.hidden = arquivo !== NOVO;
-    botaoLimpar.disabled = arquivo === NOVO || topicos.length === 0;
+    botaoLimpar.disabled = arquivo === NOVO || totalDeItens() === 0;
     botaoExcluir.disabled = arquivo === NOVO;
     if (botaoLimpar.disabled) popoverLimpar.hidden = true;
     if (botaoExcluir.disabled) popoverExcluir.hidden = true;
@@ -128,9 +265,22 @@
     desenharDica();
   }
 
-  // --- Acoes ----------------------------------------------------------------
+  /**
+   * Tira o destaque do item recem-criado depois de um tempo.
+   *
+   * Se o usuario estiver editando algum item nesse momento, nao redesenha:
+   * redesenhar destruiria o campo de edicao aberto, com o que ele digitou.
+   */
+  function agendarFimDoPiscar() {
+    setTimeout(() => {
+      recemCriado = null;
+      if (!editando) desenharLista();
+    }, TEMPO_PISCANDO);
+  }
 
-  /** Troca o arquivo mostrado e carrega os topicos dele. */
+  // --- Acoes ------------------------------------------------------------------
+
+  /** Troca o arquivo mostrado e carrega o conteudo dele. */
   async function escolherArquivo(valor) {
     arquivo = valor;
     fecharPopovers();
@@ -138,25 +288,56 @@
 
     if (arquivo === NOVO) {
       topicos = [];
+      tarefas = { pendentes: [], concluidas: [] };
       campoNome.value = '';
       desenhar();
       campoNome.focus();
       return;
     }
 
-    const { topicos: doArquivo } = await window.blink.notas.ler(arquivo);
-    topicos = doArquivo.reverse();
+    await carregar();
     desenhar();
     rascunho.focus();
   }
 
-  /** Grava o que esta no rascunho como um topico novo. */
+  /**
+   * Manda o texto para as tarefas e abre o task.md, com o item novo
+   * piscando. Texto vazio (um "/task" sozinho) so abre.
+   */
+  async function adicionarTarefa(texto) {
+    if (texto !== '') {
+      await window.blink.notas.adicionarTarefa(texto);
+    } else {
+      // Para abrir, o arquivo precisa existir: regravar o que ha cria se
+      // faltar e nao muda nada se ja existir.
+      const atuais = await window.blink.notas.lerTarefas();
+      await window.blink.notas.salvarTarefas(atuais);
+    }
+
+    arquivo = arquivoTarefas;
+    await recarregarSeletor();
+    await carregar();
+
+    recemCriado = texto !== '' ? { grupo: 'pendentes', indice: 0 } : null;
+    desenhar();
+    rascunho.focus();
+    if (recemCriado) agendarFimDoPiscar();
+  }
+
+  /** Grava o que esta no rascunho: topico, tarefa, ou "/task". */
   async function adicionar() {
-    const texto = rascunho.value.trim();
-    if (texto === '') return;
+    const bruto = rascunho.value.trim();
+    if (bruto === '') return;
+
+    const comando = bruto.match(COMANDO_TAREFA);
+    if (comando || ehTarefas()) {
+      rascunho.value = '';
+      await adicionarTarefa(comando ? (comando[1] || '').trim() : bruto);
+      return;
+    }
 
     const destino = arquivo === NOVO ? campoNome.value : arquivo;
-    const gravado = await window.blink.notas.adicionar(destino, texto);
+    const gravado = await window.blink.notas.adicionar(destino, bruto);
 
     if (!gravado) {
       campoNome.focus();
@@ -164,63 +345,91 @@
     }
 
     rascunho.value = '';
-
-    // Pode ter nascido um arquivo novo: recarrega a lista do select.
-    const estado = await window.blink.notas.estado();
-    pasta = estado.pasta;
     arquivo = gravado;
-    desenharSelect(estado.arquivos);
-
-    const { topicos: doArquivo } = await window.blink.notas.ler(arquivo);
-    topicos = doArquivo.reverse();
+    await recarregarSeletor();
+    await carregar();
 
     // O mais novo e sempre o primeiro da tela.
-    recemCriado = 0;
+    recemCriado = { grupo: 'topicos', indice: 0 };
     desenhar();
     rascunho.focus();
-
-    setTimeout(() => {
-      recemCriado = null;
-      desenharLista();
-    }, 1600);
+    agendarFimDoPiscar();
   }
 
-  async function apagar(indice) {
-    topicos.splice(indice, 1);
+  async function apagar(grupo, indice) {
+    listaDo(grupo).splice(indice, 1);
     recemCriado = null;
     desenhar();
-    await gravarLista();
+    await gravar();
+  }
+
+  /**
+   * Conclui uma tarefa, ou volta uma concluida para a fazer. Ela entra no
+   * topo da outra secao, que na tela e onde o olho esta.
+   */
+  async function alternarTarefa(grupo, indice) {
+    const destino = grupo === 'pendentes' ? 'concluidas' : 'pendentes';
+    const [tarefa] = tarefas[grupo].splice(indice, 1);
+    tarefas[destino].unshift(tarefa);
+
+    recemCriado = null;
+    desenhar();
+    await gravar();
   }
 
   async function limparTudo() {
     fecharPopovers();
-    topicos = [];
     recemCriado = null;
+
+    if (ehTarefas()) {
+      tarefas = { pendentes: [], concluidas: [] };
+      desenhar();
+      await gravar();
+      return;
+    }
+
+    topicos = [];
     desenhar();
     await window.blink.notas.limpar(arquivo);
   }
 
-  // --- Editar um topico ------------------------------------------------------
+  /**
+   * Manda o arquivo aberto para a Lixeira e cai no proximo que sobrar - ou
+   * em "+ Criar nova nota", se a pasta ficou vazia.
+   */
+  async function excluirArquivo() {
+    fecharPopovers();
+    if (arquivo === NOVO) return;
 
-  /** O campo de edicao cresce com o texto, como o proprio topico cresce. */
+    await window.blink.notas.excluir(arquivo);
+
+    const estado = await window.blink.notas.estado();
+    arquivo = primeiroArquivo(estado.arquivos);
+    desenharSelect(estado.arquivos);
+    await escolherArquivo(arquivo);
+  }
+
+  // --- Editar um item -----------------------------------------------------------
+
+  /** O campo de edicao cresce com o texto, como o proprio item cresce. */
   function ajustarAltura(campo) {
     campo.style.height = 'auto';
     campo.style.height = `${campo.scrollHeight}px`;
   }
 
   /**
-   * Troca o texto de um topico por um campo de edicao, no mesmo lugar.
+   * Troca o texto de um item por um campo de edicao, no mesmo lugar.
    *
    *   Enter        salva
    *   Shift+Enter  quebra linha, como no rascunho
    *   Esc          desiste
    *   clicar fora  salva
    *
-   * Texto vazio ao salvar desfaz a edicao em vez de apagar o topico: apagar
-   * tem o proprio botao, e esvaziar sem querer nao deve custar um topico.
+   * Texto vazio ao salvar desfaz a edicao em vez de apagar o item: apagar
+   * tem o proprio botao, e esvaziar sem querer nao deve custar um item.
    *
-   * `aoSalvar` recebe o texto novo e cuida de guardar: serve tanto para as
-   * notas comuns quanto para as tarefas.
+   * `aoSalvar` recebe o texto novo e cuida de guardar, qualquer que seja o
+   * grupo.
    */
   function editar(spanTexto, item, original, aoSalvar) {
     if (editando) return;
@@ -270,23 +479,7 @@
     });
   }
 
-  /**
-   * Manda o arquivo aberto para a Lixeira e cai no proximo que sobrar - ou
-   * em "+ Criar nova nota", se a pasta ficou vazia.
-   */
-  async function excluirArquivo() {
-    fecharPopovers();
-    if (arquivo === NOVO) return;
-
-    await window.blink.notas.excluir(arquivo);
-
-    const estado = await window.blink.notas.estado();
-    arquivo = estado.arquivos.length > 0 ? estado.arquivos[0] : NOVO;
-    desenharSelect(estado.arquivos);
-    await escolherArquivo(arquivo);
-  }
-
-  // --- Confirmacoes (limpar tudo e excluir) ----------------------------------
+  // --- Confirmacoes (limpar tudo e excluir) ------------------------------------
 
   /** Fecha as duas confirmacoes. Uma aberta nunca fica por cima da outra. */
   function fecharPopovers() {
@@ -301,7 +494,7 @@
     qual.hidden = !abrir;
   }
 
-  // --- Arrastar para reordenar ----------------------------------------------
+  // --- Arrastar para reordenar ---------------------------------------------------
 
   /** Tira as linhas-guia de todos os itens. */
   function limparGuias() {
@@ -310,9 +503,14 @@
     }
   }
 
-  function ligarArrasto(item, indice) {
+  /**
+   * Arrasta dentro do mesmo grupo. Soltar uma tarefa a fazer no meio das
+   * concluidas nao e permitido - o cursor mostra o sinal de proibido -
+   * porque para isso existe a bolinha.
+   */
+  function ligarArrasto(item, grupo, indice) {
     item.addEventListener('dragstart', (evento) => {
-      arrastando = indice;
+      arrastando = { grupo, indice, item };
       evento.dataTransfer.effectAllowed = 'move';
       // O Firefox e alguns navegadores so comecam o arrasto se houver dado.
       evento.dataTransfer.setData('text/plain', String(indice));
@@ -320,17 +518,17 @@
     });
 
     item.addEventListener('dragover', (evento) => {
+      if (!arrastando || arrastando.grupo !== grupo) return;
       evento.preventDefault();
-      if (arrastando === null || arrastando === indice) return;
-      if (alvo === indice) return;
+      if (arrastando.indice === indice || alvo === item) return;
 
-      alvo = indice;
+      alvo = item;
       limparGuias();
-      lista.children[arrastando]?.classList.add('arrastando');
+      arrastando.item.classList.add('arrastando');
 
       // Descendo, a guia fica embaixo do item; subindo, em cima. E onde o
       // item vai parar.
-      item.classList.add(arrastando < indice ? 'solta-abaixo' : 'solta-acima');
+      item.classList.add(arrastando.indice < indice ? 'solta-abaixo' : 'solta-acima');
     });
 
     item.addEventListener('drop', async (evento) => {
@@ -339,17 +537,18 @@
       arrastando = null;
       alvo = null;
 
-      if (origem === null || origem === indice) {
+      if (!origem || origem.grupo !== grupo || origem.indice === indice) {
         limparGuias();
         return;
       }
 
-      const [movido] = topicos.splice(origem, 1);
-      topicos.splice(indice, 0, movido);
+      const itens = listaDo(grupo);
+      const [movido] = itens.splice(origem.indice, 1);
+      itens.splice(indice, 0, movido);
 
       recemCriado = null;
       desenhar();
-      await gravarLista();
+      await gravar();
     });
 
     item.addEventListener('dragend', () => {
@@ -359,12 +558,12 @@
     });
   }
 
-  // --- Ligacoes -------------------------------------------------------------
+  // --- Ligacoes ------------------------------------------------------------------
 
   selectArquivo.addEventListener('change', (evento) => escolherArquivo(evento.target.value));
 
   rascunho.addEventListener('keydown', (evento) => {
-    // Enter grava; Shift+Enter quebra linha dentro do topico.
+    // Enter grava; Shift+Enter quebra linha dentro do item.
     if (evento.key === 'Enter' && !evento.shiftKey) {
       evento.preventDefault();
       adicionar();
@@ -411,20 +610,16 @@
     window.blink.janela.fechar();
   });
 
-  // --- Inicio ---------------------------------------------------------------
+  // --- Inicio --------------------------------------------------------------------
 
   async function iniciar() {
     const estado = await window.blink.notas.estado();
     pasta = estado.pasta;
+    arquivoTarefas = estado.arquivoTarefas;
 
-    // Abre no primeiro arquivo; se a pasta estiver vazia, ja em "criar nova".
-    arquivo = estado.arquivos.length > 0 ? estado.arquivos[0] : NOVO;
+    arquivo = primeiroArquivo(estado.arquivos);
     desenharSelect(estado.arquivos);
-
-    if (arquivo !== NOVO) {
-      const { topicos: doArquivo } = await window.blink.notas.ler(arquivo);
-      topicos = doArquivo.reverse();
-    }
+    await carregar();
 
     desenhar();
     if (arquivo === NOVO) campoNome.focus();

@@ -67,6 +67,9 @@ function registrar() {
   ipcMain.handle('notas:estado', async () => ({
     pasta: notas.pasta(),
     arquivos: await notas.listar(),
+    // O nome do arquivo de tarefas vem daqui, para a tela e o disco nunca
+    // discordarem sobre ele.
+    arquivoTarefas: notas.ARQUIVO_TAREFAS,
   }));
 
   ipcMain.handle('notas:ler', async (_evento, arquivo) => {
@@ -95,6 +98,21 @@ function registrar() {
   ipcMain.handle('notas:limpar', async (_evento, arquivo) => {
     if (typeof arquivo !== 'string') return false;
     return notas.limpar(arquivo);
+  });
+
+  // --- Tarefas do /task ---
+
+  ipcMain.handle('notas:lerTarefas', async () => notas.lerTarefas());
+
+  ipcMain.handle('notas:adicionarTarefa', async (_evento, texto) => {
+    if (typeof texto !== 'string' || texto.trim() === '') return false;
+    return notas.adicionarTarefa(texto.trim());
+  });
+
+  ipcMain.handle('notas:salvarTarefas', async (_evento, tarefas) => {
+    const lista = (v) => Array.isArray(v) && v.every((t) => typeof t === 'string');
+    if (!tarefas || !lista(tarefas.pendentes) || !lista(tarefas.concluidas)) return false;
+    return notas.salvarTarefas({ pendentes: tarefas.pendentes, concluidas: tarefas.concluidas });
   });
 
   // Manda o arquivo para a Lixeira: recuperavel se foi engano.

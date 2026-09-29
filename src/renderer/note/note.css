@@ -294,6 +294,76 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* --- Tarefas (task.md) ------------------------------------------------------ */
+
+/* A bolinha que conclui e desfaz. Vazia a fazer, marcada quando feita. */
+.marcador-tarefa {
+  flex: none;
+  position: relative;
+  width: 13px;
+  height: 13px;
+  margin-top: 2.5px;
+  padding: 0;
+  border: 1.5px solid var(--tarefa-pendente);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.marcador-tarefa:hover {
+  background: rgba(224, 103, 106, 0.2);
+}
+
+.topico.pendente .texto {
+  color: var(--tarefa-pendente);
+}
+
+.topico.feita .marcador-tarefa {
+  border-color: var(--rotulo);
+  background: var(--rotulo);
+}
+
+.topico.feita .marcador-tarefa:hover {
+  filter: brightness(1.25);
+}
+
+/* O visto dentro da bolinha: um L rotacionado, sem imagem nem fonte. */
+.topico.feita .marcador-tarefa::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0.5px;
+  width: 3px;
+  height: 6px;
+  border: solid var(--fundo);
+  border-width: 0 1.6px 1.6px 0;
+  transform: rotate(45deg);
+}
+
+.topico.feita .texto {
+  color: var(--rotulo);
+  text-decoration: line-through;
+}
+
+/* A linha que separa a fazer de concluidas, com o rotulo no meio. */
+.divisor-tarefas {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 2px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--rotulo);
+}
+
+.divisor-tarefas::before,
+.divisor-tarefas::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--divisoria);
+}
+
 .vazio {
   font-size: 11.5px;
   color: var(--rotulo);
