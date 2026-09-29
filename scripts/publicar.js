@@ -83,10 +83,8 @@ if (remota !== '') {
     console.log(`  tag ${tag} ja esta no GitHub`);
   } else {
     desistir(
-      `A tag ${tag} ja existe no GitHub apontando para outro commit.
-` +
-        `  Suba a versao no package.json, ou apague a tag antes:
-` +
+      `A tag ${tag} ja existe no GitHub apontando para outro commit.\n` +
+        `  Suba a versao no package.json, ou apague a tag antes:\n` +
         `    git push origin :refs/tags/${tag}`
     );
   }
