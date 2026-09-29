@@ -68,18 +68,36 @@ if (git('status', '--porcelain') !== '') {
 
 // --- 2. a tag ---------------------------------------------------------------
 
-const tagsExistentes = git('tag', '--list', tag);
+const commitAtual = git('rev-parse', 'HEAD');
 
-if (tagsExistentes === tag) {
-  console.log(`  tag ${tag} ja existe localmente`);
+// A tag no GitHub tem que apontar para o commit que esta sendo empacotado.
+// Se ela ja existir apontando para outro lugar, o instalador e a tag
+// contariam historias diferentes - e o git recusa sobrescrever, entao o
+// erro apareceria cru no meio da publicacao.
+const remota = git('ls-remote', '--tags', 'origin', tag);
+if (remota !== '') {
+  const commitRemoto = remota.split(/\s+/)[0];
+  const apontaParaCa = git('rev-list', '-n', '1', tag) === commitAtual;
+
+  if (commitRemoto === commitAtual || apontaParaCa) {
+    console.log(`  tag ${tag} ja esta no GitHub`);
+  } else {
+    desistir(
+      `A tag ${tag} ja existe no GitHub apontando para outro commit.
+` +
+        `  Suba a versao no package.json, ou apague a tag antes:
+` +
+        `    git push origin :refs/tags/${tag}`
+    );
+  }
 } else {
-  git('tag', '-a', tag, '-m', `Blink ${versao}`);
-  console.log(`  tag ${tag} criada`);
+  if (git('tag', '--list', tag) !== tag) {
+    git('tag', '-a', tag, '-m', `Blink ${versao}`);
+    console.log(`  tag ${tag} criada`);
+  }
+  git('push', 'origin', tag);
+  console.log(`  tag ${tag} enviada para o GitHub`);
 }
-
-// Enviar de novo uma tag que ja esta no GitHub nao da erro.
-git('push', 'origin', tag);
-console.log(`  tag ${tag} enviada para o GitHub`);
 
 // --- 3. limpar o dist -------------------------------------------------------
 
