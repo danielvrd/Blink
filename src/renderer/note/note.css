@@ -704,9 +704,11 @@ body {
 
 /* --- Escrita -------------------------------------------------------------- */
 
+/* 66px: 10% acima dos 60px do design, para caber uma linha a mais de texto.
+   A janela nao cresce - quem cede os 6px e a lista de topicos. */
 .rascunho {
   flex: none;
-  height: 60px;
+  height: 66px;
   resize: none;
   background: var(--superficie);
   border: 1px solid var(--borda-campo);

@@ -5,8 +5,10 @@
  * lado esquerdo, o direito e se sao diferentes - e cuida so do desenho e
  * dos cliques.
  *
- * Aplicar uma linha leva o texto da esquerda para a direita. O texto da
- * esquerda nunca muda: ele e a referencia.
+ * Cada linha diferente pode ser levada nos DOIS sentidos: da esquerda para a
+ * direita (a direita passa a ser igual a esquerda) ou da direita para a
+ * esquerda. Os dois lados podem mudar, e o botao "Copiar" de cada lado copia
+ * o que aquele lado mostra. Uma linha aplicada pode ser desfeita.
  */
 
 (function () {
@@ -15,16 +17,22 @@
   const corpo = document.getElementById('corpo');
   const grade = document.getElementById('grade');
   const regua = document.getElementById('regua');
-  const botaoCopiar = document.getElementById('btn-copiar');
+  const botaoCopiarEsquerda = document.getElementById('btn-copiar-esquerda');
+  const botaoCopiarDireita = document.getElementById('btn-copiar-direita');
   const botaoFechar = document.getElementById('btn-fechar');
 
-  /** As linhas vindas do processo principal. */
+  /** As linhas vindas do processo principal. Nunca mudam: sao o original. */
   let linhas = [];
 
-  /** Quais linhas ja foram aplicadas, por indice. */
-  const aplicadas = new Set();
+  /**
+   * Quais linhas ja foram aplicadas, por indice, e para que lado:
+   *
+   *   'dir'  esquerda -> direita: a direita passou a ser igual a esquerda
+   *   'esq'  direita -> esquerda: a esquerda passou a ser igual a direita
+   */
+  const aplicadas = new Map();
 
-  /** Qual linha esta escolhida agora, ou null. */
+  /** A linha escolhida agora e o sentido que o clique indicou, ou null. */
   let selecionada = null;
 
   /** Guarda os elementos de cada linha, para atualizar sem redesenhar tudo. */
@@ -33,13 +41,19 @@
   /**
    * O texto que o lado direito mostra hoje.
    *
-   * Depois de aplicada, a direita passa a ser o que estava na esquerda.
-   * Pode ser null quando aquele lado nao existe - linha so adicionada de um
-   * lado ou so removida do outro.
+   * Aplicada para a direita, ele passa a ser o que estava na esquerda. Pode
+   * ser null quando aquele lado nao existe - linha so adicionada de um lado
+   * ou so removida do outro.
    */
   function textoDireita(indice) {
     const linha = linhas[indice];
-    return aplicadas.has(indice) ? linha.esquerda : linha.direita;
+    return aplicadas.get(indice) === 'dir' ? linha.esquerda : linha.direita;
+  }
+
+  /** O mesmo para o lado esquerdo: aplicada para a esquerda, vira o da direita. */
+  function textoEsquerda(indice) {
+    const linha = linhas[indice];
+    return aplicadas.get(indice) === 'esq' ? linha.direita : linha.esquerda;
   }
 
   /** Uma linha diferente que ainda nao foi aplicada pode ser escolhida. */
@@ -47,65 +61,96 @@
     return linhas[indice].diferente && !aplicadas.has(indice);
   }
 
-  /** Atualiza as classes de uma linha depois de um clique. */
+  /** Atualiza as classes e o texto de uma linha depois de um clique. */
   function desenharLinha(indice) {
     const linha = linhas[indice];
     const { esquerda, calha, direita } = celulas[indice];
-    const aplicada = aplicadas.has(indice);
+    const sentido = aplicadas.get(indice);
+    const escolhida = selecionada && selecionada.indice === indice ? selecionada.sentido : null;
 
     esquerda.className = 'celula';
     direita.className = 'celula';
 
-    if (linha.esquerda === null) esquerda.classList.add('ausente');
+    if (textoEsquerda(indice) === null) esquerda.classList.add('ausente');
     if (textoDireita(indice) === null) direita.classList.add('ausente');
 
+    // O lado que recebeu a linha fica verde; o de origem continua laranja.
     if (linha.diferente) {
-      esquerda.classList.add('pendente');
-      direita.classList.add(aplicada ? 'aplicada' : 'pendente');
+      esquerda.classList.add(sentido === 'esq' ? 'aplicada' : 'pendente');
+      direita.classList.add(sentido === 'dir' ? 'aplicada' : 'pendente');
     }
 
     if (podeAplicar(indice)) {
       esquerda.classList.add('clicavel');
-      if (selecionada === indice) esquerda.classList.add('selecionada');
+      direita.classList.add('clicavel');
+      if (escolhida === 'dir') esquerda.classList.add('selecionada');
+      if (escolhida === 'esq') direita.classList.add('selecionada');
     }
 
+    esquerda.textContent = textoEsquerda(indice) ?? '';
     direita.textContent = textoDireita(indice) ?? '';
 
     limpar(calha);
     if (!linha.diferente) return;
 
-    if (aplicada) {
-      calha.appendChild(el('span', { class: 'confirmado', texto: '✓' }));
+    if (sentido) {
+      calha.appendChild(
+        el('button', {
+          class: 'confirmado',
+          texto: '✓',
+          title: 'Desfazer: a linha volta a ser uma diferença',
+          onclick: () => desfazer(indice),
+        })
+      );
       return;
     }
 
-    calha.appendChild(
+    calha.append(
       el('button', {
-        class: selecionada === indice ? 'seta ativa' : 'seta',
+        class: escolhida === 'esq' ? 'seta seta-esq ativa' : 'seta seta-esq',
+        texto: '←',
+        title: 'Levar esta linha para a esquerda',
+        onclick: () => aplicar(indice, 'esq'),
+      }),
+      el('button', {
+        class: escolhida === 'dir' ? 'seta seta-dir ativa' : 'seta seta-dir',
         texto: '→',
         title: 'Levar esta linha para a direita',
-        onclick: () => aplicar(indice),
+        onclick: () => aplicar(indice, 'dir'),
       })
     );
   }
 
-  /** Escolhe (ou desmarca) uma linha. */
-  function escolher(indice) {
+  /**
+   * Escolhe (ou desmarca) uma linha. Clicar na esquerda acende a seta para a
+   * direita, e vice-versa: o clique diz de que lado a linha sai.
+   */
+  function escolher(indice, sentido) {
     if (!podeAplicar(indice)) return;
 
     const anterior = selecionada;
-    selecionada = selecionada === indice ? null : indice;
+    const mesma = anterior && anterior.indice === indice && anterior.sentido === sentido;
+    selecionada = mesma ? null : { indice, sentido };
 
-    if (anterior !== null) desenharLinha(anterior);
+    if (anterior) desenharLinha(anterior.indice);
     desenharLinha(indice);
   }
 
-  /** Leva o texto da esquerda para a direita. */
-  function aplicar(indice) {
+  /** Leva a linha para um lado: 'dir' (esquerda -> direita) ou 'esq'. */
+  function aplicar(indice, sentido) {
     if (!podeAplicar(indice)) return;
 
-    aplicadas.add(indice);
+    aplicadas.set(indice, sentido);
     selecionada = null;
+    desenharLinha(indice);
+    desenharRegua();
+  }
+
+  /** Desfaz uma linha aplicada: os dois lados voltam ao original. */
+  function desfazer(indice) {
+    if (!aplicadas.has(indice)) return;
+
+    aplicadas.delete(indice);
     desenharLinha(indice);
     desenharRegua();
   }
@@ -134,7 +179,10 @@
       celula.classList.add('piscando');
     }
 
-    if (podeAplicar(indice) && selecionada !== indice) escolher(indice);
+    // Ja escolhe no sentido de sempre (esquerda -> direita); quem quiser o
+    // outro sentido clica na celula da direita ou na outra seta.
+    const jaEscolhida = selecionada && selecionada.indice === indice;
+    if (podeAplicar(indice) && !jaEscolhida) escolher(indice, 'dir');
   }
 
   /**
@@ -206,10 +254,13 @@
       const esquerda = el('div', {
         class: 'celula',
         texto: linha.esquerda ?? '',
-        onclick: () => escolher(indice),
+        onclick: () => escolher(indice, 'dir'),
       });
       const calha = el('div', { class: 'calha' });
-      const direita = el('div', { class: 'celula' });
+      const direita = el('div', {
+        class: 'celula',
+        onclick: () => escolher(indice, 'esq'),
+      });
 
       celulas.push({ esquerda, calha, direita });
       grade.append(esquerda, calha, direita);
@@ -221,27 +272,37 @@
   }
 
   /**
-   * Junta o lado direito inteiro, ja com as linhas aplicadas.
+   * Junta um lado inteiro ('esquerda' ou 'direita'), ja com as linhas
+   * aplicadas.
    *
-   * As linhas sem lado direito ficam de fora: elas representam um trecho
-   * que nao existe nesse lado, e colar uma linha em branco no lugar so
-   * sujaria o resultado.
+   * As linhas sem aquele lado ficam de fora: elas representam um trecho que
+   * nao existe nele, e colar uma linha em branco no lugar so sujaria o
+   * resultado.
    */
-  function textoCompletoDireita() {
+  function textoCompleto(lado) {
+    const textoDoLado = lado === 'esquerda' ? textoEsquerda : textoDireita;
     return linhas
-      .map((_, indice) => textoDireita(indice))
+      .map((_, indice) => textoDoLado(indice))
       .filter((texto) => texto !== null)
       .join('\n');
   }
 
-  botaoCopiar.addEventListener('click', async () => {
-    await window.blink.areaTransferencia.escrever(textoCompletoDireita());
+  /** Liga um botao "Copiar" a um lado; o aviso "Copiado" volta ao rotulo dele. */
+  function ligarCopiar(botao, lado) {
+    const rotulo = botao.textContent;
 
-    botaoCopiar.textContent = 'Copiado ✓';
-    setTimeout(() => {
-      botaoCopiar.textContent = 'Copiar texto';
-    }, 1400);
-  });
+    botao.addEventListener('click', async () => {
+      await window.blink.areaTransferencia.escrever(textoCompleto(lado));
+
+      botao.textContent = 'Copiado ✓';
+      setTimeout(() => {
+        botao.textContent = rotulo;
+      }, 1400);
+    });
+  }
+
+  ligarCopiar(botaoCopiarEsquerda, 'esquerda');
+  ligarCopiar(botaoCopiarDireita, 'direita');
 
   botaoFechar.addEventListener('click', () => window.blink.janela.fechar());
 

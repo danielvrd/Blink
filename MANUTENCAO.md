@@ -212,6 +212,20 @@ O calendário (`src/renderer/note/calendario.js`) é um componente próprio, no 
 `seletor.js`: o `<input type="date">` do Chromium tem um popup nativo que não é estilizável no
 tema escuro do app.
 
+### Diff Checker: aplicar nos dois sentidos
+
+`linhas` (o que vem do `comparador.js`) nunca muda; o que a tela mostra é derivado dele e do estado
+`aplicadas`, um `Map` de índice para o sentido (`'dir'`: a direita passou a ser igual à esquerda;
+`'esq'`: o contrário). `textoDireita(i)` e `textoEsquerda(i)` calculam o texto de cada lado, e o
+"Copiar" de cada lado usa a mesma função — por isso não existe cópia do estado a manter em
+sincronia. Linha só de um lado cai na mesma regra por simetria: aplicar para o lado que não tem a
+linha a **cria**, para o lado que tem a **remove** (célula vazia e `ausente`, fora do texto
+copiado). O ✓ é um botão que faz `aplicadas.delete(i)` e redesenha.
+
+A calha do meio tem 60px (`grid-template-columns: 1fr 60px 1fr`) para caber as duas setas; as
+"páginas" cinza atrás de cada lado usam `calc(50% - 30px)` e precisam acompanhar essa largura se ela
+mudar de novo.
+
 ### Fast Note: qual arquivo abre, e o olho do cabeçalho
 
 **Precedência ao abrir:** estrela (`notaPrincipal`) → último arquivo (`ultimaNota`) → primeiro da

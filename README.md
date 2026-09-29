@@ -91,9 +91,16 @@ O atalho funciona em **dois tempos**:
    janela de comparação abre.
 
 Na janela, as linhas diferentes aparecem em laranja, e a barra de rolagem à direita mostra onde
-cada uma está no texto inteiro — clique numa marca para ir direto até ela. Clique em uma linha da
-esquerda e na seta para levá-la para a direita; ela fica verde. **"Copiar texto"** copia o lado direito inteiro, já
-com as linhas aplicadas. `Esc` fecha e descarta a comparação.
+cada uma está no texto inteiro — clique numa marca para ir direto até ela.
+
+Cada linha diferente tem **duas setas** no meio: `→` leva a linha da esquerda para a direita e `←`
+leva da direita para a esquerda. O lado que recebe a linha fica verde. Clicar num dos lados da
+linha acende a seta do sentido (clicou na esquerda, acende a `→`; na direita, a `←`). Quando a
+linha existe só de um lado, `→`/`←` a **cria** ou a **remove** do outro lado, para deixar os dois
+iguais. Clicar no **✓** de uma linha aplicada **desfaz**: ela volta a ser uma diferença.
+
+**"Copiar esquerda"** e **"Copiar direita"** copiam o texto inteiro de cada lado, já com as linhas
+aplicadas. `Esc` fecha e descarta a comparação.
 
 O primeiro texto guardado vale por **2 minutos**. Depois disso o próximo atalho volta a ser o
 primeiro, para você não comparar com algo que capturou e esqueceu.

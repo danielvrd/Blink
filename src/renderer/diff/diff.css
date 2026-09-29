@@ -126,7 +126,8 @@ body {
   position: relative;
   min-height: 100%;
   display: grid;
-  grid-template-columns: 1fr 44px 1fr;
+  /* A calha tem 60px: cabem duas setas (esquerda e direita) lado a lado. */
+  grid-template-columns: 1fr 60px 1fr;
   align-content: start;
 }
 
@@ -141,7 +142,7 @@ body {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: calc(50% - 22px);
+  width: calc(50% - 30px);
   background: var(--pagina-diff);
   border-radius: 8px;
 }
@@ -235,14 +236,16 @@ body {
   border-left-color: var(--diff-pendente);
 }
 
-/* Linha ja aplicada: o lado direito em verde. */
+/* Linha ja aplicada: o lado que RECEBEU a linha em verde (o de origem
+   continua laranja). */
 .celula.aplicada {
   background: var(--diff-aplicado-fundo);
   border-left-color: var(--diff-aplicado);
 }
 
-/* O lado esquerdo de uma linha diferente ainda nao aplicada pode ser clicado
-   para escolher qual linha a seta vai levar para a direita. */
+/* Os dois lados de uma linha diferente ainda nao aplicada podem ser clicados:
+   clicar na esquerda acende a seta para a direita, e clicar na direita acende
+   a seta para a esquerda. */
 .celula.clicavel {
   cursor: pointer;
 }
@@ -266,11 +269,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
 }
 
 .seta {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -278,7 +282,7 @@ body {
   border-radius: var(--raio-campo);
   background: rgba(255, 255, 255, 0.1);
   color: var(--texto-secundario-2);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .seta:hover {
@@ -291,9 +295,22 @@ body {
   color: var(--sobre-destaque);
 }
 
+/* O visto de uma linha aplicada e um botao: clicar nele desfaz a linha. */
 .confirmado {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--raio-campo);
+  background: transparent;
   color: var(--diff-aplicado);
   font-size: 15px;
+}
+
+.confirmado:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* --- Rodape --------------------------------------------------------------- */
