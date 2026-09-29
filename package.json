@@ -19,7 +19,8 @@
     "diff": "9.0.0",
     "electron-store": "8.2.0",
     "electron-updater": "6.8.9",
-    "sql-formatter": "15.9.0"
+    "sql-formatter": "15.9.0",
+    "xml-formatter": "3.7.0"
   },
   "devDependencies": {
     "electron": "44.4.5",

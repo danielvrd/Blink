@@ -15,6 +15,7 @@ const config = require('./config');
 const selecao = require('./selecao');
 const aviso = require('./aviso');
 const diagnostico = require('./diagnostico');
+const formatadorXml = require('./formatador-xml');
 
 /**
  * Evita dois formatadores rodando ao mesmo tempo.
@@ -111,6 +112,32 @@ function formatar(texto) {
   }
 }
 
+/**
+ * O caminho do XML: formata, grava na area de transferencia e avisa.
+ *
+ * XML quebrado ou cortado nao e gravado - a area de transferencia fica com o
+ * que o usuario tinha, como no caso da SQL invalida.
+ */
+async function formatarComoXml(original) {
+  const resultado = formatadorXml.formatarXml(original, config.obter('sql').indentacao);
+
+  if (!resultado.ok) {
+    aviso.mostrar('Não foi possível formatar: a seleção parece XML, mas não é um XML válido (pode estar cortado).');
+    return;
+  }
+
+  await clipboard.writeText(resultado.texto);
+  guardarContraSobrescrita(original, resultado.texto).catch((erro) => {
+    console.warn('[ferramenta-sql] guarda falhou:', erro.message);
+  });
+
+  aviso.mostrar(
+    resultado.texto === original.trim()
+      ? 'O XML já estava formatado. Copiado para colar.'
+      : 'XML formatado e copiado. Cole onde quiser com Ctrl + V.'
+  );
+}
+
 /** O que a bind do SQL Formatter faz. */
 async function executar() {
   if (ocupado) return;
@@ -120,7 +147,15 @@ async function executar() {
     const original = await selecao.capturar();
 
     if (original.trim() === '') {
-      aviso.mostrar('Selecione uma SQL antes de usar o atalho.');
+      aviso.mostrar('Selecione uma SQL ou um XML antes de usar o atalho.');
+      return;
+    }
+
+    // XML toma um desvio antes do SQL. Uma SQL nunca comeca com "<", entao
+    // os dois caminhos nao se cruzam - e o do SQL, daqui para baixo, fica
+    // exatamente como era.
+    if (formatadorXml.pareceXml(original)) {
+      await formatarComoXml(original);
       return;
     }
 

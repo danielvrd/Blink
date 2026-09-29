@@ -41,7 +41,12 @@ atualiza quando você fechar.
 
 ### SQL Formatter — `Ctrl + Alt + F`
 
-1. Selecione uma SQL em qualquer programa.
+Formata **SQL** e **XML** — o Blink identifica sozinho qual dos dois foi selecionado. XML escapado,
+com `&lt;` e `&gt;` no lugar de `<` e `>` (comum dentro de SOAP), sai como XML legível. XML
+cortado ou quebrado não é formatado: uma notificação avisa e a área de transferência fica como
+estava. Para XML vale só a opção de indentação da aba.
+
+1. Selecione uma SQL ou um XML em qualquer programa.
 2. Pressione `Ctrl + Alt + F`.
 3. Cole onde quiser com `Ctrl + V`.
 
@@ -54,7 +59,7 @@ SQL Formatter das configurações.
 Em tela cheia, a Área de Trabalho Remota do Windows fica com todas as combinações de teclas para
 o servidor, e o atalho nunca chega ao Blink. Para esse caso existe o **modo automático**, que vem
 ligado: dê `Ctrl + C` normal dentro do servidor e, se o texto começar com `SELECT`, `INSERT`,
-`UPDATE`, `DELETE` ou `WITH`, ele chega aqui já formatado. Uma notificação avisa.
+`UPDATE`, `DELETE` ou `WITH` — ou for um XML —, ele chega aqui já formatado. Uma notificação avisa.
 
 Só vale para cópias vindas da Área de Trabalho Remota do Windows — cópias feitas na sua própria
 máquina nunca são formatadas sozinhas. Dá para desligar na aba SQL Formatter.

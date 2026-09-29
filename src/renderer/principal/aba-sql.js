@@ -88,7 +88,7 @@ window.Blink = window.Blink || {};
 
       el('div', { class: 'secao' }, [
         window.Blink.pecas.interruptor({
-          rotulo: 'Formatar sozinho SQL copiada da Área de Trabalho Remota',
+          rotulo: 'Formatar sozinho SQL/XML copiado da Área de Trabalho Remota',
           // Configuracao antiga nao tem o campo: vale o padrao, ligado.
           ligado: sql.autoRemoto !== false,
           aoTrocar: (valor) => window.blink.config.gravar('sql.autoRemoto', valor),
@@ -97,7 +97,7 @@ window.Blink = window.Blink || {};
 
       window.Blink.pecas.rodape({
         ferramenta: 'sql',
-        legenda: 'Selecione a SQL em qualquer lugar e use a bind: a versão formatada fica pronta para colar.',
+        legenda: 'Selecione uma SQL ou um XML em qualquer lugar e use a bind: a versão formatada fica pronta para colar.',
       }),
     ]);
   }

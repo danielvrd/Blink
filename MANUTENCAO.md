@@ -166,6 +166,12 @@ nem lê a área de transferência.
 Ele pergunta `selecao.emUso()` antes de agir: durante a captura de um atalho (e 1,5s depois) a área
 de transferência é mexida pelo próprio Blink, e reagir a isso quebraria a captura.
 
+**XML** (`src/main/formatador-xml.js`). O SQL Formatter desvia para o XML quando o texto começa com
+`<?xml`, `<!--` ou `<` + letra (ou o mesmo escapado, `&lt;`). Uma SQL nunca começa com `<`, então o
+caminho do SQL fica intacto. A biblioteca `xml-formatter` roda em **modo estrito**: sem ele, um XML
+quebrado ou cortado no meio — o comum em log — era "consertado" em silêncio, com a estrutura
+inventada. Ao desescapar, o `&amp;` é trocado por último: `&amp;lt;` no original é o texto `&lt;`.
+
 ### Testes que mexem no teclado
 
 **Nunca rode um teste que chame `selecao.capturar()` com o teclado de verdade.** Ele manda

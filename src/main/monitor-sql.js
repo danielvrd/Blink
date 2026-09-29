@@ -8,7 +8,8 @@
  *
  * So age quando as duas coisas sao verdade:
  *   - a copia veio de uma janela de Area de Trabalho Remota;
- *   - o texto COMECA com SELECT, INSERT, UPDATE, DELETE ou WITH.
+ *   - o texto COMECA com SELECT, INSERT, UPDATE, DELETE ou WITH - ou e
+ *     um XML (normal ou escapado, veja formatador-xml.js).
  *
  * O segundo filtro e o que evita estragar copia comum: uma linha de log com
  * "select" no meio nao e formatada. Ainda assim nao e infalivel, por isso o
@@ -22,6 +23,7 @@ const selecao = require('./selecao');
 const ferramentaSql = require('./ferramenta-sql');
 const aviso = require('./aviso');
 const diagnostico = require('./diagnostico');
+const formatadorXml = require('./formatador-xml');
 
 /** De quanto em quanto tempo olhar. */
 const INTERVALO = 400;
@@ -85,9 +87,15 @@ async function verificar() {
   // A mudanca foi feita pela captura de um atalho do proprio Blink.
   if (selecao.emUso()) return;
 
-  if (!PARECE_SQL.test(texto)) return;
+  // XML tem o seu proprio caminho; o da SQL, abaixo, e o de sempre.
+  const ehXml = formatadorXml.pareceXml(texto);
+  if (!ehXml && !PARECE_SQL.test(texto)) return;
 
-  const resultado = ferramentaSql.formatar(texto);
+  const resultado = ehXml
+    ? formatadorXml.formatarXml(texto, config.obter('sql').indentacao)
+    : ferramentaSql.formatar(texto);
+
+  // XML quebrado ou cortado passa intacto, como SQL invalida.
   if (!resultado.ok || resultado.texto === texto) return;
 
   await clipboard.writeText(resultado.texto);
@@ -97,8 +105,12 @@ async function verificar() {
   // remota trouxer a crua de volta, a formatada e regravada.
   ferramentaSql.guardarContraSobrescrita(texto, resultado.texto).catch(() => {});
 
-  diagnostico.registrar('sql-auto', { janela: titulo, caracteres: texto.length });
-  aviso.mostrar('SQL da Área de Trabalho Remota formatada. Cole com Ctrl + V.');
+  diagnostico.registrar(ehXml ? 'xml-auto' : 'sql-auto', { janela: titulo, caracteres: texto.length });
+  aviso.mostrar(
+    ehXml
+      ? 'XML da Área de Trabalho Remota formatado. Cole com Ctrl + V.'
+      : 'SQL da Área de Trabalho Remota formatada. Cole com Ctrl + V.'
+  );
 }
 
 /** Liga a vigilancia. Chamado uma vez, na abertura do app. */
