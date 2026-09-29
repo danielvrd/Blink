@@ -124,25 +124,8 @@ window.Blink = window.Blink || {};
           },
         }, [el('span', { class: 'seletor-item-nome', texto: item.rotulo })]);
 
-        if (item.marcavel) {
-          const marcada = ehPrincipal(item.valor);
-          const estrela = el('button', {
-            class: marcada ? 'seletor-estrela marcada' : 'seletor-estrela',
-            type: 'button',
-            title: marcada ? 'Deixar de ser o principal' : 'Tornar principal',
-            'aria-pressed': String(marcada),
-            'aria-label': marcada ? `Deixar ${item.rotulo} de ser o principal` : `Tornar ${item.rotulo} o principal`,
-            onmousedown: (evento) => evento.preventDefault(),
-            onclick: (evento) => {
-              // Nao escolhe o arquivo nem fecha a lista: so marca.
-              evento.stopPropagation();
-              aoMarcar(item.valor);
-            },
-          });
-          estrela.appendChild(svg(ESTRELA));
-          linha.appendChild(estrela);
-        }
-
+        // Ordem na linha: relogio primeiro, estrela por ultimo (encostada na
+        // borda direita) - e a mesma ordem do design.
         if (item.marcavel && podeHistorico(item.valor)) {
           const ligado = temHistorico(item.valor);
           const relogio = el('button', {
@@ -160,6 +143,25 @@ window.Blink = window.Blink || {};
           });
           relogio.appendChild(svg(RELOGIO));
           linha.appendChild(relogio);
+        }
+
+        if (item.marcavel) {
+          const marcada = ehPrincipal(item.valor);
+          const estrela = el('button', {
+            class: marcada ? 'seletor-estrela marcada' : 'seletor-estrela',
+            type: 'button',
+            title: marcada ? 'Deixar de ser o principal' : 'Tornar principal',
+            'aria-pressed': String(marcada),
+            'aria-label': marcada ? `Deixar ${item.rotulo} de ser o principal` : `Tornar ${item.rotulo} o principal`,
+            onmousedown: (evento) => evento.preventDefault(),
+            onclick: (evento) => {
+              // Nao escolhe o arquivo nem fecha a lista: so marca.
+              evento.stopPropagation();
+              aoMarcar(item.valor);
+            },
+          });
+          estrela.appendChild(svg(ESTRELA));
+          linha.appendChild(estrela);
         }
 
         lista.appendChild(linha);
