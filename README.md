@@ -115,6 +115,20 @@ Com o `task.md` aberto, basta escrever e dar `Enter`, sem o `/task`. Só `/task`
 tarefas. O `task.md` aparece sempre primeiro no seletor e usa o formato de checklist do Markdown,
 então dá para abri-lo no VS Code ou no GitHub e ver as caixinhas.
 
+#### Mandar para outra nota com `/`
+
+De qualquer arquivo, digite `/` no campo de escrita: abre uma lista com todas as suas notas.
+Continue digitando para filtrar (sem se preocupar com acento ou maiúscula), use as setas e `Enter`
+ou `Tab` para completar o nome. `Esc` fecha a lista e você continua escrevendo normalmente.
+
+```
+/daily revisar o deploy
+```
+
+Com `Enter`, o tópico vai para o `daily.md` e a janela troca para ele. Só `/daily`, sem texto, apenas
+troca de arquivo. Se não existir nota com aquele nome, nada é gravado: o texto fica no campo e um
+aviso aparece embaixo, para você corrigir. O `/task` funciona do mesmo jeito.
+
 #### Seus arquivos
 
 O Blink só mexe nas linhas que começam com `- ` dos seus arquivos. Título, parágrafo ou qualquer

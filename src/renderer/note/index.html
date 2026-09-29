@@ -83,7 +83,11 @@
 
       <div class="lista" id="lista"></div>
 
-      <textarea class="rascunho" id="rascunho" placeholder="Escreva e pressione Enter…" spellcheck="false"></textarea>
+      <!-- O rascunho e, logo acima dele, a lista do autocomplete de "/" -->
+      <div class="area-rascunho">
+        <div class="popup-notas" id="popup-notas" role="listbox" hidden></div>
+        <textarea class="rascunho" id="rascunho" placeholder="Escreva e pressione Enter…" spellcheck="false"></textarea>
+      </div>
 
       <div class="dica" id="dica"></div>
 
@@ -92,6 +96,7 @@
 
   <script src="../comum/ui.js"></script>
   <script src="seletor.js"></script>
+  <script src="autocompletar.js"></script>
   <script src="note.js"></script>
 </body>
 </html>

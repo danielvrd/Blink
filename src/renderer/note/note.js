@@ -23,14 +23,8 @@
 (function () {
   const { el, limpar } = window.Blink.ui;
 
-  /** Valor da opcao "+ Criar nova nota" do select. */
+  /** Valor da opcao "+ Criar nova nota" do seletor. */
   const NOVO = '__novo__';
-
-  /**
-   * "/task texto" no rascunho manda o texto para o arquivo de tarefas, de
-   * qualquer arquivo que esteja aberto. "/task" sozinho so abre as tarefas.
-   */
-  const COMANDO_TAREFA = /^\/task(?:\s+([\s\S]*))?$/i;
 
   /** Quanto tempo o item recem-criado fica destacado. */
   const TEMPO_PISCANDO = 1600;
@@ -54,6 +48,20 @@
   const popoverLimpar = document.getElementById('popover-limpar');
   const popoverExcluir = document.getElementById('popover-excluir');
   const perguntaExcluir = document.getElementById('pergunta-excluir');
+
+  /**
+   * "/" no rascunho abre a lista de notas (autocompletar.js). Ligado aqui,
+   * antes do tratador de Enter la embaixo: com a lista aberta o Enter
+   * completa o nome, e nao pode gravar o topico.
+   */
+  window.Blink.autocompletar.ligar(rascunho, document.getElementById('popup-notas'), {
+    obterNomes: () => {
+      const nomes = arquivos.map((a) => a.replace(/\.md$/i, ''));
+      // O "task" aparece mesmo antes do task.md existir: o /task cria.
+      if (!nomes.some((n) => n.toLowerCase() === 'task')) nomes.push('task');
+      return nomes;
+    },
+  });
 
   /** Pasta configurada, so para mostrar na dica. */
   let pasta = '';
@@ -270,7 +278,7 @@
   }
 
   function desenharDica() {
-    const partes = [ehTarefas() ? 'Enter adiciona uma tarefa' : 'Enter adiciona · /task vira tarefa'];
+    const partes = [ehTarefas() ? 'Enter adiciona uma tarefa' : 'Enter adiciona · / manda para outra nota'];
     if (pasta) partes.push(`Pasta: ${pasta}`);
     dica.textContent = partes.join(' · ');
     dica.title = dica.textContent;
@@ -351,27 +359,76 @@
     if (recemCriado) agendarFimDoPiscar();
   }
 
-  /** Grava o que esta no rascunho: topico, tarefa, ou "/task". */
-  async function adicionar() {
-    const bruto = rascunho.value.trim();
-    if (bruto === '') return;
+  /**
+   * Entende um "/nota texto" no comeco do rascunho.
+   *
+   * Procura o nome de arquivo MAIS LONGO que venha logo depois da barra,
+   * seguido de espaco ou do fim - assim nomes com espaco funcionam:
+   * "/anotacoes da sprint rever PR" vai para "anotacoes da sprint.md", e nao
+   * para uma "anotacoes.md" que exista tambem. Sem diferenciar maiuscula nem
+   * acento, como o filtro da lista.
+   *
+   * Devolve null se o rascunho nao comeca com "/", senao
+   *   { arquivo, texto, tarefas }   quando achou a nota
+   *   { desconhecido: nome }        quando nenhuma nota tem esse nome
+   */
+  function interpretarComando(bruto) {
+    if (!bruto.startsWith('/')) return null;
 
-    const comando = bruto.match(COMANDO_TAREFA);
-    if (comando || ehTarefas()) {
-      rascunho.value = '';
-      await adicionarTarefa(comando ? (comando[1] || '').trim() : bruto);
-      return;
+    const depois = bruto.slice(1);
+    const { normalizar } = window.Blink.autocompletar;
+
+    // O "task" vale mesmo antes do task.md existir: o /task cria.
+    const candidatos = arquivos.map((a) => ({ nome: a.replace(/\.md$/i, ''), arquivo: a }));
+    if (!candidatos.some((c) => c.arquivo.toLowerCase() === arquivoTarefas)) {
+      candidatos.push({ nome: 'task', arquivo: arquivoTarefas });
+    }
+    candidatos.sort((a, b) => b.nome.length - a.nome.length);
+
+    for (const candidato of candidatos) {
+      const tamanho = candidato.nome.length;
+      const seguinte = depois.charAt(tamanho);
+      if (
+        normalizar(depois.slice(0, tamanho)) === normalizar(candidato.nome) &&
+        (seguinte === '' || /\s/.test(seguinte))
+      ) {
+        return {
+          arquivo: candidato.arquivo,
+          texto: depois.slice(tamanho).trim(),
+          tarefas: candidato.arquivo.toLowerCase() === arquivoTarefas,
+        };
+      }
     }
 
-    const destino = arquivo === NOVO ? campoNome.value : arquivo;
-    const gravado = await window.blink.notas.adicionar(destino, bruto);
+    return { desconhecido: depois.split(/\s/)[0] };
+  }
 
-    if (!gravado) {
-      campoNome.focus();
-      return;
+  /** Recado passageiro no lugar da dica do rodape. */
+  let fimDoAviso = null;
+  function avisarNaDica(texto) {
+    clearTimeout(fimDoAviso);
+    dica.textContent = texto;
+    dica.title = texto;
+    dica.classList.add('aviso');
+    fimDoAviso = setTimeout(() => {
+      dica.classList.remove('aviso');
+      desenharDica();
+    }, 3500);
+  }
+
+  /**
+   * Grava um topico numa nota comum e mostra ela, com o topico novo
+   * piscando. Texto vazio so troca para a nota.
+   */
+  async function gravarTopico(destino, texto) {
+    if (texto === '') {
+      await escolherArquivo(destino);
+      return true;
     }
 
-    rascunho.value = '';
+    const gravado = await window.blink.notas.adicionar(destino, texto);
+    if (!gravado) return false;
+
     arquivo = gravado;
     await recarregarSeletor();
     await carregar();
@@ -381,6 +438,53 @@
     desenhar();
     rascunho.focus();
     agendarFimDoPiscar();
+    return true;
+  }
+
+  /**
+   * Grava o que esta no rascunho.
+   *
+   *   "/nota texto"  grava na nota e troca para ela (/task: nas tarefas)
+   *   "/nota"        so troca para a nota
+   *   "/inexistente" nao grava nada: avisa e deixa o texto no campo
+   *   texto normal   grava no arquivo aberto
+   */
+  async function adicionar() {
+    const bruto = rascunho.value.trim();
+    if (bruto === '') return;
+
+    const comando = interpretarComando(bruto);
+
+    if (comando && comando.desconhecido !== undefined) {
+      // Um erro de digitacao nao pode virar arquivo novo nem se perder:
+      // o texto fica no campo para corrigir.
+      avisarNaDica(
+        comando.desconhecido === ''
+          ? 'Escreva o nome de uma nota depois da barra'
+          : `Nenhuma nota chamada ${comando.desconhecido}`
+      );
+      return;
+    }
+
+    if (comando) {
+      rascunho.value = '';
+      if (comando.tarefas) await adicionarTarefa(comando.texto);
+      else await gravarTopico(comando.arquivo, comando.texto);
+      return;
+    }
+
+    if (ehTarefas()) {
+      rascunho.value = '';
+      await adicionarTarefa(bruto);
+      return;
+    }
+
+    const destino = arquivo === NOVO ? campoNome.value : arquivo;
+    if (await gravarTopico(destino, bruto)) {
+      rascunho.value = '';
+    } else {
+      campoNome.focus();
+    }
   }
 
   async function apagar(grupo, indice) {
