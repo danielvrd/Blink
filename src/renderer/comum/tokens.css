@@ -43,6 +43,7 @@
   --diff-pendente-fundo: oklch(0.75 0.15 55 / 0.14);
   --diff-aplicado: oklch(0.72 0.16 145);
   --diff-aplicado-fundo: oklch(0.72 0.16 145 / 0.16);
+  --pagina-diff: rgba(255, 255, 255, 0.035);   /* as duas "paginas" do diff */
   --apagar: oklch(0.68 0.19 25);
   --apagar-hover: oklch(0.75 0.19 25);
 

@@ -58,8 +58,9 @@ O atalho funciona em **dois tempos**:
 2. Selecione o segundo texto (em qualquer programa) e pressione `Ctrl + Alt + D` de novo — a
    janela de comparação abre.
 
-Na janela, as linhas diferentes aparecem em laranja. Clique em uma linha da esquerda e na seta
-para levá-la para a direita; ela fica verde. **"Copiar texto"** copia o lado direito inteiro, já
+Na janela, as linhas diferentes aparecem em laranja, e a barra de rolagem à direita mostra onde
+cada uma está no texto inteiro — clique numa marca para ir direto até ela. Clique em uma linha da
+esquerda e na seta para levá-la para a direita; ela fica verde. **"Copiar texto"** copia o lado direito inteiro, já
 com as linhas aplicadas. `Esc` fecha e descarta a comparação.
 
 O primeiro texto guardado vale por **2 minutos**. Depois disso o próximo atalho volta a ser o

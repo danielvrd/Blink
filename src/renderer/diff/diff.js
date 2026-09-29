@@ -13,6 +13,8 @@
   const { el, limpar } = window.Blink.ui;
 
   const corpo = document.getElementById('corpo');
+  const grade = document.getElementById('grade');
+  const regua = document.getElementById('regua');
   const botaoCopiar = document.getElementById('btn-copiar');
   const botaoFechar = document.getElementById('btn-fechar');
 
@@ -105,11 +107,99 @@
     aplicadas.add(indice);
     selecionada = null;
     desenharLinha(indice);
+    desenharRegua();
   }
+
+  // --- Regua de diferencas --------------------------------------------------
+
+  /** Posicao da linha dentro de tudo que rola, contando o respiro do topo. */
+  function topoNaRolagem(celula) {
+    return celula.offsetTop + parseFloat(getComputedStyle(corpo).paddingTop);
+  }
+
+  /**
+   * Leva ate uma linha: rola deixando ela no meio da tela, faz piscar e, se
+   * ainda da para aplicar, ja escolhe - assim a seta fica pronta para o
+   * clique seguinte.
+   */
+  function irPara(indice) {
+    const { esquerda, direita } = celulas[indice];
+    const meio = topoNaRolagem(esquerda) + esquerda.offsetHeight / 2;
+    corpo.scrollTo({ top: meio - corpo.clientHeight / 2, behavior: 'smooth' });
+
+    for (const celula of [esquerda, direita]) {
+      celula.classList.remove('piscando');
+      // Forca o navegador a reiniciar a animacao se a linha ja estava piscando.
+      void celula.offsetWidth;
+      celula.classList.add('piscando');
+    }
+
+    if (podeAplicar(indice) && selecionada !== indice) escolher(indice);
+  }
+
+  /**
+   * Desenha as marcas da regua.
+   *
+   * A regua tem a altura da barra de rolagem, que representa o texto
+   * inteiro. Cada marca fica na mesma proporcao: uma diferenca no meio do
+   * texto vira uma marca no meio da barra.
+   *
+   * Quando o texto cabe inteiro na tela nao ha barra - e nada escondido para
+   * apontar - entao a regua some.
+   */
+  function desenharRegua() {
+    limpar(regua);
+
+    const total = corpo.scrollHeight;
+    const cabeInteiro = total <= corpo.clientHeight + 1;
+    regua.hidden = cabeInteiro;
+    if (cabeInteiro) return;
+
+    const alturaRegua = regua.clientHeight;
+
+    linhas.forEach((linha, indice) => {
+      if (!linha.diferente) return;
+
+      const { esquerda } = celulas[indice];
+      const topo = (topoNaRolagem(esquerda) / total) * alturaRegua;
+      const altura = (esquerda.offsetHeight / total) * alturaRegua;
+
+      const marcador = el('div', {
+        class: aplicadas.has(indice) ? 'marcador aplicada' : 'marcador',
+        title: aplicadas.has(indice) ? 'Aplicada' : 'Diferença',
+        onclick: () => irPara(indice),
+      });
+
+      // Pela propriedade, e nao pelo atributo style: a politica de seguranca
+      // da tela (Content-Security-Policy) bloqueia estilo escrito como texto
+      // no HTML, mas deixa o JavaScript mexer nas propriedades.
+      marcador.style.top = `${topo}px`;
+      marcador.style.height = `${altura}px`;
+
+      regua.appendChild(marcador);
+    });
+  }
+
+  /**
+   * Redesenha a regua quando algo muda de tamanho: a janela, ou a grade
+   * porque o texto quebrou em mais linhas. Uma vez por quadro, no maximo -
+   * redimensionar dispara dezenas de avisos seguidos.
+   */
+  let reguaAgendada = false;
+  const observador = new ResizeObserver(() => {
+    if (reguaAgendada) return;
+    reguaAgendada = true;
+    requestAnimationFrame(() => {
+      reguaAgendada = false;
+      desenharRegua();
+    });
+  });
+  observador.observe(corpo);
+  observador.observe(grade);
 
   /** Monta a grade inteira. */
   function desenhar() {
-    limpar(corpo);
+    limpar(grade);
     celulas = [];
 
     linhas.forEach((linha, indice) => {
@@ -122,10 +212,12 @@
       const direita = el('div', { class: 'celula' });
 
       celulas.push({ esquerda, calha, direita });
-      corpo.append(esquerda, calha, direita);
+      grade.append(esquerda, calha, direita);
 
       desenharLinha(indice);
     });
+
+    desenharRegua();
   }
 
   /**

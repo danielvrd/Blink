@@ -31,8 +31,16 @@
       Uma grade de tres colunas: texto da esquerda, calha dos botoes, texto
       da direita. Cada linha do texto ocupa uma linha da grade, entao os dois
       lados ficam sempre na mesma altura, como um livro aberto.
+
+      A regua fica por cima da barra de rolagem e marca onde estao as
+      diferencas no texto inteiro - clicar numa marca leva ate ela.
     -->
-    <div class="corpo" id="corpo"></div>
+    <div class="area-corpo">
+      <div class="corpo" id="corpo">
+        <div class="grade" id="grade"></div>
+      </div>
+      <div class="regua" id="regua" hidden></div>
+    </div>
 
     <footer class="rodape">
       <span class="legenda"><span class="marca pendente"></span>Diferença</span>
