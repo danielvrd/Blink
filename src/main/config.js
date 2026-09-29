@@ -17,6 +17,8 @@ const PADROES = {
   },
   // Vazio = o usuario ainda nao escolheu a pasta das notas.
   pastaNotas: '',
+  // O arquivo da estrela no Fast Note, que o Ctrl+Alt+N abre. Vazio = nenhum.
+  notaPrincipal: '',
   sql: {
     dialeto: 'transactsql',
     palavrasChave: 'upper',
@@ -59,6 +61,7 @@ const ESQUEMA = {
     additionalProperties: false,
   },
   pastaNotas: { type: 'string' },
+  notaPrincipal: { type: 'string' },
   sql: {
     type: 'object',
     properties: {
@@ -183,6 +186,18 @@ module.exports = {
       console.warn('[config] nao consegui salvar o tamanho da janela:', erro.message);
       return false;
     }
+  },
+
+  /**
+   * Grava o arquivo principal do Fast Note ('' = nenhum).
+   *
+   * Fora dos CAMINHOS_GRAVAVEIS de proposito: quem chama e o processo
+   * principal, depois de conferir que o arquivo existe na pasta de notas.
+   */
+  definirNotaPrincipal(nome) {
+    if (typeof nome !== 'string') return false;
+    store.set('notaPrincipal', nome);
+    return true;
   },
 
   /** Caminho do config.json em disco, util para depurar. */

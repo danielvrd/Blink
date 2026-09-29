@@ -272,6 +272,12 @@ async function excluir(arquivo) {
   }
 
   await shell.trashItem(completo);
+
+  // Excluir o principal tira a estrela: senao o Ctrl+Alt+N procuraria um
+  // arquivo que foi para a Lixeira.
+  if (mesmoArquivo(config.obter('notaPrincipal'), path.basename(completo))) {
+    config.definirNotaPrincipal('');
+  }
   return true;
 }
 
@@ -377,6 +383,39 @@ async function adicionarTarefa(texto) {
   return salvarTarefas(tarefas);
 }
 
+// --- Arquivo principal (a estrela) ---------------------------------------------
+
+/** Mesmo nome de arquivo, sem diferenciar maiuscula - como o Windows. */
+function mesmoArquivo(a, b) {
+  return typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
+}
+
+/**
+ * O arquivo principal, se ainda existir na pasta. Um principal apagado ou
+ * renomeado por fora conta como nenhum.
+ */
+async function principal() {
+  const nome = config.obter('notaPrincipal');
+  if (!nome) return '';
+  const arquivos = await listar();
+  return arquivos.find((a) => mesmoArquivo(a, nome)) || '';
+}
+
+/**
+ * Marca o arquivo principal. So um por vez: marcar outro substitui. '' tira
+ * a marca. Recusa nome que nao seja de um arquivo que existe na pasta.
+ */
+async function definirPrincipal(nome) {
+  if (nome === '') return config.definirNotaPrincipal('');
+
+  const valido = nomeDeArquivo(nome);
+  if (!valido) return false;
+  const existente = (await listar()).find((a) => mesmoArquivo(a, valido));
+  if (!existente) return false;
+
+  return config.definirNotaPrincipal(existente);
+}
+
 /** Apaga todos os topicos de um arquivo, preservando o resto. */
 async function limpar(arquivo) {
   return salvarTopicos(arquivo, []);
@@ -393,6 +432,8 @@ module.exports = {
   nomeDeArquivo,
   caminhoDe,
   ARQUIVO_TAREFAS,
+  principal,
+  definirPrincipal,
   lerTarefas,
   salvarTarefas,
   adicionarTarefa,

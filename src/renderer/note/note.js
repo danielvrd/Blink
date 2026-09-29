@@ -35,8 +35,17 @@
   /** Quanto tempo o item recem-criado fica destacado. */
   const TEMPO_PISCANDO = 1600;
 
-  const selectArquivo = document.getElementById('select-arquivo');
   const campoNome = document.getElementById('campo-nome');
+
+  /** O seletor de arquivos com as estrelas (seletor.js). */
+  const seletor = window.Blink.seletor.criar(document.getElementById('seletor-arquivo'), {
+    valorNovo: NOVO,
+    rotuloNovo: '+ Criar nova nota',
+    aoEscolher: (valor) => escolherArquivo(valor),
+    aoMarcar: (valor) => alternarPrincipal(valor),
+    // A lista e as confirmacoes nunca ficam abertas juntas.
+    aoAbrir: () => fecharPopovers(),
+  });
   const lista = document.getElementById('lista');
   const rascunho = document.getElementById('rascunho');
   const dica = document.getElementById('dica');
@@ -51,6 +60,12 @@
 
   /** Nome do arquivo de tarefas. Vem do processo principal. */
   let arquivoTarefas = 'task.md';
+
+  /** Os .md da pasta, na ordem do seletor. */
+  let arquivos = [];
+
+  /** O arquivo da estrela, que o Ctrl+Alt+N abre. '' = nenhum. */
+  let principal = '';
 
   /** Arquivo escolhido agora, ou NOVO. */
   let arquivo = NOVO;
@@ -136,21 +151,32 @@
     const estado = await window.blink.notas.estado();
     pasta = estado.pasta;
     arquivoTarefas = estado.arquivoTarefas;
+    principal = estado.principal;
     desenharSelect(estado.arquivos);
     return estado.arquivos;
   }
 
   // --- Desenho ----------------------------------------------------------------
 
-  function desenharSelect(arquivos) {
-    limpar(selectArquivo);
+  function desenharSelect(lista) {
+    arquivos = lista;
+    atualizarSeletor();
+  }
 
-    for (const nome of arquivos) {
-      selectArquivo.appendChild(el('option', { value: nome, texto: nome }));
-    }
-    selectArquivo.appendChild(el('option', { value: NOVO, texto: '+ Criar nova nota' }));
+  /** Mostra no seletor o arquivo aberto e a estrela, sem reler a pasta. */
+  function atualizarSeletor() {
+    seletor.definir({ arquivos, atual: arquivo, principal });
+  }
 
-    selectArquivo.value = arquivo;
+  /**
+   * Clicou na estrela: marca como principal, ou desmarca se ja era. So um
+   * por vez - marcar outro tira a estrela do anterior.
+   */
+  async function alternarPrincipal(nome) {
+    const novo = principal.toLowerCase() === nome.toLowerCase() ? '' : nome;
+    const gravou = await window.blink.notas.definirPrincipal(novo);
+    if (gravou) principal = novo;
+    atualizarSeletor();
   }
 
   function vazio(texto) {
@@ -285,6 +311,7 @@
     arquivo = valor;
     fecharPopovers();
     recemCriado = null;
+    atualizarSeletor();
 
     if (arquivo === NOVO) {
       topicos = [];
@@ -404,6 +431,8 @@
     await window.blink.notas.excluir(arquivo);
 
     const estado = await window.blink.notas.estado();
+    // Se o excluido era o principal, o processo principal ja tirou a estrela.
+    principal = estado.principal;
     arquivo = primeiroArquivo(estado.arquivos);
     desenharSelect(estado.arquivos);
     await escolherArquivo(arquivo);
@@ -491,6 +520,7 @@
   function alternarPopover(qual) {
     const abrir = qual.hidden;
     fecharPopovers();
+    seletor.fechar();
     qual.hidden = !abrir;
   }
 
@@ -560,7 +590,6 @@
 
   // --- Ligacoes ------------------------------------------------------------------
 
-  selectArquivo.addEventListener('change', (evento) => escolherArquivo(evento.target.value));
 
   rascunho.addEventListener('keydown', (evento) => {
     // Enter grava; Shift+Enter quebra linha dentro do item.
@@ -602,6 +631,12 @@
   window.addEventListener('keydown', (evento) => {
     if (evento.key !== 'Escape') return;
 
+    // Esc com a lista de arquivos aberta so fecha ela.
+    if (seletor.estaAberto()) {
+      seletor.fechar();
+      return;
+    }
+
     // Esc com uma confirmacao aberta so fecha ela.
     if (!popoverLimpar.hidden || !popoverExcluir.hidden) {
       fecharPopovers();
@@ -616,8 +651,10 @@
     const estado = await window.blink.notas.estado();
     pasta = estado.pasta;
     arquivoTarefas = estado.arquivoTarefas;
+    principal = estado.principal;
 
-    arquivo = primeiroArquivo(estado.arquivos);
+    // Abre no arquivo da estrela. Sem estrela, o de sempre.
+    arquivo = principal || primeiroArquivo(estado.arquivos);
     desenharSelect(estado.arquivos);
     await carregar();
 

@@ -77,7 +77,15 @@ function registrar() {
     // O nome do arquivo de tarefas vem daqui, para a tela e o disco nunca
     // discordarem sobre ele.
     arquivoTarefas: notas.ARQUIVO_TAREFAS,
+    // O arquivo da estrela, que a janela abre primeiro.
+    principal: await notas.principal(),
   }));
+
+  // Marca ou tira a estrela. '' = nenhum principal.
+  ipcMain.handle('notas:definirPrincipal', async (_evento, nome) => {
+    if (typeof nome !== 'string') return false;
+    return notas.definirPrincipal(nome);
+  });
 
   ipcMain.handle('notas:ler', async (_evento, arquivo) => {
     if (typeof arquivo !== 'string') return { topicos: [] };

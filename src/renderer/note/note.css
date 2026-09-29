@@ -75,16 +75,130 @@ body {
   position: relative;
 }
 
-.campo-select {
+/* --- Seletor de arquivos (seletor.js) ------------------------------------- */
+
+.seletor {
   flex: 1;
   min-width: 0;
+  position: relative;
+}
+
+/* Fechado: parece o campo de antes - nome, estrela se for o principal, seta. */
+.seletor-botao {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: var(--superficie);
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio-campo);
   padding: 8px 10px;
   font-size: 12.5px;
   color: var(--texto-forte-2);
-  color-scheme: dark;
+  text-align: left;
+}
+
+.seletor.aberto .seletor-botao,
+.seletor-botao:focus-visible {
+  outline: none;
+  border-color: rgba(168, 57, 58, 0.55);
+}
+
+.seletor-nome {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seletor-botao > svg:last-child {
+  flex: none;
+  color: var(--texto-secundario);
+}
+
+/* A estrela do botao fechado so enfeita: e sempre a amarela. */
+.seletor-estrela-fixa {
+  flex: none;
+}
+
+.seletor-estrela-fixa path {
+  fill: var(--estrela);
+  stroke: var(--estrela);
+}
+
+/* Aberto: a lista, abaixo do campo, por cima de tudo. */
+.seletor-lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-modal-nota);
+  border-radius: var(--raio-campo);
+  box-shadow: var(--sombra-popover);
+}
+
+.seletor-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--raio-item);
+  font-size: 12.5px;
+  color: var(--texto-2);
+  cursor: pointer;
+}
+
+.seletor-item.destacado {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.seletor-item.atual {
+  color: var(--texto-forte);
+  background: rgba(168, 57, 58, 0.18);
+}
+
+.seletor-item-nome {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A estrela de cada item: vazia, ou amarela no principal. */
+.seletor-estrela {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--rotulo);
+}
+
+.seletor-estrela path {
+  fill: none;
+  stroke: currentColor;
+}
+
+.seletor-estrela:hover {
+  color: var(--texto-2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.seletor-estrela.marcada path {
+  fill: var(--estrela);
+  stroke: var(--estrela);
 }
 
 /* Vassoura e lixeira, lado a lado a direita do seletor. */

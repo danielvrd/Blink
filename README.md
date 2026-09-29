@@ -92,6 +92,13 @@ Apagar (`×`), arrastar para reordenar e a vassoura (limpar tudo) gravam na hora
 da vassoura exclui o arquivo inteiro — ele vai para a Lixeira do Windows, então dá para recuperar.
 `Esc` fecha a janela.
 
+#### Arquivo principal
+
+Abra o seletor de arquivos: cada um tem uma estrela à direita. Clique na estrela para torná-lo o
+**principal** — ela fica amarela, e o `Ctrl + Alt + N` passa a abrir sempre nele. Só um arquivo
+pode ser o principal; marcar outro troca a estrela de lugar, e clicar na amarela desmarca. Com a
+lista fechada, a estrela aparece ao lado do nome quando o arquivo aberto é o principal.
+
 #### Tarefas com `/task`
 
 De qualquer arquivo, escreva `/task` seguido da tarefa e pressione `Enter`:
