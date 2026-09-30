@@ -19,6 +19,7 @@ const diagnostico = require('./diagnostico');
 const formatadorXml = require('./formatador-xml');
 const formatadorJson = require('./formatador-json');
 const formatadorLista = require('./formatador-lista');
+const prefixoLog = require('./prefixo-log');
 
 /**
  * Evita dois formatadores rodando ao mesmo tempo.
@@ -139,80 +140,107 @@ function formatar(texto) {
 }
 
 /**
- * O caminho do XML: formata, grava na area de transferencia e avisa.
+ * Decide o que fazer com o texto que foi selecionado.
  *
- * XML quebrado ou cortado nao e gravado - a area de transferencia fica com o
- * que o usuario tinha, como no caso da SQL invalida.
- */
-async function formatarComoXml(original) {
-  const resultado = formatadorXml.formatarXml(original, config.obter('sql').indentacao);
-
-  if (!resultado.ok) {
-    aviso.mostrar('Não foi possível formatar: a seleção parece XML, mas não é um XML válido (pode estar cortado).');
-    return;
-  }
-
-  const gravado = paraWindows(resultado.texto);
-  await clipboard.writeText(gravado);
-  guardarContraSobrescrita(original, gravado).catch((erro) => {
-    console.warn('[ferramenta-sql] guarda falhou:', erro.message);
-  });
-
-  aviso.mostrar(
-    resultado.texto === normalizar(original.trim())
-      ? 'O XML já estava formatado. Copiado para colar.'
-      : 'XML formatado e copiado. Cole onde quiser com Ctrl + V.'
-  );
-}
-
-/**
- * Grava o resultado na area de transferencia, protege ele da copia remota
- * atrasada e avisa. E o final comum dos caminhos novos (JSON e lista).
- */
-async function entregar(original, texto, mensagem) {
-  const gravado = paraWindows(texto);
-  await clipboard.writeText(gravado);
-  guardarContraSobrescrita(original, gravado).catch((erro) => {
-    console.warn('[ferramenta-sql] guarda falhou:', erro.message);
-  });
-  aviso.mostrar(mensagem);
-}
-
-/**
- * O caminho do JSON, no mesmo molde do XML: JSON quebrado ou cortado nao e
- * gravado - a area de transferencia fica com o que o usuario tinha.
- */
-async function formatarComoJson(original) {
-  const resultado = formatadorJson.formatarJson(original, config.obter('sql').indentacao);
-
-  if (!resultado.ok) {
-    aviso.mostrar('Não foi possível formatar: a seleção parece JSON, mas não é um JSON válido (pode estar cortado).');
-    return;
-  }
-
-  await entregar(
-    original,
-    resultado.texto,
-    resultado.texto === normalizar(original.trim())
-      ? 'O JSON já estava formatado. Copiado para colar.'
-      : 'JSON formatado e copiado. Cole onde quiser com Ctrl + V.'
-  );
-}
-
-/**
- * O que a bind do Formatter faz.
- *
- * Uma bind so, sem escolher nada: ela olha o que foi selecionado e decide.
- * A ordem importa, porque o sql-formatter aceita QUALQUER texto (uma lista
- * de palavras ele achata numa linha so; um JSON simples ele devolve igual e
- * ainda diz que "a SQL ja estava formatada") - por isso a SQL e o ultimo
- * recurso, depois de tudo que da para reconhecer com certeza:
+ * Uma bind so, sem escolher nada: ela olha o texto e decide. A ordem importa,
+ * porque o sql-formatter aceita QUALQUER texto (uma lista de palavras ele
+ * achata numa linha so; um JSON simples ele devolve igual e ainda diz que "a
+ * SQL ja estava formatada") - por isso a SQL e o ultimo recurso, depois de
+ * tudo que da para reconhecer com certeza:
  *
  *   1. XML
- *   2. JSON (um "{" e sempre JSON; um "[" so se for valido)
+ *   2. JSON (um "{" e sempre JSON; um "[" so se for valido; e o JSON escapado de log)
  *   3. IN (...) -> uma linha por valor
  *   4. uma coluna de valores -> IN (...), se nao tiver cara de SQL
  *   5. SQL
+ *
+ * Devolve { texto, mensagem } - o que gravar na area de transferencia e o
+ * aviso - ou { recusa } - so o aviso. XML, JSON ou SQL quebrado ou cortado
+ * nao e gravado: a area de transferencia fica com o que o usuario tinha, para
+ * nao atropelar a copia por causa de um erro de digitacao.
+ *
+ * Separado do executar() para dar para testar sem teclado nem area de
+ * transferencia.
+ */
+function decidir(original) {
+  const indentacao = config.obter('sql').indentacao;
+
+  // XML toma um desvio antes do SQL. Uma SQL nunca comeca com "<", entao
+  // os dois caminhos nao se cruzam - e o do SQL, daqui para baixo, fica
+  // exatamente como era.
+  if (formatadorXml.pareceXml(original)) {
+    const resultado = formatadorXml.formatarXml(original, indentacao);
+
+    if (!resultado.ok) {
+      return { recusa: 'Não foi possível formatar: a seleção parece XML, mas não é um XML válido (pode estar cortado).' };
+    }
+    return {
+      texto: resultado.texto,
+      mensagem: resultado.texto === normalizar(original.trim())
+        ? 'O XML já estava formatado. Copiado para colar.'
+        : 'XML formatado e copiado. Cole onde quiser com Ctrl + V.',
+    };
+  }
+
+  // JSON. Um "{" e JSON mesmo quebrado (avisa), menos os escapes do JDBC
+  // ({call proc(?)}), que sao SQL; um "[" pode ser o nome de uma tabela do SQL
+  // Server ([dbo].[t]), entao so vale se for valido.
+  const parecido = formatadorJson.pareceJson(original);
+  const json = parecido ? formatadorJson.formatarJson(original, indentacao) : { ok: false };
+
+  // JSON que veio escapado de um log ({\"a\":1}) ou entre aspas ("{\"a\":1}").
+  // So depois de descartar o JSON direto: um JSON valido nunca e reinterpretado.
+  if (!json.ok) {
+    const escapado = formatadorJson.formatarJsonEscapado(original, indentacao);
+    if (escapado.ok) {
+      return { texto: escapado.texto, mensagem: 'JSON escapado formatado e copiado. Cole onde quiser com Ctrl + V.' };
+    }
+  }
+
+  if (parecido && (json.ok || formatadorJson.comecaComChave(original))) {
+    if (!json.ok) {
+      return { recusa: 'Não foi possível formatar: a seleção parece JSON, mas não é um JSON válido (pode estar cortado).' };
+    }
+    return {
+      texto: json.texto,
+      mensagem: json.texto === normalizar(original.trim())
+        ? 'O JSON já estava formatado. Copiado para colar.'
+        : 'JSON formatado e copiado. Cole onde quiser com Ctrl + V.',
+    };
+  }
+
+  // O caminho de volta: um IN (...) vira uma linha por valor.
+  const linhas = formatadorLista.paraLinhas(original);
+  if (linhas !== null) {
+    return { texto: linhas, mensagem: 'IN convertido em uma linha por valor e copiado.' };
+  }
+
+  // Uma coluna de valores vira IN (...). O paraIn devolve null para tudo
+  // que tem cara de SQL, que segue abaixo como sempre foi.
+  const lista = formatadorLista.paraIn(original);
+  if (lista !== null) {
+    return { texto: lista, mensagem: 'Lista convertida em IN e copiada. Cole onde quiser com Ctrl + V.' };
+  }
+
+  const resultado = formatar(original);
+  if (!resultado.ok) {
+    return { recusa: 'Não foi possível formatar: a seleção não parece ser uma SQL válida.' };
+  }
+
+  // Sem este aviso a bind nao daria nenhum sinal de vida: o arquivo de
+  // origem fica igual e a area de transferencia nao aparece na tela.
+  return {
+    texto: resultado.texto,
+    mensagem: resultado.texto === normalizar(original)
+      ? 'A SQL já estava formatada. Copiada para colar.'
+      : 'SQL formatada e copiada. Cole onde quiser com Ctrl + V.',
+  };
+}
+
+/**
+ * O que a bind do Formatter faz: captura a selecao, decide (veja decidir),
+ * deixa o resultado na area de transferencia, protege ele da copia remota
+ * atrasada e avisa.
  */
 async function executar() {
   if (ocupado) return;
@@ -226,63 +254,24 @@ async function executar() {
       return;
     }
 
-    // XML toma um desvio antes do SQL. Uma SQL nunca comeca com "<", entao
-    // os dois caminhos nao se cruzam - e o do SQL, daqui para baixo, fica
-    // exatamente como era.
-    if (formatadorXml.pareceXml(original)) {
-      await formatarComoXml(original);
-      return;
-    }
+    // Linha de log com data e/ou nivel na frente ("2026-09-28 10:00:01 INFO
+    // select ..."): o prefixo fica intacto numa linha e so o resto e formatado.
+    const log = prefixoLog.separar(original);
+    const decisao = decidir(log ? log.resto : original);
 
-    // JSON. Um "{" e JSON mesmo quebrado (avisa); um "[" pode ser o nome de
-    // uma tabela do SQL Server ([dbo].[t]), entao so vale se for valido.
-    if (formatadorJson.pareceJson(original)) {
-      const valido = formatadorJson.formatarJson(original, config.obter('sql').indentacao).ok;
-      if (formatadorJson.comecaComChave(original) || valido) {
-        await formatarComoJson(original);
-        return;
-      }
-    }
-
-    // O caminho de volta: um IN (...) vira uma linha por valor.
-    const linhas = formatadorLista.paraLinhas(original);
-    if (linhas !== null) {
-      await entregar(original, linhas, 'IN convertido em uma linha por valor e copiado.');
-      return;
-    }
-
-    // Uma coluna de valores vira IN (...). O paraIn devolve null para tudo
-    // que tem cara de SQL, que segue abaixo como sempre foi.
-    const lista = formatadorLista.paraIn(original);
-    if (lista !== null) {
-      await entregar(original, lista, 'Lista convertida em IN e copiada. Cole onde quiser com Ctrl + V.');
-      return;
-    }
-
-    const resultado = formatar(original);
-
-    // SQL invalida: nao mexe na area de transferencia, para nao atropelar o
-    // que o usuario tinha copiado por causa de um erro de digitacao.
-    if (!resultado.ok) {
-      aviso.mostrar('Não foi possível formatar: a seleção não parece ser uma SQL válida.');
+    if (decisao.recusa) {
+      aviso.mostrar(decisao.recusa);
       return;
     }
 
     // O capturar() devolveu a area de transferencia ao que era antes; agora
     // ela passa a ser o resultado, que e o que o usuario vai colar.
-    const gravado = paraWindows(resultado.texto);
+    const gravado = paraWindows(log ? log.prefixo + '\n' + decisao.texto : decisao.texto);
     await clipboard.writeText(gravado);
     guardarContraSobrescrita(original, gravado).catch((erro) => {
       console.warn('[ferramenta-sql] guarda falhou:', erro.message);
     });
-
-    // Sem este aviso a bind nao daria nenhum sinal de vida: o arquivo de
-    // origem fica igual e a area de transferencia nao aparece na tela.
-    aviso.mostrar(
-      resultado.texto === normalizar(original)
-        ? 'A SQL já estava formatada. Copiada para colar.'
-        : 'SQL formatada e copiada. Cole onde quiser com Ctrl + V.'
-    );
+    aviso.mostrar(decisao.mensagem);
   } catch (erro) {
     console.error('[ferramenta-sql] falhou:', erro);
     aviso.mostrar('Algo deu errado ao formatar.');
@@ -293,4 +282,4 @@ async function executar() {
   }
 }
 
-module.exports = { executar, formatar, opcoes, guardarContraSobrescrita, normalizar, paraWindows };
+module.exports = { executar, decidir, formatar, opcoes, guardarContraSobrescrita, normalizar, paraWindows };

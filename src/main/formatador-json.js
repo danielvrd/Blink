@@ -42,12 +42,21 @@ function pareceJson(texto) {
 }
 
 /**
- * Comeca com "{"? Um "{" nunca abre uma SQL nem uma lista, entao mesmo
+ * Escapes do JDBC/ODBC: {call proc(?)}, {? = call f(?)}, {ts '2024-01-01'},
+ * {d '...'}, {fn ...}, {oj ...}. Comecam com "{" mas sao SQL, nao JSON: depois
+ * da palavra vem um espaco e outra coisa (num objeto JS, "call" seria seguido
+ * de ":").
+ */
+const ESCAPE_JDBC = /^\{\s*(?:\?\s*=\s*)?(?:call|fn|oj|escape|ts|d|t)\s+[^\s:]/i;
+
+/**
+ * Comeca com "{"? Um "{" nao abre uma lista nem uma SQL comum, entao mesmo
  * quebrado ou cortado o texto e um JSON - e o certo e avisar, nao mandar
- * para o formatador de SQL.
+ * para o formatador de SQL. A unica excecao sao os escapes do JDBC/ODBC.
  */
 function comecaComChave(texto) {
-  return limpar(texto).startsWith('{');
+  const limpo = limpar(texto);
+  return limpo.startsWith('{') && !ESCAPE_JDBC.test(limpo);
 }
 
 /** Reindenta um JSON JA validado, sem tocar em strings nem numeros. */
@@ -136,4 +145,37 @@ function formatarJson(texto, opcaoIndentacao) {
   return { ok: true, texto: reindentar(limpo, indentacaoDe(opcaoIndentacao)) };
 }
 
-module.exports = { pareceJson, comecaComChave, formatarJson };
+/**
+ * JSON que veio ESCAPADO, como aparece dentro de uma string de log:
+ *
+ *   {\"a\":1}        (so as aspas escapadas)
+ *   "{\"a\":1}"      (o valor inteiro, entre aspas)
+ *
+ * Desfaz o escape e formata. Devolve { ok, texto, escapado: true } ou
+ * { ok: false }. So vale o que virar um objeto ou lista JSON de verdade: se o
+ * texto de dentro nao for um JSON valido, nada muda.
+ *
+ * Fica de fora do modo automatico da Area de Trabalho Remota de proposito: la
+ * a copia nao pode perder as contrabarras sem o usuario pedir.
+ */
+function formatarJsonEscapado(texto, opcaoIndentacao) {
+  const limpo = limpar(texto);
+  const aspas = limpo.length >= 2 && limpo.startsWith('"') && limpo.endsWith('"');
+  if (!aspas && !limpo.startsWith('{') && !limpo.startsWith('[')) return { ok: false };
+  if (!aspas && !limpo.includes(CONTRABARRA + '"')) return { ok: false };
+
+  let interno;
+  try {
+    // Entre aspas, o proprio texto e uma string JSON. Sem as aspas de fora,
+    // poe elas e le do mesmo jeito.
+    interno = JSON.parse(aspas ? limpo : '"' + limpo + '"');
+  } catch (erro) {
+    return { ok: false };
+  }
+  if (typeof interno !== 'string') return { ok: false };
+
+  const formatado = formatarJson(interno, opcaoIndentacao);
+  return formatado.ok ? { ok: true, texto: formatado.texto, escapado: true } : { ok: false };
+}
+
+module.exports = { pareceJson, comecaComChave, formatarJson, formatarJsonEscapado };
