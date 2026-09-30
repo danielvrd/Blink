@@ -78,6 +78,9 @@ Sobre SQL:
 - Os parâmetros de log e de código (`?`, `@P0`, `:nome`, `:1`, `$1`, `${id}`, `#{id}`, `{0}`, `%s`)
   ficam exatamente como estavam. Um pedaço estranho, como um GUID sem aspas, não impede mais a
   formatação do resto.
+- Scripts com **`DECLARE`** saem com cada declaração numa linha (as variáveis de uma lista entram
+  um nível, e `DECLARE @T TABLE (...)` fica numa linha só), e um `IF`, `WHILE` ou `EXEC` que vem
+  logo depois de um `DECLARE` ou de um `SET @variável` sem `;` vai para a linha de baixo.
 - Colunas com nome de palavra reservada (`user`, `type`, `role`…) ficam indentadas como as demais.
 - Funções (`GETDATE`, `ISNULL`…) e tipos (`VARCHAR`, `INT`…) seguem a caixa escolhida para as
   palavras-chave.
@@ -98,8 +101,8 @@ Formatter das configurações; a indentação vale também para XML e JSON.
 Em tela cheia, a Área de Trabalho Remota do Windows fica com todas as combinações de teclas para
 o servidor, e o atalho nunca chega ao Blink. Para esse caso existe o **modo automático**, que vem
 ligado: dê `Ctrl + C` normal dentro do servidor e, se o texto começar com `SELECT`, `INSERT`,
-`UPDATE`, `DELETE` ou `WITH` — ou for um XML ou um JSON —, ele chega aqui já formatado. Uma
-notificação avisa.
+`UPDATE`, `DELETE`, `WITH` ou `DECLARE` — ou for um XML ou um JSON —, ele chega aqui já formatado.
+Uma notificação avisa.
 
 Só vale para cópias vindas da Área de Trabalho Remota do Windows — cópias feitas na sua própria
 máquina nunca são formatadas sozinhas. Dá para desligar na aba Formatter, com **dois
@@ -156,6 +159,16 @@ Para **editar** um tópico, clique no texto dele: `Enter` ou clicar fora salva, 
 Apagar (`×`), arrastar para reordenar e a vassoura (limpar tudo) gravam na hora. A lixeira ao lado
 da vassoura exclui o arquivo inteiro — ele vai para a Lixeira do Windows, então dá para recuperar.
 `Esc` fecha a janela.
+
+O botão **C**, à esquerda da vassoura, **copia as anotações** de uma vez: uma linha `- tópico` para
+cada uma, na ordem em que foram escritas (a mais antiga primeiro), com as quebras de linha do
+Windows. Com o histórico diário ligado, copia só as anotações do dia que está na tela; no `task.md`,
+copia as tarefas como caixinhas (`- [ ]` e `- [x]`). Uma mensagem no rodapé diz quantas foram
+copiadas, e o botão fica apagado quando não há nada para copiar.
+
+O botão **—**, ao lado do `×` (no Fast Note e também na janela do Diff Checker), **minimiza** a
+janela para a barra de tarefas. Ao apertar o atalho de novo, ela volta como estava — o que você
+estava escrevendo continua no campo.
 
 #### Arquivo principal
 

@@ -163,7 +163,8 @@ relatado por alguém numa rede que não dá para reproduzir.
 todas as combinações de teclas, então nenhum atalho global chega — nem o do Blink, nem os do
 AutoHotkey ou do PowerToys. O monitor resolve sem atalho: olha a área de transferência a cada 400ms
 **só enquanto a janela da frente é remota** (e por 5s depois de sair dela), e formata sozinho o que
-chegar começando com `SELECT`, `INSERT`, `UPDATE`, `DELETE` ou `WITH`. Fora da janela remota ele
+chegar começando com `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `WITH` ou `DECLARE` (`PARECE_SQL`; o
+`DECLARE` entrou porque muito script começa declarando variáveis). Fora da janela remota ele
 nem lê a área de transferência.
 
 Ele pergunta `selecao.emUso()` antes de agir: durante a captura de um atalho (e 1,5s depois) a área
@@ -300,9 +301,13 @@ resultado não bater com o que entrou, valem a saída e o comportamento de antes
   resultado é igual à entrada, e cada nome neutro volta exatamente uma vez. Usa o `lexer-sql.js`.
 - `layout-tsql.js` (só T-SQL): a biblioteca não entende `BEGIN`/`END`/`IF`/`ELSE`/`WHILE`. Este arquivo
   pega a saída dela e arruma só onde quebrar a linha e quanto indentar (cabeçalho de PROC/FUNCTION/
-  TRIGGER, blocos, `IF`/`ELSE`/`WHILE` com corpo simples, `TRY`/`CATCH`, `GO`, `SET NOCOUNT ON;`). Só age
-  com um **marcador** (CREATE/ALTER de PROC/FUNCTION/TRIGGER, `BEGIN` de bloco, `IF`/`WHILE` de comando);
-  sem ele devolve `null` sem nem tokenizar. A trava compara a lista de tokens da entrada e da saída
+  TRIGGER, blocos, `IF`/`ELSE`/`WHILE` com corpo simples, `TRY`/`CATCH`, `GO`, `SET NOCOUNT ON;`).
+  `DECLARE` também: todo `DECLARE` abre uma linha (sem `;` a biblioteca deixa vários juntos), as
+  variáveis de uma lista entram um nível, `DECLARE @T` + `TABLE (...)` voltam a uma linha, e um `IF`,
+  `WHILE`, `PRINT`, `EXEC`… que venha depois de um `DECLARE` ou de um `SET @variável` sem `;` (flag
+  `semFim`) abre outro comando. Só age
+  com um **marcador** (CREATE/ALTER de PROC/FUNCTION/TRIGGER, `BEGIN` de bloco, `IF`/`WHILE` de comando,
+  `DECLARE`); sem ele devolve `null` sem nem tokenizar. A trava compara a lista de tokens da entrada e da saída
   (`lexer-sql.js`): qualquer diferença, ou qualquer coisa que o algoritmo não entenda (comando sem `;`
   ambíguo dentro de um corpo simples, `END` sem `BEGIN`…), devolve `null`. No fuzz, ~5% dos programas
   desistem; todos os outros saem idempotentes.
@@ -324,8 +329,10 @@ anterior**, e não só contra testes escritos à mão. Em `.verif/` (fora do git
   calculada de forma independente (a própria biblioteca, sem o nosso código por cima). Toda diferença
   fora das regras é regressão. Ao final, `golden-relatorio.md` lista o antes/depois de cada mudança.
 
-O baseline do pack de 0.6.0 foi gerado no commit `6c8b367` (v0.5.0). Para a próxima rodada de mudanças
-no Formatter, gere um baseline novo do commit atual e esvazie as regras.
+O baseline do pack de 0.6.0 foi gerado no commit `6c8b367` (v0.5.0); o do pack seguinte (`DECLARE`, botões
+do Fast Note), no `45fc94d` (v0.6.0). Para cada rodada de mudanças no Formatter, gere um baseline novo do
+commit atual (`electron .verif/golden.js gerar --forcar`, com `src/` limpo), esvazie as regras e acrescente
+ao corpus as entradas do que vai mudar.
 
 ### Diff Checker: destaque dentro da linha
 
@@ -371,6 +378,26 @@ aceita nomes de ferramenta conhecidos, mostra a principal (`mostrarPrincipal(aba
 janela da ferramenta — elas são `alwaysOnTop` e a principal não, então a principal apareceria
 escondida atrás. A aba vai gravada em `abaAtiva` (vale se a principal ainda carrega) e também
 mandada pelo canal `principal:aba`, porque a principal só lê o config uma vez, ao abrir.
+
+**O estado da janela principal envelhece.** A principal nasce escondida na abertura do app e fica
+carregada por horas; o `estado` que `principal.js` lê da configuração seria o de quando ela abriu. Já
+causou um defeito real: a pasta das notas também é gravada por fora (o seletor que o `Ctrl + Alt + N`
+abre em `garantirPasta`), e a aba Fast Note continuava dizendo "Nenhuma pasta escolhida" com a pasta
+salva — e, no mesmo esquema, dialeto, caixa e indentação voltavam ao valor antigo ao trocar de aba.
+Por isso `mostrarAba` **relê** a configuração a cada troca e a aba Fast Note é redesenhada quando a
+janela volta a ter o foco (com 150ms de espera: o seletor de pasta ainda está gravando). As outras
+abas não são redesenhadas no foco, porque uma gravação de atalho em andamento seria interrompida.
+Teste: `.verif/teste-pasta.js`.
+
+**Botão copiar (C)** (`#btn-copiar`, `textoParaCopiar()` em `note.js`): copia como `- tópico`, do mais
+antigo para o mais novo (a tela mostra o mais novo primeiro, então inverte uma cópia), continuação
+indentada com 2 espaços, CRLF, pelo IPC `areaTransferencia:escrever`. No histórico só o dia
+selecionado; no `task.md` as caixinhas `- [ ]`/`- [x]`. Fica desabilitado como a vassoura.
+
+**Botão minimizar** (`#btn-minimizar`, Fast Note e Diff): usa o `janela:minimizar` que a principal já
+tinha; vai para a barra de tarefas. Em `janelas.js`, `abrirNota()` com a janela minimizada só faz
+`restore()` — **sem** `reload()`: o rascunho não é gravado em disco e o recarregamento o perderia.
+`abrirDiff()` restaura e recarrega (a comparação nova precisa das linhas novas).
 
 ### I18n
 
