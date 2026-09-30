@@ -21,6 +21,7 @@ const formatadorJson = require('./formatador-json');
 const formatadorLista = require('./formatador-lista');
 const prefixoLog = require('./prefixo-log');
 const nomeNeutro = require('./nome-neutro');
+const layoutTsql = require('./layout-tsql');
 
 /**
  * Evita dois formatadores rodando ao mesmo tempo.
@@ -141,7 +142,16 @@ function formatar(texto) {
   const opcs = opcoes();
   // Com nomes neutros onde a biblioteca tropeca (placeholders, colunas com
   // nome reservado, um pedaco estranho). Sem nada disso, e o format() de sempre.
-  return nomeNeutro.formatar(texto, (t) => format(t, opcs), opcs.language);
+  const resultado = nomeNeutro.formatar(texto, (t) => format(t, opcs), opcs.language);
+
+  // Procedures, triggers e funcoes do T-SQL: o layout de BEGIN / END / IF /
+  // ELSE / WHILE, que a biblioteca nao faz. Devolve null - e fica a saida da
+  // biblioteca - se nao ha o que arrumar ou se a trava reprovar.
+  if (resultado.ok && opcs.language === 'transactsql') {
+    const arrumado = layoutTsql.aplicar(resultado.texto, opcs.useTabs ? '\t' : ' '.repeat(opcs.tabWidth));
+    if (arrumado !== null) return { ok: true, texto: arrumado };
+  }
+  return resultado;
 }
 
 /**
