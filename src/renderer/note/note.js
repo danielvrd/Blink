@@ -61,6 +61,7 @@
   const lista = document.getElementById('lista');
   const rascunho = document.getElementById('rascunho');
   const dica = document.getElementById('dica');
+  const botaoCopiar = document.getElementById('btn-copiar');
   const botaoLimpar = document.getElementById('btn-limpar');
   const botaoExcluir = document.getElementById('btn-excluir');
   const popoverLimpar = document.getElementById('popover-limpar');
@@ -395,6 +396,11 @@
 
   function desenhar() {
     campoNome.hidden = arquivo !== NOVO;
+    // O copiar segue a vassoura: sem nada para copiar, fica apagado.
+    botaoCopiar.disabled = arquivo === NOVO || totalDeItens() === 0;
+    botaoCopiar.title = ehHistorico()
+      ? `Copiar as anotações do dia ${formatarDataBR(dataSelecionada)}`
+      : 'Copiar todas as anotações';
     botaoLimpar.disabled = arquivo === NOVO || totalDeItens() === 0;
     botaoExcluir.disabled = arquivo === NOVO;
     if (botaoLimpar.disabled) popoverLimpar.hidden = true;
@@ -655,6 +661,41 @@
     await gravar();
   }
 
+  /**
+   * O texto do botao copiar: uma linha "- topico" por anotacao, NA ORDEM EM
+   * QUE FORAM ESCRITAS (a tela mostra a mais nova primeiro, entao a lista e
+   * invertida), com as quebras de linha de um topico indentadas por baixo.
+   *
+   *   - Com o relogio ligado, so o dia selecionado.
+   *   - Nas tarefas, as pendentes e depois as concluidas, como caixinhas.
+   *   - Nas notas comuns, o arquivo todo.
+   *
+   * Sai com CRLF, o padrao do Windows: cola direito no Bloco de Notas e no
+   * e-mail.
+   */
+  function textoParaCopiar() {
+    const linhas = (itens, marca) => itens.slice().reverse().map((t) => `- ${marca}${t.split('\n').join('\n  ')}`);
+
+    let partes;
+    if (ehTarefas()) {
+      partes = [...linhas(tarefas.pendentes, '[ ] '), ...linhas(tarefas.concluidas, '[x] ')];
+    } else if (ehHistorico()) {
+      partes = linhas(historicoAtual(), '');
+    } else {
+      partes = linhas(topicos, '');
+    }
+    return { texto: partes.join('\n').split('\n').join('\r\n'), total: partes.length };
+  }
+
+  async function copiarNotas() {
+    if (botaoCopiar.disabled) return;
+    const { texto, total } = textoParaCopiar();
+    if (total === 0) return;
+
+    const gravou = await window.blink.areaTransferencia.escrever(texto);
+    avisarNaDica(gravou ? `Copiada${total === 1 ? '' : 's'}: ${total} anotaç${total === 1 ? 'ão' : 'ões'}` : 'Não foi possível copiar.');
+  }
+
   async function limparTudo() {
     fecharPopovers();
     recemCriado = null;
@@ -873,6 +914,8 @@
     }
   });
 
+  botaoCopiar.addEventListener('click', copiarNotas);
+
   botaoLimpar.addEventListener('click', () => {
     if (botaoLimpar.disabled) return;
     // No historico a pergunta cita o dia: "limpar tudo" ali limpa so ele.
@@ -896,6 +939,8 @@
   document.getElementById('btn-excluir-nao').addEventListener('click', fecharPopovers);
 
   document.getElementById('btn-fechar').addEventListener('click', () => window.blink.janela.fechar());
+  // Minimizar vai para a barra de tarefas; a janela volta pelo icone ou pela bind.
+  document.getElementById('btn-minimizar').addEventListener('click', () => window.blink.janela.minimizar());
 
   // O olho: abre as configuracoes na aba do Fast Note e fecha esta janela.
   document.getElementById('btn-olho').addEventListener('click', () => window.blink.janela.abrirPrincipal('note'));

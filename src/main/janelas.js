@@ -225,8 +225,9 @@ function abrirDiff(linhas) {
   linhasDiff = linhas;
 
   // Ja tem uma comparacao aberta: recarrega com as linhas novas em vez de
-  // empilhar uma segunda janela.
+  // empilhar uma segunda janela. Minimizada, volta da barra de tarefas antes.
   if (diff && !diff.isDestroyed()) {
+    if (diff.isMinimized()) diff.restore();
     diff.reload();
     diff.show();
     diff.focus();
@@ -268,6 +269,16 @@ let nota = null;
 /** Abre o bloco de notas. */
 function abrirNota() {
   if (nota && !nota.isDestroyed()) {
+    // Minimizada (o botao ao lado do X): so volta da barra de tarefas. Nao
+    // recarrega, senao o que estava sendo escrito no rascunho se perderia -
+    // o rascunho nao e gravado em disco.
+    if (nota.isMinimized()) {
+      nota.restore();
+      nota.show();
+      nota.focus();
+      return nota;
+    }
+
     // Ja esta aberto: recarrega para a lista de arquivos vir atualizada,
     // caso algum .md tenha sido criado ou apagado por fora.
     nota.reload();

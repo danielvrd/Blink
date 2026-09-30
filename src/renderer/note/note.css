@@ -58,6 +58,14 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* Minimizar e fechar, um ao lado do outro no canto. */
+.botoes-janela {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
 .botao-x {
   width: 24px;
   height: 24px;

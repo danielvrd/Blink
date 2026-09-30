@@ -27,7 +27,14 @@
         </button>
         <span>Fast Note</span>
       </div>
-      <button class="botao-x" id="btn-fechar" title="Fechar" aria-label="Fechar">×</button>
+      <div class="botoes-janela">
+        <button class="botao-x" id="btn-minimizar" title="Minimizar" aria-label="Minimizar">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <line x1="0" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1.2"></line>
+          </svg>
+        </button>
+        <button class="botao-x" id="btn-fechar" title="Fechar" aria-label="Fechar">×</button>
+      </div>
     </header>
 
     <div class="corpo">
@@ -42,6 +49,13 @@
         <div class="calendario" id="calendario-historico" hidden></div>
 
         <div class="acoes-arquivo">
+          <button class="botao-acao" id="btn-copiar" title="Copiar todas as anotações" aria-label="Copiar as anotações">
+            <!-- letra C, desenhada por traço para não depender de fonte -->
+            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16.75 8 A6.2 6.2 0 1 0 16.75 16" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"></path>
+            </svg>
+          </button>
+
           <button class="botao-acao" id="btn-limpar" title="Limpar tudo" aria-label="Limpar todas as notas">
             <!-- vassoura -->
             <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">

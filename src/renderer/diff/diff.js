@@ -330,6 +330,8 @@
   ligarCopiar(botaoCopiarDireita, 'direita');
 
   botaoFechar.addEventListener('click', () => window.blink.janela.fechar());
+  // Minimizar vai para a barra de tarefas; a janela volta pelo icone ou pela bind.
+  document.getElementById('btn-minimizar').addEventListener('click', () => window.blink.janela.minimizar());
 
   // O olho: abre as configuracoes na aba do Diff Checker e fecha esta janela.
   document.getElementById('btn-olho').addEventListener('click', () => window.blink.janela.abrirPrincipal('diff'));
