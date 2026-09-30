@@ -46,6 +46,24 @@ let guardaAtual = 0;
 const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * Quebras de linha. As funcoes de formatacao devolvem LF; o que vai para a
+ * area de transferencia sai com CRLF, que e o que o Windows usa - colado no
+ * Bloco de Notas, no Outlook ou num editor antigo, LF puro vira uma linha so.
+ *
+ * Toda COMPARACAO (ja estava formatado? a copia crua voltou?) ignora essa
+ * diferenca, senao um texto que ja estava certo, so que com CRLF, seria dado
+ * como "formatado" de novo.
+ */
+function normalizar(texto) {
+  return texto.split('\r\n').join('\n');
+}
+
+/** LF ou CRLF na entrada, CRLF na saida - sem duplicar o CR de quem ja tinha. */
+function paraWindows(texto) {
+  return normalizar(texto).split('\n').join('\r\n');
+}
+
+/**
  * Protege a SQL formatada de ser atropelada pela copia remota.
  *
  * Numa Area de Trabalho Remota a copia do servidor pode chegar aqui atrasada
@@ -61,10 +79,12 @@ const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 async function guardarContraSobrescrita(cru, formatado) {
   const minha = ++guardaAtual;
+  const crua = normalizar(cru);
+  const pronta = normalizar(formatado);
 
   // Ja estava formatada: cru e formatado sao o mesmo texto, nao ha o que
   // proteger.
-  if (cru === formatado) return 0;
+  if (crua === pronta) return 0;
 
   const fim = Date.now() + TEMPO_DE_GUARDA;
   let regravacoes = 0;
@@ -73,11 +93,11 @@ async function guardarContraSobrescrita(cru, formatado) {
     await esperar(INTERVALO_DA_GUARDA);
     if (minha !== guardaAtual) break;
 
-    const atual = await clipboard.readText();
-    if (atual === cru) {
+    const atual = normalizar(await clipboard.readText());
+    if (atual === crua) {
       await clipboard.writeText(formatado);
       regravacoes += 1;
-    } else if (atual !== formatado) {
+    } else if (atual !== pronta) {
       // O usuario copiou outra coisa: nao e mais problema nosso.
       break;
     }
@@ -132,13 +152,14 @@ async function formatarComoXml(original) {
     return;
   }
 
-  await clipboard.writeText(resultado.texto);
-  guardarContraSobrescrita(original, resultado.texto).catch((erro) => {
+  const gravado = paraWindows(resultado.texto);
+  await clipboard.writeText(gravado);
+  guardarContraSobrescrita(original, gravado).catch((erro) => {
     console.warn('[ferramenta-sql] guarda falhou:', erro.message);
   });
 
   aviso.mostrar(
-    resultado.texto === original.trim()
+    resultado.texto === normalizar(original.trim())
       ? 'O XML já estava formatado. Copiado para colar.'
       : 'XML formatado e copiado. Cole onde quiser com Ctrl + V.'
   );
@@ -149,8 +170,9 @@ async function formatarComoXml(original) {
  * atrasada e avisa. E o final comum dos caminhos novos (JSON e lista).
  */
 async function entregar(original, texto, mensagem) {
-  await clipboard.writeText(texto);
-  guardarContraSobrescrita(original, texto).catch((erro) => {
+  const gravado = paraWindows(texto);
+  await clipboard.writeText(gravado);
+  guardarContraSobrescrita(original, gravado).catch((erro) => {
     console.warn('[ferramenta-sql] guarda falhou:', erro.message);
   });
   aviso.mostrar(mensagem);
@@ -171,7 +193,7 @@ async function formatarComoJson(original) {
   await entregar(
     original,
     resultado.texto,
-    resultado.texto === original.trim()
+    resultado.texto === normalizar(original.trim())
       ? 'O JSON já estava formatado. Copiado para colar.'
       : 'JSON formatado e copiado. Cole onde quiser com Ctrl + V.'
   );
@@ -248,15 +270,16 @@ async function executar() {
 
     // O capturar() devolveu a area de transferencia ao que era antes; agora
     // ela passa a ser o resultado, que e o que o usuario vai colar.
-    await clipboard.writeText(resultado.texto);
-    guardarContraSobrescrita(original, resultado.texto).catch((erro) => {
+    const gravado = paraWindows(resultado.texto);
+    await clipboard.writeText(gravado);
+    guardarContraSobrescrita(original, gravado).catch((erro) => {
       console.warn('[ferramenta-sql] guarda falhou:', erro.message);
     });
 
     // Sem este aviso a bind nao daria nenhum sinal de vida: o arquivo de
     // origem fica igual e a area de transferencia nao aparece na tela.
     aviso.mostrar(
-      resultado.texto === original
+      resultado.texto === normalizar(original)
         ? 'A SQL já estava formatada. Copiada para colar.'
         : 'SQL formatada e copiada. Cole onde quiser com Ctrl + V.'
     );
@@ -270,4 +293,4 @@ async function executar() {
   }
 }
 
-module.exports = { executar, formatar, opcoes, guardarContraSobrescrita };
+module.exports = { executar, formatar, opcoes, guardarContraSobrescrita, normalizar, paraWindows };

@@ -125,15 +125,19 @@ async function verificar() {
       ? formatadorJson.formatarJson(texto, indentacao)
       : ferramentaSql.formatar(texto);
 
-  // XML ou JSON quebrado ou cortado passa intacto, como SQL invalida.
-  if (!resultado.ok || resultado.texto === texto) return;
+  // XML ou JSON quebrado ou cortado passa intacto, como SQL invalida. Um texto
+  // que ja estava formatado (mesmo que com CRLF) tambem: nao ha o que fazer.
+  if (!resultado.ok || ferramentaSql.normalizar(resultado.texto) === ferramentaSql.normalizar(texto)) return;
 
-  await clipboard.writeText(resultado.texto);
-  ultimoVisto = resultado.texto;
+  // Sai com CRLF, como qualquer texto do Windows. O ultimoVisto e o texto
+  // gravado, senao a propria gravacao pareceria uma copia nova do usuario.
+  const gravado = ferramentaSql.paraWindows(resultado.texto);
+  await clipboard.writeText(gravado);
+  ultimoVisto = gravado;
 
   // A mesma protecao do atalho: se uma segunda sincronizacao da copia
   // remota trouxer a crua de volta, a formatada e regravada.
-  ferramentaSql.guardarContraSobrescrita(texto, resultado.texto).catch(() => {});
+  ferramentaSql.guardarContraSobrescrita(texto, gravado).catch(() => {});
 
   const tipo = ehXml ? 'xml' : ehJson ? 'json' : 'sql';
   diagnostico.registrar(`${tipo}-auto`, { janela: titulo, caracteres: texto.length });
