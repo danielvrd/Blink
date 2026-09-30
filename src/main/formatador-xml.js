@@ -8,6 +8,7 @@
  */
 
 const formatarBiblioteca = require('xml-formatter');
+const { motor, LIMITE_CAPACIDADE } = require('./motor-xml');
 
 /** Comeca como XML: declaracao, comentario ou uma tag. */
 const INICIO_XML = /^(<\?xml|<!--|<[A-Za-z_])/;
@@ -60,10 +61,25 @@ function formatarXml(texto, opcaoIndentacao) {
   const limpo = limpar(texto);
   const escapado = !INICIO_XML.test(limpo) && INICIO_XML_ESCAPADO.test(limpo);
   const xml = escapado ? desescapar(limpo) : limpo;
+  const indentacao = indentacaoDe(opcaoIndentacao);
+
+  // Documento grande: a biblioteca e quadratica (1,2 MB levam ~20 s com o app
+  // parado), entao o motor linear tenta primeiro. Ele so responde quando tem
+  // certeza; "nao sei" (null) segue para a biblioteca, como sempre foi.
+  if (xml.length > LIMITE_CAPACIDADE) {
+    let doMotor = null;
+    try {
+      doMotor = motor(xml, indentacao);
+    } catch (erro) {
+      doMotor = null;
+    }
+    if (doMotor === false) return { ok: false };
+    if (doMotor !== null) return { ok: true, texto: doMotor, escapado };
+  }
 
   try {
     const saida = formatarBiblioteca(xml, {
-      indentation: indentacaoDe(opcaoIndentacao),
+      indentation: indentacao,
       collapseContent: true,
       lineSeparator: '\n',
       throwOnFailure: true,
