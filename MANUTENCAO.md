@@ -214,30 +214,48 @@ tema escuro do app.
 
 ### Formatter: como a bind decide o que fazer
 
-A mesma tecla formata XML, JSON, lista de valores e SQL, sem perguntar nada
-(`executar()` em `src/main/ferramenta-sql.js`). A **ordem** é o que sustenta isso:
+A mesma tecla formata XML, JSON, lista de valores e SQL, sem perguntar nada. `executar()` (em
+`src/main/ferramenta-sql.js`) captura a seleção, chama `decidir()` — que devolve `{ texto, mensagem }`
+ou `{ recusa }` — e só então grava, protege e avisa. Separar `decidir()` deixa testar a decisão sem
+teclado nem área de transferência. A **ordem** é o que sustenta tudo:
 
+0. **Prefixo de log** (`prefixo-log.js`), só na bind: data e hora e/ou nível (`INFO`, `ERRO`…) no começo,
+   seguidos de SQL, XML ou JSON válido. O prefixo fica intacto numa linha e o resto segue a decisão
+   normal. A regra é estreita de propósito: texto livre com data (`2026-09-28 ERRO ao executar select…`)
+   não é tocado. O modo automático não usa isto.
 1. XML (`pareceXml`, exclusivo).
-2. JSON: um `{` no começo é sempre JSON (quebrado, só avisa); um `[` só é JSON se for válido, porque o
-   SQL Server usa colchetes para nomes (`[dbo].[tabela]`).
-3. `IN (...)` → uma linha por valor (`paraLinhas`).
+2. JSON: um `{` no começo é sempre JSON (quebrado, só avisa) — exceto os escapes do JDBC/ODBC
+   (`{call proc(?)}`, `{ts '…'}`), que são SQL; um `[` só é JSON se for válido, porque o SQL Server usa
+   colchetes para nomes (`[dbo].[tabela]`). JSON **escapado de log** (`{\"a\":1}`) ou entre aspas
+   (`"{\"a\":1}"`) é desfeito e formatado (`formatarJsonEscapado`), mas só depois de descartar o JSON
+   direto e só na bind: o automático não pode tirar contrabarras de uma cópia sem ninguém pedir.
+3. `IN (...)` → uma linha por valor (`paraLinhas`, aceita `N'…'`).
 4. Coluna de valores → `IN (...)` (`paraIn`), só se não tiver cara de SQL.
 5. SQL, o último recurso.
 
 A SQL vem por último porque o `sql-formatter` **aceita qualquer texto**: uma lista de palavras ele
 achata numa linha só, um JSON simples ele devolve igual e ainda diz que "a SQL já estava formatada".
-Ele só falha em acidentes de sintaxe (`$`, aspas ou chaves abertas, parênteses desbalanceados), então
-não dá para usá-lo para descobrir se algo é SQL. A heurística da lista (`formatador-lista.js`) rejeita
-o que parece fragmento de SQL: começo de instrução (`SELECT`, `INSERT`, `CREATE`, `DECLARE`… ou
-comentário), `= < > ;`, linha com mais de 120 caracteres, várias colunas (tabulação numa seleção de
-várias linhas) ou uma linha de duas palavras ou mais com uma palavra de estrutura (`and`, `from`,
-`where`…). Uma palavra sozinha (`ON`, `OR`) pode ser valor. Para ampliar o que conta como SQL, é só
-acrescentar ao `INICIO_SQL` ou à `PALAVRA_SQL`. Todo valor do `IN` sai com aspas, número inclusive.
+Ele só falha em acidentes de sintaxe, então não dá para usá-lo para descobrir se algo é SQL. A heurística
+da lista (`formatador-lista.js`) rejeita o que parece fragmento de SQL: começo de instrução (`SELECT`,
+`CREATE`, `DECLARE`… ou comentário), `= < > ;`, linha com mais de 120 caracteres, várias colunas
+(tabulação numa seleção de várias linhas), linha de duas palavras ou mais que **começa** com palavra de SQL
+(`and ativo`, `ELSE 0`) ou tem palavra de estrutura no meio (`like`, `is`, `where`…), `x IN (...)` e
+definição de coluna (`ID INT NOT NULL`). Palavras fracas no meio (`Black or White`, `Paid in full`) são
+valores; uma palavra sozinha (`ON`, `OR`) também. Limitação conhecida: `In Progress` e `On Hold`
+começam com palavra de SQL e seguem como SQL. Vírgula no fim (ou no começo) de todas as linhas é
+tirada; se todos os valores parecem nome de coluna (`a.id,`), é lista de colunas e fica com a SQL. Uma
+linha só com vírgulas vira `IN` apenas se forem só números ou só textos entre aspas.
+
+**Quebras de linha: LF por dentro, CRLF na área de transferência.** Todas as funções de formatação
+devolvem LF; `paraWindows()` converte na hora de gravar (bind e automático). Toda **comparação** ("já
+estava formatado?", "a cópia crua voltou?") passa por `normalizar()`, senão um texto já certo, só que
+com CRLF, seria dado como formatado de novo. A guarda contra sobrescrita e o `ultimoVisto` do monitor
+usam o texto **gravado** (com CRLF) — verificado que `writeText` de CRLF volta idêntico no `readText`.
 
 **O JSON não usa `JSON.stringify(JSON.parse(...))`** (`formatador-json.js`): isso mudaria o conteúdo
 — inteiro grande perde precisão, `1.0` vira `1`, chaves numéricas sobem para o início, chaves
 repetidas somem. O JSON é validado com `JSON.parse` mas reindentado percorrendo o texto, então strings
-e números saem exatamente como entraram. JSON escapado de log (`{\"a\":1}`) **não** é tratado.
+e números saem exatamente como entraram.
 
 **Modo automático (`monitor-sql.js`)**: tem dois interruptores, `sql.autoRemoto` (SQL e XML) e
 `sql.autoRemotoJson`, ambos "ligado" quando o campo não existe (config antigo). A lista de valores
@@ -249,6 +267,65 @@ O nome visível é "Formatter", mas os identificadores continuam `sql` (`binds.s
 `abaAtiva`, `ferramenta-sql.js`, `monitor-sql.js`, `aba-sql.js`): renomeá-los quebraria o
 `config.json` de quem já usa. A aba do Formatter é a mais alta da janela principal, e a altura mínima
 (530px, `janelas.js`) foi medida com os dois interruptores.
+
+#### XML grande: o motor linear (`motor-xml.js`)
+
+O `xml-formatter` (por dentro, o `xml-parser-xo`) é **quadrático**: a cada atributo ele procura `?>` e
+`/>` no resto do documento inteiro. 300 KB levam 0,3 s, 1,2 MB levam ~20 s, e o app fica parado (o modo
+automático também, roda no mesmo processo). Acima de `LIMITE_CAPACIDADE` (200 KB) o `formatarXml` tenta
+primeiro o motor, que reproduz **byte a byte** a saída da biblioteca com as opções do Blink, em uma
+passada. Ele devolve `string` (formatado), `false` (inválido com certeza: cortado, tag trocada, texto
+solto) ou `null` ("não sei": DOCTYPE, instrução de processamento, atributo sem aspas/duplicado, raiz
+dupla…), e `null` cai na biblioteca como sempre foi. Até 200 KB nada muda.
+
+A regra de manutenção é **equivalência**: se mexer no motor (ou trocar a versão do `xml-formatter`),
+rode `node .verif/teste-motor-xml.js` — ele compara o motor com a biblioteca em dezenas de milhares de
+documentos gerados (fuzz determinístico, cortes, mutações) e em XMLs realistas, e exige: motor devolveu
+texto ⇒ **idêntico**; motor devolveu `false` ⇒ a biblioteca também recusa. `--grande` inclui 1,7 MB pelo
+caminho lento da biblioteca. Vários elementos no topo (`<a/><b/>`) e XML escapado duas vezes
+(`&amp;lt;`) ficam em `formatador-xml.js` (`dividirIrmaos`, cada pedaço passa pelo mesmo caminho).
+
+#### SQL: nomes neutros e layout de procedure
+
+Dois módulos entram por cima do `sql-formatter` dentro de `formatar()`, e os dois têm **trava**: se o
+resultado não bater com o que entrou, valem a saída e o comportamento de antes.
+
+- `nome-neutro.js`: troca um pedaço por um identificador comum (`BLINKX0X`), formata e devolve o pedaço
+  no lugar. Serve a placeholders que a biblioteca estraga ou recusa (`:nome`, `#{id}`, `${id}`, `{0}`,
+  `%s`, `$1`; `$10.00` é dinheiro, não placeholder), a colunas com nome reservado do T-SQL (`user`,
+  `type`, `role`, `language`, `schema`, `table`, `index`, `rule`, `option`, só em comandos DML e depois
+  de `,` `(` `SELECT` `WHERE`…) e, como rede de segurança, a **um** pedaço estranho que faz a biblioteca
+  recusar tudo (lê `Unexpected "X" at line L column C`, troca, tenta de novo, até 10 vezes; nunca troca
+  texto entre aspas — string aberta continua recusada). A trava: sem espaços e sem diferenciar caixa o
+  resultado é igual à entrada, e cada nome neutro volta exatamente uma vez. Usa o `lexer-sql.js`.
+- `layout-tsql.js` (só T-SQL): a biblioteca não entende `BEGIN`/`END`/`IF`/`ELSE`/`WHILE`. Este arquivo
+  pega a saída dela e arruma só onde quebrar a linha e quanto indentar (cabeçalho de PROC/FUNCTION/
+  TRIGGER, blocos, `IF`/`ELSE`/`WHILE` com corpo simples, `TRY`/`CATCH`, `GO`, `SET NOCOUNT ON;`). Só age
+  com um **marcador** (CREATE/ALTER de PROC/FUNCTION/TRIGGER, `BEGIN` de bloco, `IF`/`WHILE` de comando);
+  sem ele devolve `null` sem nem tokenizar. A trava compara a lista de tokens da entrada e da saída
+  (`lexer-sql.js`): qualquer diferença, ou qualquer coisa que o algoritmo não entenda (comando sem `;`
+  ambíguo dentro de um corpo simples, `END` sem `BEGIN`…), devolve `null`. No fuzz, ~5% dos programas
+  desistem; todos os outros saem idempotentes.
+
+`functionCase` e `dataTypeCase` da `sql-formatter` recebem a mesma opção das palavras-chave
+(`opcoes()`); o risco aceito é uma coluna com nome de tipo (`date`, `text`) mudar só de caixa.
+
+#### O teste de referência ("golden") do Formatter
+
+Como o Formatter mexe em texto de produção, toda mudança nele é conferida contra o **comportamento
+anterior**, e não só contra testes escritos à mão. Em `.verif/` (fora do git):
+
+- `corpus-formatter.js`: ~300 entradas determinísticas (SQL, procedures, XML, JSON, listas, logs).
+- `golden.js`: roda o `executar()` **e** o `monitor.verificar()` reais sobre o corpus, em três
+  configurações (T-SQL maiúsculas/4, T-SQL minúsculas/tab, PostgreSQL/2), com teclado e aviso falsos.
+  `gerar` grava `golden-antes.json` (só com `src/` igual ao commit de referência); `atual` roda e
+  compara; `comparar` reavalia as regras sobre o último resultado, sem recoletar.
+- `golden-regras.js`: as **mudanças intencionais**, uma regra por etapa, cada uma com a saída esperada
+  calculada de forma independente (a própria biblioteca, sem o nosso código por cima). Toda diferença
+  fora das regras é regressão. Ao final, `golden-relatorio.md` lista o antes/depois de cada mudança.
+
+O baseline do pack de 0.6.0 foi gerado no commit `6c8b367` (v0.5.0). Para a próxima rodada de mudanças
+no Formatter, gere um baseline novo do commit atual e esvazie as regras.
 
 ### Diff Checker: destaque dentro da linha
 

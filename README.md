@@ -5,7 +5,7 @@ de teclado, de dentro de qualquer programa:
 
 1. **Diff Checker** — compara dois textos selecionados e mostra as diferenças lado a lado.
 2. **Fast Note** — um bloco de notas rápido que grava tópicos em arquivos `.md` numa pasta sua.
-3. **Formatter** — identifica e formata SQL, XML, JSON e listas de valores (`IN ('A', 'B')`), tudo com a mesma tecla.
+3. **Formatter** — identifica e formata SQL (inclusive procedures), XML, JSON, linhas de log e listas de valores (`IN ('A', 'B')`), tudo com a mesma tecla.
 4. **I18n** — troca acentos e alguns outros caracteres por sequências de escape do JavaScript.
 
 Tudo roda na sua máquina. Não há servidor, conta nem envio de dados para fora.
@@ -50,21 +50,40 @@ escolher nada. Ele reconhece, nesta ordem:
 
 | O que você seleciona | O que sai |
 |---|---|
-| **XML** (normal ou escapado) | XML indentado |
-| **JSON** (objeto ou lista) | JSON indentado, com números e texto exatamente como estavam |
+| **XML** (normal, escapado, escapado duas vezes, ou vários elementos lado a lado) | XML indentado |
+| **JSON** (objeto ou lista, inclusive o que vem escapado de um log ou entre aspas) | JSON indentado, com números e texto exatamente como estavam |
 | `IN ('A', 'B')` | uma linha por valor (`A` e `B`) |
-| uma **coluna de valores**, uma por linha (do Excel, do banco) | `IN ('A', 'B')`, com aspas simples em todos os valores |
-| qualquer outra coisa (**SQL**) | SQL formatada |
+| uma **coluna de valores**, uma por linha (do Excel, do banco), ou uma linha só de números/textos separados por vírgula | `IN ('A', 'B')`, com aspas simples em todos os valores |
+| uma **linha de log** (`2026-09-28 10:00:01 INFO select ...`) | o começo do log fica como está, numa linha, e o resto é formatado |
+| qualquer outra coisa (**SQL**) | SQL formatada — inclusive procedures, triggers e funções do SQL Server |
 
 A coluna de valores só é reconhecida quando não tem cara de SQL: um trecho como `a.id = 1` e
-`and b.x = 2` continua sendo formatado como SQL. Uma palavra sozinha também segue como SQL — a
-lista precisa de dois valores ou mais. JSON cortado ou inválido não é formatado: uma notificação
-avisa e a área de transferência fica como estava.
+`and b.x = 2` continua sendo formatado como SQL, e uma lista de colunas com vírgula
+(`a.id,` / `b.nome,`) também. Uma palavra sozinha segue como SQL — a lista precisa de dois valores ou
+mais. Vírgulas que sobram no fim de cada linha da coluna são tiradas. JSON cortado ou inválido não é
+formatado: uma notificação avisa e a área de transferência fica como estava.
 
-Sobre XML: XML escapado,
-com `&lt;` e `&gt;` no lugar de `<` e `>` (comum dentro de SOAP), sai como XML legível. XML
-cortado ou quebrado não é formatado: uma notificação avisa e a área de transferência fica como
-estava. Para XML vale só a opção de indentação da aba.
+Sobre XML: XML escapado, com `&lt;` e `&gt;` no lugar de `<` e `>` (comum dentro de SOAP), sai como
+XML legível — mesmo quando veio escapado duas vezes. Vários elementos no topo (`<a/><b/>`) são
+formatados um a um. XML cortado ou quebrado não é formatado: uma notificação avisa e a área de
+transferência fica como estava. Para XML vale só a opção de indentação da aba. Documentos grandes
+(mais de 200 KB) são formatados em uma fração de segundo.
+
+Sobre SQL:
+
+- **Procedures, triggers e funções do SQL Server** saem organizados: parâmetros um por linha, `AS`,
+  `BEGIN` e `END` cada um na sua linha, e o conteúdo indentado a cada nível (`IF`, `ELSE`, `WHILE`,
+  `TRY`/`CATCH`). Se o Blink não tiver certeza de que entendeu o texto, deixa a formatação simples de
+  sempre.
+- Os parâmetros de log e de código (`?`, `@P0`, `:nome`, `:1`, `$1`, `${id}`, `#{id}`, `{0}`, `%s`)
+  ficam exatamente como estavam. Um pedaço estranho, como um GUID sem aspas, não impede mais a
+  formatação do resto.
+- Colunas com nome de palavra reservada (`user`, `type`, `role`…) ficam indentadas como as demais.
+- Funções (`GETDATE`, `ISNULL`…) e tipos (`VARCHAR`, `INT`…) seguem a caixa escolhida para as
+  palavras-chave.
+
+O texto formatado vai para a área de transferência com as quebras de linha do Windows, então cola
+direito no Bloco de Notas e em qualquer programa.
 
 1. Selecione o texto em qualquer programa.
 2. Pressione `Ctrl + Alt + F`.
