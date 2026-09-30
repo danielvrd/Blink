@@ -20,6 +20,7 @@ const formatadorXml = require('./formatador-xml');
 const formatadorJson = require('./formatador-json');
 const formatadorLista = require('./formatador-lista');
 const prefixoLog = require('./prefixo-log');
+const nomeNeutro = require('./nome-neutro');
 
 /**
  * Evita dois formatadores rodando ao mesmo tempo.
@@ -115,6 +116,11 @@ function opcoes() {
   return {
     language: sql.dialeto,
     keywordCase: sql.palavrasChave,
+    // Funcoes (GETDATE, ISNULL) e tipos de dado (VARCHAR, INT) seguem a mesma
+    // opcao das palavras-chave: sem isto ficavam como o usuario digitou, e o
+    // SELECT em maiusculas ao lado de "getdate()" em minusculas ficava torto.
+    functionCase: sql.palavrasChave,
+    dataTypeCase: sql.palavrasChave,
     // 'tab' nao e um numero de espacos: vira useTabs e o tabWidth passa a
     // ser so o tamanho visual da tabulacao.
     tabWidth: sql.indentacao === 'tab' ? 4 : Number(sql.indentacao),
@@ -132,11 +138,10 @@ function opcoes() {
  * teclado nem na area de transferencia.
  */
 function formatar(texto) {
-  try {
-    return { ok: true, texto: format(texto, opcoes()) };
-  } catch (erro) {
-    return { ok: false, erro: erro.message };
-  }
+  const opcs = opcoes();
+  // Com nomes neutros onde a biblioteca tropeca (placeholders, colunas com
+  // nome reservado, um pedaco estranho). Sem nada disso, e o format() de sempre.
+  return nomeNeutro.formatar(texto, (t) => format(t, opcs), opcs.language);
 }
 
 /**
