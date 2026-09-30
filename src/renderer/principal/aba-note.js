@@ -35,6 +35,8 @@ window.Blink = window.Blink || {};
         caminho.textContent = escolhida;
         caminho.title = escolhida;
         caminho.classList.remove('vazio');
+        // A copia em memoria acompanha o que foi gravado.
+        estado.valores.pastaNotas = escolhida;
       },
     });
 

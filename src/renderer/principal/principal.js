@@ -19,6 +19,9 @@
   /** Tudo que veio do processo principal: valores, situacao das binds etc. */
   let estado = null;
 
+  /** A aba que esta na tela agora. */
+  let abaAtual = null;
+
   const barraAbas = document.getElementById('barra-abas');
   const conteudo = document.getElementById('conteudo');
 
@@ -31,11 +34,20 @@
    * A aba e montada do zero a cada troca. Sao poucos elementos e o codigo
    * fica bem mais simples do que guardar as tres na memoria e esconder duas:
    * cada aba sempre nasce com os valores atuais da configuracao.
+   *
+   * "Atuais" de verdade: a configuracao e RELIDA a cada troca. A janela
+   * principal fica escondida por horas e o que ela leu na abertura envelhece -
+   * a pasta das notas, por exemplo, tambem muda por fora (o seletor que o
+   * Ctrl+Alt+N abre quando ainda nao ha pasta), e a aba continuava mostrando
+   * "Nenhuma pasta escolhida" com a pasta ja salva.
    */
-  function mostrarAba(id) {
+  async function mostrarAba(id) {
     const indice = ABAS.findIndex((aba) => aba.id === id);
     const aba = ABAS[indice];
     if (!aba) return;
+
+    estado = await window.blink.config.ler();
+    abaAtual = id;
 
     botoesAba.forEach((botao, i) => botao.classList.toggle('ativa', i === indice));
 
@@ -83,11 +95,23 @@
 
     ligarBarraTitulo();
     montarBarraAbas();
-    mostrarAba(estado.valores.abaAtiva);
+    await mostrarAba(estado.valores.abaAtiva);
 
     // O olho do cabecalho de uma ferramenta pede para abrir numa aba: a
     // janela principal pode estar escondida ha tempo, ja carregada.
     window.blink.principal.aoTrocarAba((id) => mostrarAba(id));
+
+    // Ao voltar para a janela, a aba do Fast Note e desenhada de novo: a
+    // pasta pode ter mudado enquanto ela estava escondida. So essa aba - as
+    // outras podem estar no meio de uma gravacao de atalho, que uma aba
+    // redesenhada interromperia.
+    // Com uma pequena espera: quando o foco volta do seletor de pasta, o
+    // processo principal ainda esta gravando a escolha.
+    window.addEventListener('focus', () => {
+      setTimeout(() => {
+        if (abaAtual === 'note') mostrarAba('note');
+      }, 150);
+    });
   }
 
   iniciar();
