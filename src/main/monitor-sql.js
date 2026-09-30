@@ -8,7 +8,7 @@
  *
  * So age quando as duas coisas sao verdade:
  *   - a copia veio de uma janela de Area de Trabalho Remota;
- *   - o texto COMECA com SELECT, INSERT, UPDATE, DELETE ou WITH - ou e
+ *   - o texto COMECA com SELECT, INSERT, UPDATE, DELETE, WITH ou DECLARE - ou e
  *     um XML (normal ou escapado, veja formatador-xml.js) - ou e um JSON
  *     de objeto ou lista (veja formatador-json.js).
  *
@@ -38,8 +38,12 @@ const INTERVALO = 400;
  */
 const TEMPO_APOS_SAIR = 5000;
 
-/** Comeca com uma das palavras de SQL, ignorando espacos e caixa. */
-const PARECE_SQL = /^\s*(SELECT|INSERT|UPDATE|DELETE|WITH)\b/i;
+/**
+ * Comeca com uma das palavras de SQL, ignorando espacos e caixa. DECLARE
+ * entra porque muito script comeca declarando as variaveis - sem ele, a
+ * copia nunca era formatada sozinha.
+ */
+const PARECE_SQL = /^\s*(SELECT|INSERT|UPDATE|DELETE|WITH|DECLARE)\b/i;
 
 /** Quando a janela da frente foi remota pela ultima vez. */
 let ultimaVezRemoto = 0;

@@ -31,7 +31,7 @@ const INICIO_INEQUIVOCO = new Set([
 const INICIO_AMBIGUO = new Set(['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'MERGE', 'EXEC', 'EXECUTE', 'SET', 'WITH', 'FETCH', 'USE']);
 
 /** Palavras sem as quais nao existe marcador: um teste barato antes de qualquer trabalho. */
-const PALAVRA_CANDIDATA = /(?:^|[^A-Za-z0-9_])(?:BEGIN|IF|WHILE|PROC|PROCEDURE|FUNCTION|TRIGGER)(?![A-Za-z0-9_])/i;
+const PALAVRA_CANDIDATA = /(?:^|[^A-Za-z0-9_])(?:BEGIN|IF|WHILE|PROC|PROCEDURE|FUNCTION|TRIGGER|DECLARE)(?![A-Za-z0-9_])/i;
 
 /** Depois de BEGIN, estas palavras dizem que NAO e um bloco. */
 const BEGIN_NAO_BLOCO = new Set(['TRAN', 'TRANSACTION', 'DISTRIBUTED', 'DIALOG', 'CONVERSATION']);
@@ -98,12 +98,13 @@ function agrupar(tokens) {
   return linhas;
 }
 
-/** Tem algo que este arquivo sabe arrumar? (CREATE/ALTER de PROC..., BEGIN de bloco, IF/WHILE de comando) */
+/** Tem algo que este arquivo sabe arrumar? (CREATE/ALTER de PROC..., BEGIN de bloco, IF/WHILE de comando, DECLARE) */
 function temMarcador(sig) {
   for (let k = 0; k < sig.length; k++) {
     const u = sig[k].u;
     if (!u) continue;
     const prox = sig[k + 1];
+    if (u === 'DECLARE') return true;
     if ((u === 'CREATE' || u === 'ALTER') && prox && prox.u) {
       let m = prox;
       if (m.u === 'OR' && sig[k + 2] && sig[k + 2].u === 'ALTER') m = sig[k + 3];
@@ -133,6 +134,10 @@ function processar(linhas) {
   const pilha = [];
   let paren = 0;
   let emComando = true;
+  // Dentro de um DECLARE (ate o proximo comando): a lista de variaveis e a "TABLE (...)" da variavel de tabela.
+  let declaracao = false;
+  // Um DECLARE ou "SET @variavel = ..." sem ";": o comando termina quando outro comeca, mesmo que na mesma linha.
+  let semFim = false;
   const saida = [];
   let peca = null;
 
@@ -359,6 +364,16 @@ function processar(linhas) {
       continue;
     }
 
+    // Uma declaracao ("DECLARE @a INT = 1") ou um "SET @a = 1" sem ";" nao tem fim marcado: um IF, WHILE, PRINT, EXEC...
+    // que venha logo depois, mesmo na mesma linha, abre outro comando.
+    let comandoNovo = false;
+    if (semFim && !emComando && paren === 0 && u && u !== 'DECLARE' && (INICIO_INEQUIVOCO.has(u) || u === 'EXEC' || u === 'EXECUTE')) {
+      declaracao = false;
+      semFim = false;
+      emComando = true;
+      comandoNovo = true;
+    }
+
     // --- o que esta esperando um ELSE / o fim de um corpo simples ---------------------------
     const topoEspera = topo() && topo().k === 'IF' && topo().fase === 'espera';
     if (topoEspera && u !== 'ELSE') {
@@ -548,25 +563,37 @@ function processar(linhas) {
     let novaLinha = false;
     // O ";" colado num END ("END;") fica na mesma linha do END.
     const pontoEVirgulaDoEnd = tok.t === 'sim' && tok.s === ';' && !tok.ini && peca && peca.tipo === 'end';
-    if (!peca || (peca.fechada && !pontoEVirgulaDoEnd)) novaLinha = true;
+    // Todo DECLARE abre uma linha nova: sem ";" a biblioteca deixa varios juntos ("DECLARE @A INT DECLARE @B INT").
+    const abreDeclare = u === 'DECLARE' && paren === 0;
+    if (!peca || (peca.fechada && !pontoEVirgulaDoEnd) || abreDeclare || comandoNovo) novaLinha = true;
     else if (tok.ini) {
       const emCondicao = f && !ehBloco(f) && f.k !== 'CASE' && f.fase === 'cond' && paren === f.p0 && !(tok.t === 'sim' && tok.s === ')');
       const setDeOpcao = ant && ant.u === 'SET' && u && OPCOES_SET.has(u) && ant.ln === tok.ln - 1 && peca.toks.length === 1;
+      // "DECLARE @T" e, na linha de baixo, "TABLE (...)": a variavel de tabela volta para uma linha so.
+      const tabelaDeDeclare = declaracao && u === 'TABLE' && ant && ant.t === 'pal' && ant.s[0] === '@' && ant.ln === tok.ln - 1;
       if (emCondicao) {
         // A condicao de IF/WHILE fora de parenteses vai numa linha so.
         if (peca.toks.some((t) => t.t === 'com1')) desistir();
         peca.junta = true;
-      } else if (setDeOpcao) {
+      } else if (setDeOpcao || tabelaDeDeclare) {
         peca.junta = true;
       } else novaLinha = true;
     }
 
     if (novaLinha) {
       // Um comando novo comeca (o que estava aberto termina), exceto dentro de parenteses.
-      if (emComando && paren === 0) novoComando();
+      if ((emComando || abreDeclare) && paren === 0) novoComando();
       const pai = topo();
       if (pai && !ehBloco(pai) && pai.k !== 'CASE' && pai.fase === 'corpo' && !pai.iniciado) abrirCorpoSimples(pai);
+      // "@B INT" depois da virgula, dentro de um DECLARE: a lista sai um nivel para dentro.
+      const continuaDeclare = declaracao && tok.ini && tok.t === 'pal' && tok.s[0] === '@' && ant && ant.t === 'sim' && ant.s === ',' && paren === 0;
       novaPeca('normal', indDe(tok), tok);
+      if (continuaDeclare) peca.nivel += 1;
+      if (abreDeclare) declaracao = true;
+      else if (!continuaDeclare && paren === 0) declaracao = false;
+      // Um comando qualquer encerra o "sem fim" de antes; DECLARE e "SET @variavel" abrem um novo.
+      if (paren === 0 && u && (INICIO_AMBIGUO.has(u) || INICIO_INEQUIVOCO.has(u))) semFim = false;
+      if (abreDeclare || (u === 'SET' && tok.ini && prox && prox.t === 'pal' && prox.s[0] === '@')) semFim = true;
     } else if (peca && tok.ini && !novaLinha && peca.junta) {
       peca.juntadas = (peca.juntadas || 0) + 1;
       tok.juntar = true;
@@ -580,6 +607,8 @@ function processar(linhas) {
       else if (tok.s === ';' && paren === 0) {
         comandoCompleto();
         fechar();
+        declaracao = false;
+        semFim = false;
         emComando = true;
         j += 1;
         continue;
