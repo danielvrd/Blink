@@ -236,6 +236,13 @@ body {
   border-left-color: var(--diff-pendente);
 }
 
+/* Dentro de uma linha diferente, so o pedaco que mudou fica mais forte. */
+.celula .mudou {
+  background: var(--diff-mudou);
+  border-radius: 3px;
+  color: var(--texto-forte);
+}
+
 /* Linha ja aplicada: o lado que RECEBEU a linha em verde (o de origem
    continua laranja). */
 .celula.aplicada {

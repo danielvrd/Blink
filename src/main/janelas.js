@@ -26,9 +26,11 @@ const ICONE = path.join(__dirname, '..', 'assets', 'icones', 'blink.ico');
 /**
  * Tamanho padrao e minimo de cada janela.
  *
- * Principal: o design pede 460px de largura. A altura e a da aba do SQL
- * Formatter, a mais alta (com o interruptor do modo automatico); abaixo
- * desse minimo o rodape das abas encavala no conteudo.
+ * Principal: o design pede 460px de largura. A altura e a da aba do
+ * Formatter, a mais alta (com os dois interruptores do modo automatico, o de
+ * SQL/XML e o de JSON); abaixo desse minimo o rodape das abas encavala no
+ * conteudo. Foi medido: com os dois interruptores faltavam 40px nos 490 de
+ * antes, entao 530.
  *
  * Diff: grande, porque sao dois textos lado a lado. O padrao e reduzido se o
  * monitor for menor.
@@ -36,7 +38,7 @@ const ICONE = path.join(__dirname, '..', 'assets', 'icones', 'blink.ico');
  * Nota: pequena, e um bloco de notas rapido.
  */
 const TAMANHOS = {
-  principal: { largura: 460, altura: 490, minLargura: 460, minAltura: 490 },
+  principal: { largura: 460, altura: 530, minLargura: 460, minAltura: 530 },
   diff: { largura: 1040, altura: 680, minLargura: 520, minAltura: 320 },
   nota: { largura: 320, altura: 380, minLargura: 300, minAltura: 320 },
 };

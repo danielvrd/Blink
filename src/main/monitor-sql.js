@@ -1,5 +1,5 @@
 /**
- * Modo automatico do SQL Formatter para a Area de Trabalho Remota.
+ * Modo automatico do Formatter para a Area de Trabalho Remota.
  *
  * Em tela cheia, a Area de Trabalho Remota captura todas as combinacoes de
  * teclas e manda para o servidor - o Ctrl+Alt+F nunca chega no Blink. Este
@@ -9,11 +9,13 @@
  * So age quando as duas coisas sao verdade:
  *   - a copia veio de uma janela de Area de Trabalho Remota;
  *   - o texto COMECA com SELECT, INSERT, UPDATE, DELETE ou WITH - ou e
- *     um XML (normal ou escapado, veja formatador-xml.js).
+ *     um XML (normal ou escapado, veja formatador-xml.js) - ou e um JSON
+ *     de objeto ou lista (veja formatador-json.js).
  *
  * O segundo filtro e o que evita estragar copia comum: uma linha de log com
  * "select" no meio nao e formatada. Ainda assim nao e infalivel, por isso o
- * modo tem liga/desliga na aba SQL Formatter.
+ * modo tem liga/desliga na aba Formatter - um para SQL e XML e outro so
+ * para JSON.
  */
 
 const { clipboard } = require('electron');
@@ -24,6 +26,7 @@ const ferramentaSql = require('./ferramenta-sql');
 const aviso = require('./aviso');
 const diagnostico = require('./diagnostico');
 const formatadorXml = require('./formatador-xml');
+const formatadorJson = require('./formatador-json');
 
 /** De quanto em quanto tempo olhar. */
 const INTERVALO = 400;
@@ -51,10 +54,30 @@ let ultimoVisto = null;
 /** Evita duas verificacoes ao mesmo tempo, se uma demorar mais que o intervalo. */
 let verificando = false;
 
-function ligado() {
-  // Configuracao antiga, de antes desta opcao existir, nao tem o campo:
-  // vale o padrao, que e ligado.
+/**
+ * Os dois interruptores da aba Formatter: um para SQL e XML, outro so para
+ * JSON (quem copia JSON minificado para colar num corpo de requisicao pode
+ * nao querer que ele chegue indentado).
+ *
+ * Configuracao antiga, de antes de a opcao existir, nao tem o campo: vale o
+ * padrao, que e ligado.
+ */
+function ligadoSqlXml() {
   return config.obter('sql.autoRemoto') !== false;
+}
+
+function ligadoJson() {
+  return config.obter('sql.autoRemotoJson') !== false;
+}
+
+/**
+ * JSON pequeno demais nao vale o aviso: "[1]" ou "{}" copiados por engano
+ * viriam identados e atrapalhariam mais do que ajudam.
+ */
+const TAMANHO_MINIMO_JSON = 20;
+
+function pareceJsonParaFormatar(texto) {
+  return texto.trim().length >= TAMANHO_MINIMO_JSON && formatadorJson.pareceJson(texto);
 }
 
 /**
@@ -62,7 +85,7 @@ function ligado() {
  * remota por perto, nem le a area de transferencia.
  */
 async function verificar() {
-  if (!ligado()) {
+  if (!ligadoSqlXml() && !ligadoJson()) {
     ultimoVisto = null;
     return;
   }
@@ -87,15 +110,22 @@ async function verificar() {
   // A mudanca foi feita pela captura de um atalho do proprio Blink.
   if (selecao.emUso()) return;
 
-  // XML tem o seu proprio caminho; o da SQL, abaixo, e o de sempre.
-  const ehXml = formatadorXml.pareceXml(texto);
-  if (!ehXml && !PARECE_SQL.test(texto)) return;
+  // XML e JSON tem o seu proprio caminho; o da SQL, abaixo, e o de sempre.
+  // A lista de valores nao entra aqui: qualquer copia de varias linhas com
+  // uma palavra por linha viraria alvo.
+  const ehXml = ligadoSqlXml() && formatadorXml.pareceXml(texto);
+  const ehJson = !ehXml && ligadoJson() && pareceJsonParaFormatar(texto);
+  const ehSql = !ehXml && !ehJson && ligadoSqlXml() && PARECE_SQL.test(texto);
+  if (!ehXml && !ehJson && !ehSql) return;
 
+  const indentacao = config.obter('sql').indentacao;
   const resultado = ehXml
-    ? formatadorXml.formatarXml(texto, config.obter('sql').indentacao)
-    : ferramentaSql.formatar(texto);
+    ? formatadorXml.formatarXml(texto, indentacao)
+    : ehJson
+      ? formatadorJson.formatarJson(texto, indentacao)
+      : ferramentaSql.formatar(texto);
 
-  // XML quebrado ou cortado passa intacto, como SQL invalida.
+  // XML ou JSON quebrado ou cortado passa intacto, como SQL invalida.
   if (!resultado.ok || resultado.texto === texto) return;
 
   await clipboard.writeText(resultado.texto);
@@ -105,11 +135,14 @@ async function verificar() {
   // remota trouxer a crua de volta, a formatada e regravada.
   ferramentaSql.guardarContraSobrescrita(texto, resultado.texto).catch(() => {});
 
-  diagnostico.registrar(ehXml ? 'xml-auto' : 'sql-auto', { janela: titulo, caracteres: texto.length });
+  const tipo = ehXml ? 'xml' : ehJson ? 'json' : 'sql';
+  diagnostico.registrar(`${tipo}-auto`, { janela: titulo, caracteres: texto.length });
   aviso.mostrar(
-    ehXml
-      ? 'XML da Área de Trabalho Remota formatado. Cole com Ctrl + V.'
-      : 'SQL da Área de Trabalho Remota formatada. Cole com Ctrl + V.'
+    {
+      xml: 'XML da Área de Trabalho Remota formatado. Cole com Ctrl + V.',
+      json: 'JSON da Área de Trabalho Remota formatado. Cole com Ctrl + V.',
+      sql: 'SQL da Área de Trabalho Remota formatada. Cole com Ctrl + V.',
+    }[tipo]
   );
 }
 

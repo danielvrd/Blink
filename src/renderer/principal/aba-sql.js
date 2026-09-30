@@ -1,8 +1,9 @@
 /**
- * Aba "SQL Formatter" da janela principal.
+ * Aba "Formatter" da janela principal (o antigo "SQL Formatter").
  *
- * Aqui ficam as opcoes que a etapa 2 vai passar para a biblioteca
- * sql-formatter: dialeto, caixa das palavras-chave e indentacao.
+ * Aqui ficam as opcoes que vao para a biblioteca sql-formatter - dialeto,
+ * caixa das palavras-chave e indentacao (a indentacao vale tambem para XML e
+ * JSON) - e os interruptores do modo automatico da Area de Trabalho Remota.
  */
 
 window.Blink = window.Blink || {};
@@ -88,16 +89,21 @@ window.Blink = window.Blink || {};
 
       el('div', { class: 'secao' }, [
         window.Blink.pecas.interruptor({
-          rotulo: 'Formatar sozinho SQL/XML copiado da Área de Trabalho Remota',
+          rotulo: 'Formatar sozinho SQL e XML copiados da Área de Trabalho Remota',
           // Configuracao antiga nao tem o campo: vale o padrao, ligado.
           ligado: sql.autoRemoto !== false,
           aoTrocar: (valor) => window.blink.config.gravar('sql.autoRemoto', valor),
+        }),
+        window.Blink.pecas.interruptor({
+          rotulo: 'Formatar sozinho JSON copiado da Área de Trabalho Remota',
+          ligado: sql.autoRemotoJson !== false,
+          aoTrocar: (valor) => window.blink.config.gravar('sql.autoRemotoJson', valor),
         }),
       ]),
 
       window.Blink.pecas.rodape({
         ferramenta: 'sql',
-        legenda: 'Selecione uma SQL ou um XML em qualquer lugar e use a bind: a versão formatada fica pronta para colar.',
+        legenda: 'Selecione um texto em qualquer lugar e use a bind: SQL, XML, JSON e listas de valores são identificados sozinhos.',
       }),
     ]);
   }

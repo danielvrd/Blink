@@ -91,7 +91,7 @@ window.Blink = window.Blink || {};
   function mensagemDeErro(resultado) {
     switch (resultado.motivo) {
       case 'duplicado': {
-        const nomes = { diff: 'Diff Checker', note: 'Fast Note', sql: 'SQL Formatter', i18n: 'I18n' };
+        const nomes = { diff: 'Diff Checker', note: 'Fast Note', sql: 'Formatter', i18n: 'I18n' };
         return `Este atalho já é o do ${nomes[resultado.ferramenta] || 'outro recurso'}.`;
       }
       case 'em-uso':

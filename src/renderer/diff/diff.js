@@ -61,6 +61,28 @@
     return linhas[indice].diferente && !aplicadas.has(indice);
   }
 
+  /**
+   * Escreve o texto de uma celula.
+   *
+   * Com `partes` (o que mudou dentro da linha, vindo do comparador), os
+   * pedacos mudados ganham um <span class="mudou"> e o resto fica como texto.
+   * Sempre por textContent e nos de texto, nunca por innerHTML: uma SQL tem
+   * "<" e "&" que nao podem virar HTML.
+   */
+  function escrever(celula, texto, partes) {
+    if (!partes || texto === null) {
+      celula.textContent = texto ?? '';
+      return;
+    }
+
+    limpar(celula);
+    for (const parte of partes) {
+      celula.appendChild(
+        parte.mudou ? el('span', { class: 'mudou', texto: parte.texto }) : document.createTextNode(parte.texto)
+      );
+    }
+  }
+
   /** Atualiza as classes e o texto de uma linha depois de um clique. */
   function desenharLinha(indice) {
     const linha = linhas[indice];
@@ -87,8 +109,12 @@
       if (escolhida === 'esq') direita.classList.add('selecionada');
     }
 
-    esquerda.textContent = textoEsquerda(indice) ?? '';
-    direita.textContent = textoDireita(indice) ?? '';
+    // So destaca o que mudou dentro da linha enquanto ela esta pendente: depois
+    // de aplicada os dois lados mostram o mesmo texto, e os pedacos calculados
+    // para o par original nao descrevem mais o que esta na tela.
+    const pendente = sentido === undefined;
+    escrever(esquerda, textoEsquerda(indice), pendente ? linha.partesEsquerda : null);
+    escrever(direita, textoDireita(indice), pendente ? linha.partesDireita : null);
 
     limpar(calha);
     if (!linha.diferente) return;
@@ -253,7 +279,6 @@
     linhas.forEach((linha, indice) => {
       const esquerda = el('div', {
         class: 'celula',
-        texto: linha.esquerda ?? '',
         onclick: () => escolher(indice, 'dir'),
       });
       const calha = el('div', { class: 'calha' });

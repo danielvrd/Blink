@@ -169,7 +169,7 @@ nem lê a área de transferência.
 Ele pergunta `selecao.emUso()` antes de agir: durante a captura de um atalho (e 1,5s depois) a área
 de transferência é mexida pelo próprio Blink, e reagir a isso quebraria a captura.
 
-**XML** (`src/main/formatador-xml.js`). O SQL Formatter desvia para o XML quando o texto começa com
+**XML** (`src/main/formatador-xml.js`). O Formatter desvia para o XML quando o texto começa com
 `<?xml`, `<!--` ou `<` + letra (ou o mesmo escapado, `&lt;`). Uma SQL nunca começa com `<`, então o
 caminho do SQL fica intacto. A biblioteca `xml-formatter` roda em **modo estrito**: sem ele, um XML
 quebrado ou cortado no meio — o comum em log — era "consertado" em silêncio, com a estrutura
@@ -212,6 +212,57 @@ O calendário (`src/renderer/note/calendario.js`) é um componente próprio, no 
 `seletor.js`: o `<input type="date">` do Chromium tem um popup nativo que não é estilizável no
 tema escuro do app.
 
+### Formatter: como a bind decide o que fazer
+
+A mesma tecla formata XML, JSON, lista de valores e SQL, sem perguntar nada
+(`executar()` em `src/main/ferramenta-sql.js`). A **ordem** é o que sustenta isso:
+
+1. XML (`pareceXml`, exclusivo).
+2. JSON: um `{` no começo é sempre JSON (quebrado, só avisa); um `[` só é JSON se for válido, porque o
+   SQL Server usa colchetes para nomes (`[dbo].[tabela]`).
+3. `IN (...)` → uma linha por valor (`paraLinhas`).
+4. Coluna de valores → `IN (...)` (`paraIn`), só se não tiver cara de SQL.
+5. SQL, o último recurso.
+
+A SQL vem por último porque o `sql-formatter` **aceita qualquer texto**: uma lista de palavras ele
+achata numa linha só, um JSON simples ele devolve igual e ainda diz que "a SQL já estava formatada".
+Ele só falha em acidentes de sintaxe (`$`, aspas ou chaves abertas, parênteses desbalanceados), então
+não dá para usá-lo para descobrir se algo é SQL. A heurística da lista (`formatador-lista.js`) rejeita
+o que parece fragmento de SQL: começo de instrução (`SELECT`, `INSERT`, `CREATE`, `DECLARE`… ou
+comentário), `= < > ;`, linha com mais de 120 caracteres, várias colunas (tabulação numa seleção de
+várias linhas) ou uma linha de duas palavras ou mais com uma palavra de estrutura (`and`, `from`,
+`where`…). Uma palavra sozinha (`ON`, `OR`) pode ser valor. Para ampliar o que conta como SQL, é só
+acrescentar ao `INICIO_SQL` ou à `PALAVRA_SQL`. Todo valor do `IN` sai com aspas, número inclusive.
+
+**O JSON não usa `JSON.stringify(JSON.parse(...))`** (`formatador-json.js`): isso mudaria o conteúdo
+— inteiro grande perde precisão, `1.0` vira `1`, chaves numéricas sobem para o início, chaves
+repetidas somem. O JSON é validado com `JSON.parse` mas reindentado percorrendo o texto, então strings
+e números saem exatamente como entraram. JSON escapado de log (`{\"a\":1}`) **não** é tratado.
+
+**Modo automático (`monitor-sql.js`)**: tem dois interruptores, `sql.autoRemoto` (SQL e XML) e
+`sql.autoRemotoJson`, ambos "ligado" quando o campo não existe (config antigo). A lista de valores
+**nunca** entra no automático: qualquer cópia de várias linhas com uma palavra por linha viraria alvo.
+JSON só é formatado sozinho se tiver 20 caracteres ou mais (não mexer em `[1]`). O diagnóstico do
+JSON é `json-auto` (o `teste-auto.js` conta as linhas `sql-auto`, então os rótulos não se misturam).
+
+O nome visível é "Formatter", mas os identificadores continuam `sql` (`binds.sql`, `config.sql.*`,
+`abaAtiva`, `ferramenta-sql.js`, `monitor-sql.js`, `aba-sql.js`): renomeá-los quebraria o
+`config.json` de quem já usa. A aba do Formatter é a mais alta da janela principal, e a altura mínima
+(530px, `janelas.js`) foi medida com os dois interruptores.
+
+### Diff Checker: destaque dentro da linha
+
+Para cada par de linhas alteradas (`emparelhar` em `comparador.js`) o comparador calcula o que mudou
+com `diffWordsWithSpace` e acrescenta dois campos **opcionais**, `partesEsquerda`/`partesDireita`. A
+escolha: o `diffChars` vira confete em SQL, e o `diffWords` ignora espaço (uma linha que só ganhou
+espaço ficaria sem nada destacado). Os campos **não existem** quando o `diff` estoura o `timeout`
+(60ms por par, 500ms no total — sem limite, linhas de 20 mil caracteres muito diferentes levam
+dezenas de segundos e a comparação roda no processo principal), quando um dos lados está vazio, ou
+quando a linha mudou mais de 60%. A tela só destaca enquanto a linha está pendente (depois de
+aplicada os dois lados são iguais), monta `<span class="mudou">` com `textContent` (nunca
+`innerHTML`: SQL tem `<` e `&`) e trata os campos como opcionais, então linhas montadas à mão nos
+testes continuam valendo.
+
 ### Diff Checker: aplicar nos dois sentidos
 
 `linhas` (o que vem do `comparador.js`) nunca muda; o que a tela mostra é derivado dele e do estado
@@ -246,7 +297,7 @@ mandada pelo canal `principal:aba`, porque a principal só lê o config uma vez,
 
 ### I18n
 
-Segue o mesmo molde do SQL Formatter (`src/main/ferramenta-i18n.js`): sem janela própria, a bind
+Segue o mesmo molde do Formatter (`src/main/ferramenta-i18n.js`): sem janela própria, a bind
 captura a seleção com `selecao.capturar()`, troca os caracteres e grava na área de transferência.
 Diferente do SQL, a transformação nunca falha — qualquer texto é válido — então não existe o
 branch de "seleção inválida".

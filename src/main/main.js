@@ -46,7 +46,7 @@ const FERRAMENTAS = {
   'diff-exemplo': () => ferramentaDiff.abrirExemplo(),
   'sql-ajuda': () => {
     const bind = config.obter('binds').sql;
-    aviso.mostrar(`Selecione uma SQL em qualquer programa e use ${bind}.`);
+    aviso.mostrar(`Selecione um texto (SQL, XML, JSON ou lista de valores) em qualquer programa e use ${bind}.`);
   },
   'i18n-ajuda': () => {
     const bind = config.obter('binds').i18n;

@@ -325,6 +325,12 @@ body {
   color: var(--texto-2);
 }
 
+/* Dois interruptores seguidos (a aba Formatter tem um para SQL/XML e um para
+   JSON) nao podem ficar colados. */
+.linha-interruptor + .linha-interruptor {
+  margin-top: 14px;
+}
+
 .interruptor {
   flex: none;
   position: relative;

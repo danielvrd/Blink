@@ -34,6 +34,8 @@ const PADROES = {
     // Formatar sozinho a SQL copiada de dentro de uma Area de Trabalho
     // Remota, sem precisar do atalho (veja monitor-sql.js).
     autoRemoto: true,
+    // O mesmo para JSON, com o interruptor proprio.
+    autoRemotoJson: true,
   },
   abaAtiva: 'diff',
   // Tamanho de cada janela, depois que o usuario redimensiona. Vazio =
@@ -89,6 +91,7 @@ const ESQUEMA = {
         enum: ['2', '4', 'tab'],
       },
       autoRemoto: { type: 'boolean' },
+      autoRemotoJson: { type: 'boolean' },
     },
     required: ['dialeto', 'palavrasChave', 'indentacao'],
     additionalProperties: false,
@@ -128,6 +131,7 @@ const CAMINHOS_GRAVAVEIS = new Set([
   'sql.palavrasChave',
   'sql.indentacao',
   'sql.autoRemoto',
+  'sql.autoRemotoJson',
   'abaAtiva',
 ]);
 

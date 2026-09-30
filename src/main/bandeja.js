@@ -93,7 +93,7 @@ function montarMenu() {
       click: () => acionarFerramenta('note'),
     },
     {
-      label: 'SQL Formatter',
+      label: 'Formatter',
       // Este depende de uma selecao, que o menu nao tem. O clique so
       // lembra qual e o atalho.
       click: () => acionarFerramenta('sql-ajuda'),

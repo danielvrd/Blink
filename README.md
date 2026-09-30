@@ -5,7 +5,7 @@ de teclado, de dentro de qualquer programa:
 
 1. **Diff Checker** — compara dois textos selecionados e mostra as diferenças lado a lado.
 2. **Fast Note** — um bloco de notas rápido que grava tópicos em arquivos `.md` numa pasta sua.
-3. **SQL Formatter** — formata a SQL selecionada e deixa o resultado pronto para colar.
+3. **Formatter** — identifica e formata SQL, XML, JSON e listas de valores (`IN ('A', 'B')`), tudo com a mesma tecla.
 4. **I18n** — troca acentos e alguns outros caracteres por sequências de escape do JavaScript.
 
 Tudo roda na sua máquina. Não há servidor, conta nem envio de dados para fora.
@@ -43,30 +43,50 @@ configurações do Blink já na aba daquela ferramenta e fecha a janela dela.
 
 ## Como usar
 
-### SQL Formatter — `Ctrl + Alt + F`
+### Formatter — `Ctrl + Alt + F`
 
-Formata **SQL** e **XML** — o Blink identifica sozinho qual dos dois foi selecionado. XML escapado,
+Uma tecla só: o Blink olha o que foi selecionado, **identifica sozinho** e formata. Sem menu, sem
+escolher nada. Ele reconhece, nesta ordem:
+
+| O que você seleciona | O que sai |
+|---|---|
+| **XML** (normal ou escapado) | XML indentado |
+| **JSON** (objeto ou lista) | JSON indentado, com números e texto exatamente como estavam |
+| `IN ('A', 'B')` | uma linha por valor (`A` e `B`) |
+| uma **coluna de valores**, uma por linha (do Excel, do banco) | `IN ('A', 'B')`, com aspas simples em todos os valores |
+| qualquer outra coisa (**SQL**) | SQL formatada |
+
+A coluna de valores só é reconhecida quando não tem cara de SQL: um trecho como `a.id = 1` e
+`and b.x = 2` continua sendo formatado como SQL. Uma palavra sozinha também segue como SQL — a
+lista precisa de dois valores ou mais. JSON cortado ou inválido não é formatado: uma notificação
+avisa e a área de transferência fica como estava.
+
+Sobre XML: XML escapado,
 com `&lt;` e `&gt;` no lugar de `<` e `>` (comum dentro de SOAP), sai como XML legível. XML
 cortado ou quebrado não é formatado: uma notificação avisa e a área de transferência fica como
 estava. Para XML vale só a opção de indentação da aba.
 
-1. Selecione uma SQL ou um XML em qualquer programa.
+1. Selecione o texto em qualquer programa.
 2. Pressione `Ctrl + Alt + F`.
 3. Cole onde quiser com `Ctrl + V`.
 
 O texto de origem **não é alterado**: a versão formatada vai para a área de transferência, e uma
 notificação confirma. O dialeto, a caixa das palavras-chave e a indentação são escolhidos na aba
-SQL Formatter das configurações.
+Formatter das configurações; a indentação vale também para XML e JSON.
 
 #### Copiando de uma Área de Trabalho Remota
 
 Em tela cheia, a Área de Trabalho Remota do Windows fica com todas as combinações de teclas para
 o servidor, e o atalho nunca chega ao Blink. Para esse caso existe o **modo automático**, que vem
 ligado: dê `Ctrl + C` normal dentro do servidor e, se o texto começar com `SELECT`, `INSERT`,
-`UPDATE`, `DELETE` ou `WITH` — ou for um XML —, ele chega aqui já formatado. Uma notificação avisa.
+`UPDATE`, `DELETE` ou `WITH` — ou for um XML ou um JSON —, ele chega aqui já formatado. Uma
+notificação avisa.
 
 Só vale para cópias vindas da Área de Trabalho Remota do Windows — cópias feitas na sua própria
-máquina nunca são formatadas sozinhas. Dá para desligar na aba SQL Formatter.
+máquina nunca são formatadas sozinhas. Dá para desligar na aba Formatter, com **dois
+interruptores**: um para SQL e XML e outro só para JSON (útil se você copia JSON minificado para
+colar numa requisição e não quer que ele chegue indentado). JSON muito curto (como `[1]`) e a lista
+de valores nunca são formatados sozinhos.
 
 ### I18n — `Ctrl + Alt + I`
 
@@ -90,8 +110,10 @@ O atalho funciona em **dois tempos**:
 2. Selecione o segundo texto (em qualquer programa) e pressione `Ctrl + Alt + D` de novo — a
    janela de comparação abre.
 
-Na janela, as linhas diferentes aparecem em laranja, e a barra de rolagem à direita mostra onde
-cada uma está no texto inteiro — clique numa marca para ir direto até ela.
+Na janela, as linhas diferentes aparecem em laranja, e **dentro de cada uma o pedaço que mudou
+fica mais forte** (uma palavra trocada, um espaço a mais) — se a linha mudou quase inteira, nada é
+destacado. A barra de rolagem à direita mostra onde cada diferença está no texto inteiro — clique
+numa marca para ir direto até ela.
 
 Cada linha diferente tem **duas setas** no meio: `→` leva a linha da esquerda para a direita e `←`
 leva da direita para a esquerda. O lado que recebe a linha fica verde. Clicar num dos lados da
@@ -206,13 +228,13 @@ Clique com o botão direito no olho, ao lado do relógio:
 | Abrir Blink | mostra a janela de configurações |
 | Diff Checker | abre uma comparação de exemplo |
 | Fast Note | abre o bloco de notas |
-| SQL Formatter | lembra qual é o atalho |
+| Formatter | lembra qual é o atalho |
 | I18n | lembra qual é o atalho |
 | Procurar atualizações | consulta na hora se há versão nova |
 | Iniciar com o Windows | liga ou desliga a inicialização automática |
 | Sair | encerra o Blink |
 
-Pelo menu, o Diff Checker, o SQL Formatter e o I18n não capturam texto: clicar num item de menu
+Pelo menu, o Diff Checker, o Formatter e o I18n não capturam texto: clicar num item de menu
 tira o foco do programa onde a seleção estava. Para eles, use os atalhos.
 
 ## Atalhos
@@ -221,7 +243,7 @@ tira o foco do programa onde a seleção estava. Para eles, use os atalhos.
 |---|---|
 | Diff Checker | `Ctrl + Alt + D` |
 | Fast Note | `Ctrl + Alt + N` |
-| SQL Formatter | `Ctrl + Alt + F` |
+| Formatter | `Ctrl + Alt + F` |
 | I18n | `Ctrl + Alt + I` |
 
 Todos podem ser trocados na janela de configurações, em **"Alterar"**. Se o campo ficar vermelho,
@@ -242,7 +264,7 @@ programa já usa essa combinação. Troque por outra.
 **Funciona em quase tudo, menos num programa específico.** Se esse programa roda como
 administrador, o Windows impede que o Blink converse com ele. Rode os dois no mesmo nível.
 
-**O SQL Formatter ou o Diff Checker não pegam o texto dentro de uma Área de Trabalho Remota.** O
+**O Formatter ou o Diff Checker não pegam o texto dentro de uma Área de Trabalho Remota.** O
 Blink espera mais quando reconhece a janela remota, mas numa conexão lenta a cópia ainda pode se
 perder. Se acontecer, mande o arquivo `%APPDATA%\Blink\blink.log` junto com o relato: ele registra
 quanto tempo cada cópia levou e de que janela veio — nunca o texto copiado.

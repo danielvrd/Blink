@@ -1,8 +1,9 @@
 /**
- * SQL Formatter.
+ * Formatter (o antigo "SQL Formatter").
  *
- * Nao abre janela nenhuma. A bind pega a SQL selecionada, formata e deixa o
- * resultado na area de transferencia, pronto para colar.
+ * Nao abre janela nenhuma. A bind pega o que foi selecionado - SQL, XML,
+ * JSON ou uma lista de valores -, formata e deixa o resultado na area de
+ * transferencia, pronto para colar.
  *
  * O arquivo de origem nao e tocado de proposito: a ideia e selecionar a SQL
  * onde ela esta, apertar a bind e colar a versao formatada em outro lugar.
@@ -16,6 +17,8 @@ const selecao = require('./selecao');
 const aviso = require('./aviso');
 const diagnostico = require('./diagnostico');
 const formatadorXml = require('./formatador-xml');
+const formatadorJson = require('./formatador-json');
+const formatadorLista = require('./formatador-lista');
 
 /**
  * Evita dois formatadores rodando ao mesmo tempo.
@@ -141,7 +144,54 @@ async function formatarComoXml(original) {
   );
 }
 
-/** O que a bind do SQL Formatter faz. */
+/**
+ * Grava o resultado na area de transferencia, protege ele da copia remota
+ * atrasada e avisa. E o final comum dos caminhos novos (JSON e lista).
+ */
+async function entregar(original, texto, mensagem) {
+  await clipboard.writeText(texto);
+  guardarContraSobrescrita(original, texto).catch((erro) => {
+    console.warn('[ferramenta-sql] guarda falhou:', erro.message);
+  });
+  aviso.mostrar(mensagem);
+}
+
+/**
+ * O caminho do JSON, no mesmo molde do XML: JSON quebrado ou cortado nao e
+ * gravado - a area de transferencia fica com o que o usuario tinha.
+ */
+async function formatarComoJson(original) {
+  const resultado = formatadorJson.formatarJson(original, config.obter('sql').indentacao);
+
+  if (!resultado.ok) {
+    aviso.mostrar('Não foi possível formatar: a seleção parece JSON, mas não é um JSON válido (pode estar cortado).');
+    return;
+  }
+
+  await entregar(
+    original,
+    resultado.texto,
+    resultado.texto === original.trim()
+      ? 'O JSON já estava formatado. Copiado para colar.'
+      : 'JSON formatado e copiado. Cole onde quiser com Ctrl + V.'
+  );
+}
+
+/**
+ * O que a bind do Formatter faz.
+ *
+ * Uma bind so, sem escolher nada: ela olha o que foi selecionado e decide.
+ * A ordem importa, porque o sql-formatter aceita QUALQUER texto (uma lista
+ * de palavras ele achata numa linha so; um JSON simples ele devolve igual e
+ * ainda diz que "a SQL ja estava formatada") - por isso a SQL e o ultimo
+ * recurso, depois de tudo que da para reconhecer com certeza:
+ *
+ *   1. XML
+ *   2. JSON (um "{" e sempre JSON; um "[" so se for valido)
+ *   3. IN (...) -> uma linha por valor
+ *   4. uma coluna de valores -> IN (...), se nao tiver cara de SQL
+ *   5. SQL
+ */
 async function executar() {
   if (ocupado) return;
   ocupado = true;
@@ -150,7 +200,7 @@ async function executar() {
     const original = await selecao.capturar();
 
     if (original.trim() === '') {
-      aviso.mostrar('Selecione uma SQL ou um XML antes de usar o atalho.');
+      aviso.mostrar('Selecione um texto (SQL, XML, JSON ou lista de valores) antes de usar o atalho.');
       return;
     }
 
@@ -159,6 +209,31 @@ async function executar() {
     // exatamente como era.
     if (formatadorXml.pareceXml(original)) {
       await formatarComoXml(original);
+      return;
+    }
+
+    // JSON. Um "{" e JSON mesmo quebrado (avisa); um "[" pode ser o nome de
+    // uma tabela do SQL Server ([dbo].[t]), entao so vale se for valido.
+    if (formatadorJson.pareceJson(original)) {
+      const valido = formatadorJson.formatarJson(original, config.obter('sql').indentacao).ok;
+      if (formatadorJson.comecaComChave(original) || valido) {
+        await formatarComoJson(original);
+        return;
+      }
+    }
+
+    // O caminho de volta: um IN (...) vira uma linha por valor.
+    const linhas = formatadorLista.paraLinhas(original);
+    if (linhas !== null) {
+      await entregar(original, linhas, 'IN convertido em uma linha por valor e copiado.');
+      return;
+    }
+
+    // Uma coluna de valores vira IN (...). O paraIn devolve null para tudo
+    // que tem cara de SQL, que segue abaixo como sempre foi.
+    const lista = formatadorLista.paraIn(original);
+    if (lista !== null) {
+      await entregar(original, lista, 'Lista convertida em IN e copiada. Cole onde quiser com Ctrl + V.');
       return;
     }
 
@@ -187,7 +262,7 @@ async function executar() {
     );
   } catch (erro) {
     console.error('[ferramenta-sql] falhou:', erro);
-    aviso.mostrar('Algo deu errado ao formatar a SQL.');
+    aviso.mostrar('Algo deu errado ao formatar.');
     // Nao mexe na area de transferencia aqui: o capturar() ja devolveu ela
     // ao que era, mesmo tendo dado erro.
   } finally {
