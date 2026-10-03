@@ -31,6 +31,16 @@ window.Blink = window.Blink || {};
   ];
 
   /**
+   * O estilo da saida. "Alinhado" (padrao): FROM na mesma linha da tabela, AND
+   * do ON alinhados sob o ON, END do CASE na coluna dos WHEN, CTEs do WITH mais
+   * para a esquerda. "Clássico": a saida da biblioteca, sem esses ajustes.
+   */
+  const ESTILOS = [
+    { valor: 'alinhado', rotulo: 'Alinhado' },
+    { valor: 'classico', rotulo: 'Clássico' },
+  ];
+
+  /**
    * Vira `tabWidth` (2 ou 4) ou `useTabs: true`. Guardamos como texto para
    * que 'tab' caiba no mesmo campo dos numeros.
    */
@@ -62,9 +72,20 @@ window.Blink = window.Blink || {};
         registrado: estado.situacaoBinds.sql,
       }),
 
-      el('div', { class: 'secao' }, [
-        el('div', { class: 'rotulo', texto: 'Dialeto' }),
-        select,
+      el('div', { class: 'secao grade-2' }, [
+        el('div', {}, [
+          el('div', { class: 'rotulo', texto: 'Dialeto' }),
+          select,
+        ]),
+        el('div', {}, [
+          el('div', { class: 'rotulo', texto: 'Estilo' }),
+          window.Blink.pecas.segmentado({
+            opcoes: ESTILOS,
+            // Configuracao antiga nao tem o campo: vale o padrao, Alinhado.
+            valor: sql.estilo === 'classico' ? 'classico' : 'alinhado',
+            aoTrocar: (valor) => window.blink.config.gravar('sql.estilo', valor),
+          }),
+        ]),
       ]),
 
       el('div', { class: 'secao grade-2' }, [

@@ -41,10 +41,14 @@ function definirAcao(callback) {
  * ajuda.
  */
 function itemDeAtualizacao() {
-  const { estado, versao, disponivel } = atualizacao.situacao();
+  const { estado, versao, disponivel, instalando } = atualizacao.situacao();
 
   if (!disponivel) {
     return { label: 'Atualizações (só no Blink instalado)', enabled: false };
+  }
+
+  if (instalando) {
+    return { label: 'Verificando a versão mais nova…', enabled: false };
   }
 
   if (estado === 'pronta') {

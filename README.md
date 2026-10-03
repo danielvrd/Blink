@@ -36,7 +36,13 @@ Vale marcar **"Iniciar com o Windows"** no menu do botão direito — sem isso v
 app na mão toda vez que ligar o computador.
 
 As atualizações chegam sozinhas: o app avisa por notificação quando há uma versão nova e se
-atualiza quando você fechar.
+atualiza quando você fechar. Se você deixa o Blink aberto por dias, ele continua procurando e
+sempre instala a versão **mais nova** que existir, não a primeira que baixou.
+
+Quando há uma atualização, aparece um botão no canto de cada janela (ao lado do minimizar):
+**"Baixando atualização…"** enquanto baixa e **"Atualização disponível"** quando está pronta. Nas
+janelas estreitas ele vira "Atualizar". Clicar nele pergunta se pode reiniciar o Blink agora; se
+você confirmar, ele confere uma última vez se saiu algo ainda mais novo antes de instalar.
 
 Dentro do Fast Note e do Diff Checker, o **olho** do cabeçalho é um botão: clicar nele abre as
 configurações do Blink já na aba daquela ferramenta e fecha a janela dela.
@@ -96,12 +102,30 @@ O texto de origem **não é alterado**: a versão formatada vai para a área de 
 notificação confirma. O dialeto, a caixa das palavras-chave e a indentação são escolhidos na aba
 Formatter das configurações; a indentação vale também para XML e JSON.
 
+O **estilo** também é escolhido lá, ao lado do dialeto:
+
+- **Alinhado** (padrão): o `FROM` fica na mesma linha da primeira tabela, os `AND`/`OR` de um
+  `JOIN ... ON` ficam alinhados embaixo do `ON` (e o `ON ( ... )` mantém os parênteses, com o `)`
+  no fim da última condição), o `END` de um `CASE` fica na coluna dos `WHEN`, os CTEs de um `WITH`
+  começam na linha do próprio `WITH` (`WITH Nome AS (`), e vários `DECLARE` seguidos ficam sem linha em
+  branco entre eles.
+- **Clássico**: o jeito de antes, sem esses ajustes.
+
+Nada do que você escreveu muda no estilo Alinhado — só espaços e quebras de linha.
+
+**SQL cortada no fim** (por exemplo, um `WITH x AS (` copiado sem o `)` e sem o `SELECT` final) agora
+também é formatada, em vez de recusada: o Blink formata como se os parênteses que faltam existissem e
+tira esses mesmos parênteses do resultado. A notificação avisa ("estava incompleta: faltava fechar 1
+parêntese"). Vale para até 5 parênteses faltando; mais que isso, ou parênteses fechando a mais, continua
+sendo recusado.
+
 #### Copiando de uma Área de Trabalho Remota
 
 Em tela cheia, a Área de Trabalho Remota do Windows fica com todas as combinações de teclas para
 o servidor, e o atalho nunca chega ao Blink. Para esse caso existe o **modo automático**, que vem
 ligado: dê `Ctrl + C` normal dentro do servidor e, se o texto começar com `SELECT`, `INSERT`,
 `UPDATE`, `DELETE`, `WITH` ou `DECLARE` — ou for um XML ou um JSON —, ele chega aqui já formatado.
+Comentários (`-- busca`, `/* ... */`) e um `;` na frente (o `;WITH` do SQL Server) não atrapalham.
 Uma notificação avisa.
 
 Só vale para cópias vindas da Área de Trabalho Remota do Windows — cópias feitas na sua própria
@@ -132,6 +156,17 @@ O atalho funciona em **dois tempos**:
 2. Selecione o segundo texto (em qualquer programa) e pressione `Ctrl + Alt + D` de novo — a
    janela de comparação abre.
 
+A **fonte e o tamanho** do texto da comparação são escolhidos na aba Diff Checker das configurações
+(10 a 20 px; padrão JetBrains Mono 13) e valem na hora, até na janela que já está aberta.
+
+Quando os textos são **código**, o Diff Checker pinta a sintaxe: JavaScript, TypeScript, HTML/XML,
+CSS/SCSS, JSON, SQL, Python, Java, C#, PHP, Bash, YAML e Markdown. A linguagem é descoberta sozinha
+(uma só para a comparação inteira) e, quando o texto não tem cara de código — uma prosa, um log, uma
+lista —, fica sem cor nenhuma. O pedaço que mudou dentro da linha continua em destaque e mantém a cor
+do código. O **tema das cores** é escolhido na aba Diff Checker (Dark+ do VS Code, que é o padrão,
+Monokai, One Dark, Dracula, GitHub Dark ou "Sem cores") e também vale na hora, com a janela aberta.
+Comparações muito grandes (mais de 300 KB) abrem sem cores.
+
 Na janela, as linhas diferentes aparecem em laranja, e **dentro de cada uma o pedaço que mudou
 fica mais forte** (uma palavra trocada, um espaço a mais) — se a linha mudou quase inteira, nada é
 destacado. A barra de rolagem à direita mostra onde cada diferença está no texto inteiro — clique
@@ -144,7 +179,8 @@ linha existe só de um lado, `→`/`←` a **cria** ou a **remove** do outro lad
 iguais. Clicar no **✓** de uma linha aplicada **desfaz**: ela volta a ser uma diferença.
 
 **"Copiar esquerda"** e **"Copiar direita"** copiam o texto inteiro de cada lado, já com as linhas
-aplicadas. `Esc` fecha e descarta a comparação.
+aplicadas. `Esc` **minimiza** a janela (a comparação continua lá); para fechar e descartar, use o
+`×`.
 
 O primeiro texto guardado vale por **2 minutos**. Depois disso o próximo atalho volta a ser o
 primeiro, para você não comparar com algo que capturou e esqueceu.
@@ -155,10 +191,21 @@ primeiro, para você não comparar com algo que capturou e esqueceu.
 2. Escreva e pressione `Enter`. `Shift + Enter` quebra a linha dentro do mesmo tópico.
 3. Escolha outro arquivo no seletor, ou **"+ Criar nova nota"** para começar um.
 
-Para **editar** um tópico, clique no texto dele: `Enter` ou clicar fora salva, `Esc` desiste.
-Apagar (`×`), arrastar para reordenar e a vassoura (limpar tudo) gravam na hora. A lixeira ao lado
-da vassoura exclui o arquivo inteiro — ele vai para a Lixeira do Windows, então dá para recuperar.
-`Esc` fecha a janela.
+A **fonte e o tamanho** do texto (tópicos, edição e campo de escrita) são escolhidos na aba Fast Note
+das configurações: JetBrains Mono, Cascadia Mono, Consolas, Courier New, Lucida Console, Segoe UI,
+Arial, Calibri, Verdana ou Tahoma, de 10 a 20 px (padrão JetBrains Mono 12). Valem na hora, com a
+janela aberta, e o `×` e a bolinha das tarefas continuam alinhados com a primeira linha em qualquer
+tamanho.
+
+Para **editar** um tópico, clique no texto dele: o cursor entra no ponto em que você clicou, e a
+tela não se mexe enquanto você digita, por maior que seja o arquivo. `Enter` ou clicar fora salva,
+`Esc` desiste. Apagar (`×`), arrastar para reordenar e a vassoura (limpar tudo) gravam na hora. O `×`
+de apagar fica sempre ao lado da **primeira linha** do tópico. A lixeira ao lado da vassoura exclui o
+arquivo inteiro — ele vai para a Lixeira do Windows, então dá para recuperar.
+
+`Tab` **indenta** (no campo de escrita e na edição de um tópico): com várias linhas selecionadas,
+indenta todas; `Shift + Tab` desfaz. `Esc` **minimiza** a janela para a barra de tarefas — para
+fechar de verdade, use o `×`.
 
 O botão **C**, à esquerda da vassoura, **copia as anotações** de uma vez: uma linha `- tópico` para
 cada uma, na ordem em que foram escritas (a mais antiga primeiro), com as quebras de linha do
@@ -167,8 +214,9 @@ copia as tarefas como caixinhas (`- [ ]` e `- [x]`). Uma mensagem no rodapé diz
 copiadas, e o botão fica apagado quando não há nada para copiar.
 
 O botão **—**, ao lado do `×` (no Fast Note e também na janela do Diff Checker), **minimiza** a
-janela para a barra de tarefas. Ao apertar o atalho de novo, ela volta como estava — o que você
-estava escrevendo continua no campo.
+janela para a barra de tarefas, como o `Esc`. Ao apertar o atalho de novo, ela volta como estava — o
+que você estava escrevendo continua no campo, e o cursor já está nele para você digitar, igual a
+quando a janela abre do zero.
 
 #### Arquivo principal
 
@@ -194,11 +242,26 @@ De qualquer arquivo, escreva `/task` seguido da tarefa e pressione `Enter`:
 
 O Fast Note troca para o arquivo `task.md` com a tarefa nova em vermelho, na seção **A fazer**.
 Clique na bolinha ao lado dela para concluir — ela desce para **Concluídas**, riscada. Clicar de
-novo na bolinha volta a tarefa para A fazer.
+novo na bolinha volta a tarefa para A fazer. Ao lado de "Concluídas" há uma **vassoura cinza** que
+limpa só as tarefas concluídas (com a mesma confirmação da vassoura de cima); as que ainda estão a
+fazer ficam.
 
 Com o `task.md` aberto, basta escrever e dar `Enter`, sem o `/task`. Só `/task`, sem texto, abre as
 tarefas. O `task.md` aparece sempre primeiro no seletor e usa o formato de checklist do Markdown,
 então dá para abri-lo no VS Code ou no GitHub e ver as caixinhas.
+
+**Tarefas concluídas vão para a daily.** Na aba Fast Note das configurações, escolha o que acontece
+ao concluir uma tarefa — **Não registrar**, **Na daily** (padrão) ou **Daily com tópico** — e qual
+arquivo é a sua daily (só aparecem os arquivos com o relógio ligado; sem escolher nenhum, nada é
+registrado). Ao concluir, a tarefa vira um tópico no **dia de hoje** da daily: dez tarefas
+concluídas são dez tópicos. No modo **Daily com tópico** cada tarefa vira um tópico **recolhível**:
+uma seta ▸ ao lado do título abre e fecha uma caixa de anotações, que grava sozinha (fechado por
+padrão; a seta fica em destaque quando há anotações). Desmarcar a tarefa tira o tópico da daily — do
+**dia em que ela foi concluída**, não do de hoje (o Blink guarda esse dia, escondido, no `task.md`).
+Se o texto foi mudado na daily, o Blink não acha, nada é removido de lá e um aviso diz isso; se o
+tópico recolhível tem anotações suas, ele pergunta antes de remover. Limpar as concluídas ou apagar
+uma tarefa **não** mexe na daily. O botão **C** copia o tópico recolhível como `- título` com as
+anotações por baixo.
 
 #### Histórico diário
 
@@ -230,6 +293,70 @@ Com `Enter`, o tópico vai para o `daily.md` e a janela troca para ele. Só `/da
 troca de arquivo. Se não existir nota com aquele nome, nada é gravado: o texto fica no campo e um
 aviso aparece embaixo, para você corrigir. O `/task` funciona do mesmo jeito.
 
+#### Arquivos com cadeado
+
+Abra o seletor de arquivos: ao lado do relógio, cada arquivo tem um **cadeado**. Clicar nele pede uma
+**senha** (duas vezes, com o aviso de que **sem a senha não há como recuperar o conteúdo** — nem o
+Blink consegue) e o arquivo inteiro vira um arquivo **criptografado** (AES-256, com a senha
+transformada em chave pelo scrypt). No disco não fica nada legível: nem os tópicos, nem o título, nem
+as linhas fora da lista. Cada arquivo tem a **sua** senha, mas nada impede de usar a mesma em vários.
+O `task.md` e os arquivos com o relógio (histórico diário) não podem ter cadeado, e um arquivo
+com cadeado não aparece na lista do `/`.
+
+Ao escolher um arquivo com cadeado, a lista dá lugar a uma tela de **senha**. Senha errada diz "Senha
+incorreta." e espera 1 segundo antes de aceitar outra tentativa. Aberto, o arquivo funciona como
+qualquer nota (escrever, editar, apagar, arrastar) e **fica aberto só até você trocar de arquivo,
+minimizar ou fechar a janela** — aí o Blink esquece a chave, apaga o conteúdo da tela e pede a senha
+de novo. Também tranca ao recarregar a janela (apertar o atalho com ela já aberta).
+
+Dentro de um arquivo com cadeado há o botão **+ credencial** (título, login e senha). Na lista, o
+título aparece e o login e a senha ficam como `••••••`:
+
+- **Copiar** (um botão para o login e outro para a senha) copia sem mostrar o valor. A senha
+  copiada **sai da área de transferência sozinha depois de 30 segundos** (se você não tiver copiado
+  outra coisa nesse meio tempo) e é marcada para **não entrar no histórico do Windows (Win+V)** nem
+  na sincronização com a nuvem.
+- **O olhinho** mostra o login e a senha, mas pede a **senha do arquivo de novo**. Fica mostrando até
+  o arquivo ser trancado.
+
+Para **tirar o cadeado**, clique nele de novo: o Blink pede a senha, avisa que as senhas das
+credenciais passarão a ficar visíveis no arquivo e volta o `.md` comum (uma credencial vira o tópico
+`Título — login: x — senha: y`).
+
+#### Folha livre
+
+Abra o seletor de arquivos: à esquerda do cadeado, cada arquivo tem uma **folha**. Clicar nela liga a
+**folha livre**: no lugar da lista de tópicos, o arquivo vira uma página em branco, do tamanho de uma
+folha A4 (ela encolhe para caber na janela), onde você escreve como num editor de documentos — e pode
+**desenhar por cima**. A janela do Fast Note ganha um tamanho próprio para a folha, maior que o da
+nota comum; você pode redimensioná-la, e cada modo lembra o tamanho que você deixou.
+
+- **Escrever.** Títulos, listas (comum, numerada e de tarefas, com caixinhas), citação, bloco de
+  código, divisória, imagem, negrito, itálico, sublinhado, riscado, cor do texto e marca-texto.
+  Selecione um trecho e uma **barra** aparece em cima dele (N, I, S, T, A para a cor e M para o
+  marca-texto). Digite `/` numa linha para escolher um bloco (setas e `Enter`; `Esc` fecha). Atalhos
+  de Markdown também valem: `# `, `## `, `### `, `- `, `1. `, `[] `, `> `, `---` e `Enter`, e três
+  crases e `Enter` para código. `Ctrl + B`, `Ctrl + I`, `Ctrl + U` e `Ctrl + Z` / `Ctrl + Y` funcionam
+  como de costume.
+- **Imagens.** Cole (`Ctrl + V`) ou arraste uma imagem PNG, JPEG, GIF ou WebP, de até 15 MB. Elas
+  ficam guardadas numa pasta escondida `.blink`, dentro da sua pasta de notas.
+- **Caneta.** Na barra acima da folha: **Texto**, **Caneta**, **Marca-texto** (largo e translúcido —
+  também serve para pintar) e **Borracha** (apaga o traço inteiro que ela tocar). Há três espessuras e
+  oito cores, e as setas ↶ ↷ desfazem e refazem o desenho. Com uma ferramenta de desenho ligada, o
+  `Esc` volta para o texto (outro `Esc` minimiza). O desenho fica preso à folha, como caneta no papel,
+  e continua no mesmo ponto quando você muda o tamanho da janela.
+- **Ligar e desligar.** Ao ligar, a folha começa com os tópicos do arquivo como uma lista. O arquivo
+  `.md` **não é alterado** enquanto a folha está ligada. Desligar volta para os tópicos, e a folha
+  fica guardada: ligar de novo traz tudo de volta, texto, imagens e desenho.
+- **O resto da janela.** O botão **C** copia o texto da folha; a **vassoura** limpa texto e desenho
+  (com confirmação); a **lixeira** manda para a Lixeira do Windows o arquivo, a folha e as imagens que
+  só ela usa; e um `/nome texto` escrito em outra nota acrescenta um parágrafo no fim da folha. A
+  folha grava sozinha, pouco depois de você parar, e também ao trocar de arquivo, minimizar ou fechar.
+
+A folha não combina com o **cadeado** nem com o **histórico diário** (o ícone fica apagado e a dica
+diz o que desligar antes), e o `task.md` não tem folha. A folha **não é criptografada**: se o conteúdo
+é sigiloso, use o cadeado.
+
 #### Seus arquivos
 
 O Blink só mexe nas linhas que começam com `- ` dos seus arquivos. Título, parágrafo ou qualquer
@@ -249,7 +376,9 @@ Anotações da sprint.    <- o Blink não toca
 
 Todas as janelas do Blink podem ser redimensionadas puxando qualquer borda ou canto, como qualquer
 janela do Windows. O tamanho que você deixar volta na próxima vez que ela abrir. A janela de
-configurações também maximiza, pelo botão ou com dois cliques na barra de título.
+configurações também maximiza, pelo botão ou com dois cliques na barra de título. O Fast Note tem
+dois tamanhos: um para as notas comuns e outro para os arquivos em folha livre — a janela troca de um
+para o outro conforme o arquivo aberto.
 
 ## Menu do ícone na bandeja
 
@@ -262,7 +391,7 @@ Clique com o botão direito no olho, ao lado do relógio:
 | Fast Note | abre o bloco de notas |
 | Formatter | lembra qual é o atalho |
 | I18n | lembra qual é o atalho |
-| Procurar atualizações | consulta na hora se há versão nova |
+| Procurar atualizações | consulta na hora se há versão nova (com uma já baixada vira "Reiniciar para atualizar") |
 | Iniciar com o Windows | liga ou desliga a inicialização automática |
 | Sair | encerra o Blink |
 
@@ -281,10 +410,15 @@ tira o foco do programa onde a seleção estava. Para eles, use os atalhos.
 Todos podem ser trocados na janela de configurações, em **"Alterar"**. Se o campo ficar vermelho,
 outro programa já usa aquela combinação — escolha outra.
 
+Depois de usar o atalho (`Ctrl + Alt + F`, por exemplo), você pode **soltar só o `Alt` e o `F` e
+manter o `Ctrl` apertado** para já emendar um `Ctrl + V`: o `Ctrl` continua valendo. Soltar tudo e
+apertar `Ctrl + V` depois também funciona, claro.
+
 ## Onde ficam seus dados
 
 - **Configurações:** `%APPDATA%\Blink\config.json`
-- **Notas:** na pasta que você escolheu no Fast Note
+- **Notas:** na pasta que você escolheu no Fast Note (as folhas livres e as imagens delas ficam numa
+  subpasta escondida chamada `.blink`, dentro dela)
 
 Desinstalar o Blink não apaga nenhum dos dois.
 

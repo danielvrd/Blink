@@ -1,7 +1,7 @@
 /**
  * Aba "Diff Checker" da janela principal.
  *
- * A mais simples das tres: so o atalho. A comparacao em si vem na etapa 4.
+ * O atalho e a fonte e o tamanho do texto das celulas.
  *
  * O design nao tem seletor de tema aqui - o esquema preto e fixo.
  */
@@ -20,6 +20,12 @@ window.Blink = window.Blink || {};
         acelerador: estado.valores.binds.diff,
         registrado: estado.situacaoBinds.diff,
       }),
+
+      // Fonte e tamanho do texto das celulas (valem na hora na janela aberta).
+      window.Blink.aparencia.montarCampos('diff', estado.aparencia.diff),
+
+      // As cores do codigo (realce de sintaxe): o tema vale na hora na janela aberta.
+      window.Blink.aparencia.montarTema(estado.diffTema),
 
       window.Blink.pecas.rodape({
         ferramenta: 'diff',

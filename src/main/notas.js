@@ -24,6 +24,7 @@ const path = require('path');
 const { shell } = require('electron');
 
 const config = require('./config');
+const cripto = require('./privado');
 
 /** Um topico no arquivo: "- texto". */
 const LINHA_TOPICO = /^-\s+(.*)$/;
@@ -209,11 +210,42 @@ async function ler(arquivo) {
 
   try {
     const conteudo = await fs.readFile(completo, 'utf8');
+    // Arquivo com cadeado: o que esta no disco e texto cifrado, nunca topicos. Quem abre e o notas-privadas.js.
+    if (cripto.ehPrivado(conteudo)) return { topicos: [], existe: true, privado: true };
     return { topicos: separar(conteudo).topicos, existe: true };
   } catch (erro) {
     if (erro.code === 'ENOENT') return { topicos: [], existe: false };
     throw erro;
   }
+}
+
+/**
+ * O arquivo (caminho completo) tem o cadeado? Le so o comeco, o bastante para o cabecalho.
+ * Arquivo que nao existe nao e privado.
+ */
+async function ehArquivoPrivado(completo) {
+  let aberto;
+  try {
+    aberto = await fs.open(completo, 'r');
+    const lido = Buffer.alloc(24);
+    const { bytesRead } = await aberto.read(lido, 0, lido.length, 0);
+    return cripto.ehPrivado(lido.toString('utf8', 0, bytesRead));
+  } catch (erro) {
+    if (erro.code === 'ENOENT') return false;
+    throw erro;
+  } finally {
+    if (aberto) await aberto.close();
+  }
+}
+
+/** Os arquivos da pasta que tem o cadeado, com o nome como esta na pasta. */
+async function listarPrivados() {
+  const privados = [];
+  for (const nome of await listar()) {
+    const completo = caminhoDe(nome);
+    if (completo && (await ehArquivoPrivado(completo))) privados.push(nome);
+  }
+  return privados;
 }
 
 /**
@@ -225,6 +257,11 @@ async function ler(arquivo) {
 async function salvarTopicos(arquivo, topicos) {
   const completo = caminhoDe(arquivo);
   if (!completo) return false;
+
+  // Gravar texto puro por cima de um arquivo com cadeado destruiria o conteudo cifrado; e um arquivo em
+  // folha livre nao muda o .md.
+  if (await ehArquivoPrivado(completo)) return false;
+  if (ehArquivoLivre(path.basename(completo))) return false;
 
   let partes = { cabecalho: [], topicos: [], rodape: [] };
   try {
@@ -383,19 +420,179 @@ async function lerTarefas() {
   }
 }
 
-/** Regrava o task.md inteiro, criando se preciso. */
-async function salvarTarefas(tarefas) {
+/**
+ * Uma operacao por vez sobre o task.md (e a daily que o alternarTarefa mexe junto).
+ * Sem isto, uma regravacao vinda da tela no meio de um alternarTarefa
+ * sobrescreveria o que ele acabou de gravar.
+ */
+let filaDasTarefas = Promise.resolve();
+function naFilaDasTarefas(trabalho) {
+  const resultado = filaDasTarefas.then(trabalho);
+  filaDasTarefas = resultado.catch(() => {});
+  return resultado;
+}
+
+/** Regrava o task.md inteiro, criando se preciso. Sem a fila: so para dentro das operacoes da fila. */
+async function gravarTarefas(tarefas) {
   const completo = caminhoDe(ARQUIVO_TAREFAS);
   if (!completo) return false;
   await fs.writeFile(completo, montarTarefas(tarefas), 'utf8');
   return true;
 }
 
+/** Regrava o task.md inteiro, criando se preciso. */
+function salvarTarefas(tarefas) {
+  return naFilaDasTarefas(() => gravarTarefas(tarefas));
+}
+
 /** Acrescenta uma tarefa pendente no fim da lista do arquivo. */
-async function adicionarTarefa(texto) {
-  const tarefas = await lerTarefas();
-  tarefas.pendentes.push(texto);
-  return salvarTarefas(tarefas);
+function adicionarTarefa(texto) {
+  return naFilaDasTarefas(async () => {
+    const tarefas = await lerTarefas();
+    tarefas.pendentes.push(texto);
+    return gravarTarefas(tarefas);
+  });
+}
+
+// --- Tarefas concluidas -> daily -------------------------------------------------
+
+/**
+ * O dia em que uma tarefa foi concluida fica ESCONDIDO no fim dela, num
+ * comentario do Markdown que nenhum editor mostra:
+ *
+ *     - [x] deploy da v1.3 <!-- feita 2026-10-01 -->
+ *
+ * E o que permite desmarcar uma tarefa velha e tira-la da daily DAQUELE dia
+ * (nao do de hoje). A tela nunca mostra o comentario: tira na lista, na edicao e
+ * no botao C, e devolve ao salvar uma edicao.
+ */
+const DATA_DA_CONCLUSAO = /[ \t]*<!-- feita (\d{4}-\d{2}-\d{2}) -->[ \t]*$/;
+
+/** O texto da tarefa sem o comentario da data. */
+function tarefaSemData(texto) {
+  return texto.replace(DATA_DA_CONCLUSAO, '');
+}
+
+/** O dia ("AAAA-MM-DD") em que a tarefa foi concluida, ou null se o texto nao traz a data. */
+function dataDaTarefa(texto) {
+  const achou = DATA_DA_CONCLUSAO.exec(texto);
+  return achou ? achou[1] : null;
+}
+
+/**
+ * Topico recolhivel da daily: a primeira linha comeca com "▸ " (o titulo) e o
+ * resto e o corpo, anotacoes que a tela mostra ao abrir. So as tarefas
+ * concluidas no modo 'dailyTopico' geram esses topicos.
+ */
+const PREFIXO_RECOLHIVEL = '▸ ';
+
+/**
+ * O arquivo da daily, se estiver configurado e ainda servir: existe na pasta, tem
+ * o relogio ligado e nao e o task.md. Senao null - e nada e registrado.
+ */
+async function arquivoDaily() {
+  const nome = config.obterTarefas().arquivoDaily;
+  if (!nome || mesmoArquivo(nome, ARQUIVO_TAREFAS)) return null;
+  const comRelogio = await arquivosComHistorico();
+  const achado = comRelogio.find((a) => mesmoArquivo(a, nome)) || null;
+  if (achado && (await ehArquivoPrivado(caminhoDe(achado)))) return null;
+  return achado;
+}
+
+/**
+ * Tira da daily, no dia indicado, o ULTIMO topico que e a tarefa: o texto igual ao
+ * dela, ou um recolhivel ("▸ ") com o mesmo titulo. Um recolhivel cujo corpo tem
+ * anotacoes que nao vieram da tarefa so sai com `confirmado`.
+ *
+ * Devolve { achou, precisaConfirmar }. Nao achou = o texto foi editado la, e nada some.
+ */
+async function removerDaDaily(daily, data, puro, confirmado) {
+  const { dias } = await lerHistorico(daily);
+  const dia = dias.find((d) => d.data === data);
+  if (!dia) return { achou: false, precisaConfirmar: false };
+
+  const titulo = puro.split('\n')[0];
+  // O que o proprio Blink poe no corpo de um recolhivel: as linhas da tarefa depois da primeira.
+  const corpoGerado = puro.split('\n').slice(1).join('\n').trim();
+
+  for (let i = dia.topicos.length - 1; i >= 0; i--) {
+    const topico = dia.topicos[i];
+    const ehIgual = topico === puro;
+    const linhasDoTopico = topico.split('\n');
+    const ehRecolhivel = linhasDoTopico[0] === PREFIXO_RECOLHIVEL + titulo;
+    if (!ehIgual && !ehRecolhivel) continue;
+
+    if (ehRecolhivel && !ehIgual) {
+      const corpo = linhasDoTopico.slice(1).join('\n').trim();
+      if (corpo !== corpoGerado && !confirmado) return { achou: true, precisaConfirmar: true };
+    }
+
+    const restantes = dia.topicos.filter((_, j) => j !== i);
+    await salvarDiaHistorico(daily, data, restantes);
+    return { achou: true, precisaConfirmar: false };
+  }
+
+  return { achou: false, precisaConfirmar: false };
+}
+
+/**
+ * Conclui uma tarefa, ou volta uma concluida para a fazer - e mexe na daily junto.
+ * Tudo de uma vez (le, confere, move, grava), numa fila: a tela manda so qual
+ * tarefa e quer o resultado de volta.
+ *
+ *   grupo      'pendentes' (concluir) ou 'concluidas' (desmarcar)
+ *   indice     a posicao na lista DO ARQUIVO (a tela mostra invertido)
+ *   texto      o texto da tarefa como a tela o conhece (com o comentario da data):
+ *              se nao for o do arquivo, a tela esta desatualizada e nada muda
+ *   confirmado o usuario ja aceitou remover um topico recolhivel com anotacoes
+ *
+ * Concluir: a tarefa vai para o fim de "Concluidas" com a data de hoje escondida
+ * e, com a daily configurada, ganha um topico no dia de hoje (o texto dela, ou
+ * "▸ texto" no modo 'dailyTopico'). Desmarcar: volta para o fim de "A fazer" e o
+ * topico sai da daily do dia em que foi concluida (a data escondida).
+ *
+ * Devolve { ok, tarefas, daily: { acao, arquivo, data } } (acao: 'nenhuma',
+ * 'registrou', 'removeu' ou 'nao-achou'), ou { ok: false, motivo: 'desatualizado',
+ * tarefas } ou { ok: false, precisaConfirmar: true, tarefas } sem mudar nada.
+ */
+function alternarTarefa({ grupo, indice, texto, confirmado = false }) {
+  return naFilaDasTarefas(async () => {
+    const tarefas = await lerTarefas();
+    if (grupo !== 'pendentes' && grupo !== 'concluidas') return { ok: false, motivo: 'grupo', tarefas };
+
+    const lista = tarefas[grupo];
+    if (!Number.isInteger(indice) || lista[indice] !== texto) return { ok: false, motivo: 'desatualizado', tarefas };
+
+    const opcoes = config.obterTarefas();
+    const daily = await arquivoDaily();
+    const puro = tarefaSemData(texto);
+    let registro = { acao: 'nenhuma' };
+
+    if (grupo === 'pendentes') {
+      const hoje = dataDeHoje();
+      lista.splice(indice, 1);
+      tarefas.concluidas.push(`${puro} <!-- feita ${hoje} -->`);
+
+      if (daily && opcoes.aoConcluir !== 'nada') {
+        const topico = opcoes.aoConcluir === 'dailyTopico' ? PREFIXO_RECOLHIVEL + puro : puro;
+        await adicionarHistorico(daily, hoje, topico);
+        registro = { acao: 'registrou', arquivo: daily, data: hoje };
+      }
+    } else {
+      // Tarefa feita antes desta funcao existir nao tem data: volta para a fazer sem mexer na daily.
+      const data = dataDaTarefa(texto);
+      if (data && daily) {
+        const removido = await removerDaDaily(daily, data, puro, confirmado);
+        if (removido.precisaConfirmar) return { ok: false, precisaConfirmar: true, tarefas };
+        registro = { acao: removido.achou ? 'removeu' : 'nao-achou', arquivo: daily, data };
+      }
+      lista.splice(indice, 1);
+      tarefas.pendentes.push(puro);
+    }
+
+    await gravarTarefas(tarefas);
+    return { ok: true, tarefas, daily: registro };
+  });
 }
 
 // --- Arquivo principal (a estrela) ---------------------------------------------
@@ -403,6 +600,14 @@ async function adicionarTarefa(texto) {
 /** Mesmo nome de arquivo, sem diferenciar maiuscula - como o Windows. */
 function mesmoArquivo(a, b) {
   return typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
+}
+
+/**
+ * O arquivo esta em folha livre? (notas-livres.js). Nesse modo o .md NUNCA muda - a folha mora em
+ * .blink/livre/ -, entao as gravacoes de topico daqui o recusam, como recusam um arquivo com cadeado.
+ */
+function ehArquivoLivre(nome) {
+  return (config.obter('notasLivres') || []).some((a) => mesmoArquivo(a, nome));
 }
 
 /**
@@ -494,8 +699,24 @@ async function limpar(arquivo) {
  * ao ultimo dia visto, e ganharia uma data que nao devia.
  */
 const CABECALHO_DIA = /^## (\d{4}-\d{2}-\d{2})\s*$/;
-const LINHA_TOPICO_DIA = /^\s{2,}-\s+(.*)$/;
-const LINHA_CONTINUACAO_DIA = /^\s{2,}(.*)$/;
+/**
+ * Topico do dia: so ESPACOS antes do traco. Com \s, a linha de continuacao
+ * "    <tab>- sub" (um tab que o usuario deu com o TAB, seguido de um traco)
+ * viraria um topico novo.
+ */
+const LINHA_TOPICO_DIA = /^ {2,}-\s+(.*)$/;
+
+/**
+ * Continuacao de um topico do dia. O escreverTopicoDia grava 4 espacos antes
+ * de cada linha seguinte, e e EXATAMENTE isso que se tira na leitura - o que
+ * vier depois (uma tabulacao do TAB, ou espacos de indentacao) e do usuario e
+ * tem que voltar como foi escrito. Com \s{2,} a indentacao era engolida.
+ *
+ * O formato frouxo (2 ou mais espacos/tabs) fica de segunda opcao, para quem
+ * editou o arquivo na mao com outra indentacao.
+ */
+const LINHA_CONTINUACAO_DIA = /^ {4}(.*)$/;
+const LINHA_CONTINUACAO_DIA_FROUXA = /^\s{2,}(.*)$/;
 
 /**
  * Separa o conteudo de um arquivo de historico em quatro partes.
@@ -547,7 +768,7 @@ function separarHistorico(conteudo) {
       continue;
     }
 
-    const continuacao = linha.match(LINHA_CONTINUACAO_DIA);
+    const continuacao = linha.match(LINHA_CONTINUACAO_DIA) || linha.match(LINHA_CONTINUACAO_DIA_FROUXA);
     if (continuacao && ultimoTopico && ultimoTopico.length > 0) {
       ultimoTopico[ultimoTopico.length - 1] += '\n' + continuacao[1];
       continue;
@@ -650,6 +871,8 @@ async function lerHistorico(arquivo) {
 async function salvarDiaHistorico(arquivo, data, topicos) {
   const completo = caminhoDe(arquivo);
   if (!completo) return false;
+  if (await ehArquivoPrivado(completo)) return false;
+  if (ehArquivoLivre(path.basename(completo))) return false;
 
   let partes = { cabecalho: [], correntes: [], dias: [], rodape: [] };
   try {
@@ -688,6 +911,7 @@ async function adicionarHistorico(arquivo, data, texto) {
 async function migrarParaHistorico(arquivo) {
   const completo = caminhoDe(arquivo);
   if (!completo) return false;
+  if (await ehArquivoPrivado(completo)) return false;
 
   let partes = { cabecalho: [], correntes: [], dias: [], rodape: [] };
   try {
@@ -724,6 +948,11 @@ async function definirHistorico(arquivo, ligado) {
   const existente = (await listar()).find((a) => mesmoArquivo(a, nome));
   if (!existente) return false;
 
+  // Cadeado e relogio nao andam juntos: o arquivo cifrado nao tem dias para o Blink ler. Nem folha livre e relogio:
+  // o relogio reescreve o .md, e a folha livre nao mexe nele.
+  if (ligado && (await ehArquivoPrivado(caminhoDe(existente)))) return false;
+  if (ligado && ehArquivoLivre(existente)) return false;
+
   const atuais = config.obter('notasHistorico') || [];
   const jaLigado = atuais.some((a) => mesmoArquivo(a, existente));
   const novaLista = ligado
@@ -745,6 +974,10 @@ module.exports = {
   excluir,
   nomeDeArquivo,
   caminhoDe,
+  ehArquivoPrivado,
+  ehArquivoLivre,
+  listarPrivados,
+  mesmoArquivo,
   ARQUIVO_TAREFAS,
   principal,
   definirPrincipal,
@@ -753,6 +986,11 @@ module.exports = {
   lerTarefas,
   salvarTarefas,
   adicionarTarefa,
+  alternarTarefa,
+  arquivoDaily,
+  tarefaSemData,
+  dataDaTarefa,
+  PREFIXO_RECOLHIVEL,
   arquivosComHistorico,
   definirHistorico,
   lerHistorico,
@@ -762,6 +1000,7 @@ module.exports = {
   // exportados para teste
   separar,
   montar,
+  escreverTopico,
   separarTarefas,
   montarTarefas,
   separarHistorico,

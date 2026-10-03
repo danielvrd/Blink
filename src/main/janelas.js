@@ -41,6 +41,8 @@ const TAMANHOS = {
   principal: { largura: 460, altura: 530, minLargura: 460, minAltura: 530 },
   diff: { largura: 1040, altura: 680, minLargura: 520, minAltura: 320 },
   nota: { largura: 320, altura: 380, minLargura: 300, minAltura: 320 },
+  // A mesma janela com um arquivo em folha livre: maior (uma folha de papel e um desenho), lembrada a parte.
+  notaLivre: { largura: 760, altura: 600, minLargura: 480, minAltura: 420 },
 };
 
 /**
@@ -126,8 +128,48 @@ function lembrarTamanho(janela, nome) {
     // Tamanho do conteudo, nao da janela: e o mesmo que se pede ao criar,
     // entao reabrir devolve exatamente o que o usuario deixou.
     const [largura, altura] = janela.getContentSize();
-    config.salvarTamanho(nome, largura, altura);
+    // O nome pode ser uma funcao: a janela do Fast Note guarda um tamanho para a nota comum e outro para a folha livre.
+    config.salvarTamanho(typeof nome === 'function' ? nome() : nome, largura, altura);
   });
+}
+
+/**
+ * O Fast Note com um arquivo em folha livre aberto? Muda o tamanho que a janela lembra (notaLivre em vez de nota).
+ * Volta a false quando a janela fecha.
+ */
+let modoLivre = false;
+
+/**
+ * Troca o tamanho da janela do Fast Note entre o da nota comum e o da folha livre, conforme o arquivo aberto.
+ * Cada um e o que o usuario deixou da ultima vez (ou o padrao), nunca maior que a area util do monitor, e a janela
+ * fica toda visivel (se crescer para fora da tela, anda para dentro).
+ */
+function definirModoNota(janela, livre) {
+  if (!janela || janela.isDestroyed()) return;
+  modoLivre = livre === true;
+
+  const nome = modoLivre ? 'notaLivre' : 'nota';
+  const padrao = TAMANHOS[nome];
+  const salvo = config.obterTamanho(nome);
+  const area = screen.getDisplayMatching(janela.getBounds()).workArea;
+
+  const largura = Math.max(padrao.minLargura, Math.min(salvo ? salvo.largura : padrao.largura, Math.round(area.width * LIMITE_DA_TELA)));
+  const altura = Math.max(padrao.minAltura, Math.min(salvo ? salvo.altura : padrao.altura, Math.round(area.height * LIMITE_DA_TELA)));
+
+  // O minimo muda junto: a folha precisa de mais espaco que o bloco de notas rapido.
+  janela.setMinimumSize(padrao.minLargura, padrao.minAltura);
+  if (janela.isMaximized()) return;
+
+  const [larguraAtual, alturaAtual] = janela.getContentSize();
+  if (larguraAtual === largura && alturaAtual === altura) return;
+
+  janela.setContentSize(largura, altura);
+
+  // Crescendo, a janela pode ter passado da borda da tela: traz para dentro.
+  const limites = janela.getBounds();
+  const x = Math.min(Math.max(limites.x, area.x), Math.max(area.x, area.x + area.width - limites.width));
+  const y = Math.min(Math.max(limites.y, area.y), Math.max(area.y, area.y + area.height - limites.height));
+  if (x !== limites.x || y !== limites.y) janela.setPosition(x, y);
 }
 
 // --- Janela principal -------------------------------------------------------
@@ -266,6 +308,21 @@ function abrirDiff(linhas) {
 
 let nota = null;
 
+/**
+ * Devolve o foco ao campo de escrita da nota.
+ *
+ * Aberto do zero, o Fast Note ja foca o campo sozinho (o iniciar() da tela).
+ * Voltando da barra de tarefas isso nao acontece: o foco do teclado continua
+ * onde estava - no botao de minimizar, que acabou de ser clicado - e quem
+ * volta pela bind ficava sem poder digitar. A tela decide qual campo recebe:
+ * o de edicao, se houver um aberto, senao o de escrita.
+ */
+function focarCampoDaNota(janela) {
+  if (!janela || janela.isDestroyed()) return;
+  janela.webContents.focus();
+  janela.webContents.send('nota:focar');
+}
+
 /** Abre o bloco de notas. */
 function abrirNota() {
   if (nota && !nota.isDestroyed()) {
@@ -276,6 +333,7 @@ function abrirNota() {
       nota.restore();
       nota.show();
       nota.focus();
+      focarCampoDaNota(nota);
       return nota;
     }
 
@@ -297,14 +355,30 @@ function abrirNota() {
 
   acertarTamanho(nota, inicial);
   nota.loadFile(path.join(RENDERER, 'note', 'index.html'));
-  lembrarTamanho(nota, 'nota');
+  modoLivre = false;
+  lembrarTamanho(nota, () => (modoLivre ? 'notaLivre' : 'nota'));
 
   nota.once('ready-to-show', () => {
     nota.show();
     nota.focus();
   });
 
+  // Restaurada pelo icone da barra de tarefas (e nao pela bind): o mesmo foco.
+  nota.on('restore', () => focarCampoDaNota(nota));
+
+  // Os arquivos com cadeado ficam abertos so ate trocar de arquivo, minimizar ou fechar: aqui o processo
+  // principal esquece as chaves e avisa a tela, que apaga o conteudo da memoria (notas-privadas.js).
+  // Recarregar (a bind com a janela ja aberta) tambem tranca: a tela recomeca sem nada aberto.
+  const privadas = require('./notas-privadas');
+  nota.on('minimize', () => {
+    privadas.trancarTudo();
+    if (nota && !nota.isDestroyed()) nota.webContents.send('privado:trancou');
+  });
+  nota.webContents.on('did-start-loading', () => privadas.trancarTudo());
+
   nota.on('closed', () => {
+    privadas.trancarTudo();
+    modoLivre = false;
     nota = null;
   });
 
@@ -318,6 +392,7 @@ module.exports = {
   mostrarPrincipal,
   abrirDiff,
   abrirNota,
+  definirModoNota,
   obterLinhasDiff,
   permitirEncerrar,
 };

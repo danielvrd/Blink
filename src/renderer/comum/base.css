@@ -66,6 +66,19 @@
   box-sizing: border-box;
 }
 
+/*
+  Sem ligaduras em lugar nenhum. A JetBrains Mono tem uma para "..": quem
+  desenha o grupo e o ULTIMO caractere, e na digitacao o desenho sai cortado -
+  ao teclar o terceiro ponto o primeiro sumia e sobravam 2 na tela, mesmo com
+  3 no texto. O !important e para vencer o atalho "font:" de alguns campos, que
+  zera as ligaduras de volta ao padrao. Medido com os pontos digitados de
+  verdade, em escala de 125%.
+*/
+* {
+  font-variant-ligatures: none !important;
+  font-feature-settings: "liga" 0, "calt" 0 !important;
+}
+
 html,
 body {
   margin: 0;
@@ -148,4 +161,100 @@ select:focus-visible {
 @keyframes entrarModal {
   from { opacity: 0; transform: scale(0.97) translateY(6px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* --- Botao "Atualizacao disponivel" (comum/atualizacao.js) ------------------
+  Mora no cabecalho de cada janela, a esquerda do minimizar. Nas janelas
+  estreitas o texto curto ("Atualizar") toma o lugar do longo.
+--------------------------------------------------------------------------- */
+
+.botao-atualizacao {
+  flex: none;
+  align-self: center;
+  height: 22px;
+  margin-right: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--borda-modal);
+  border-radius: var(--raio-item);
+  background: var(--aba-ativa-fundo);
+  color: var(--destaque-estado);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+}
+
+.botao-atualizacao:hover:not(:disabled) {
+  background: var(--segmentado-ativo);
+}
+
+.botao-atualizacao:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.botao-atualizacao[hidden] {
+  display: none;
+}
+
+.botao-atualizacao .texto-curto {
+  display: none;
+}
+
+@media (max-width: 379px) {
+  .botao-atualizacao .texto-longo {
+    display: none;
+  }
+  .botao-atualizacao .texto-curto {
+    display: inline;
+  }
+}
+
+/* A confirmacao do reinicio, solta na tela (a posicao vem do script). */
+.popover-atualizacao {
+  position: fixed;
+  z-index: 50;
+  width: 220px;
+  padding: 10px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-modal-nota);
+  border-radius: var(--raio-campo);
+  box-shadow: var(--sombra-popover);
+  -webkit-app-region: no-drag;
+}
+
+.popover-atualizacao[hidden] {
+  display: none;
+}
+
+.pergunta-atualizacao {
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  color: var(--texto-forte-2);
+}
+
+.botoes-atualizacao {
+  display: flex;
+  gap: 6px;
+}
+
+.botoes-atualizacao button {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: var(--raio-item);
+  font-size: 11px;
+}
+
+.botao-atualizacao-sim {
+  border: none;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-weight: 600;
+}
+
+.botao-atualizacao-nao {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--texto-2);
 }

@@ -18,7 +18,17 @@ const ferramentaDiff = require('./ferramenta-diff');
 const ferramentaNote = require('./ferramenta-note');
 const ferramentaI18n = require('./ferramenta-i18n');
 const notas = require('./notas');
+const privadas = require('./notas-privadas');
+const livres = require('./notas-livres');
 const aviso = require('./aviso');
+const atualizacao = require('./atualizacao');
+
+/**
+ * Caminhos de configuracao que as janelas ja abertas precisam saber que mudaram
+ * (a aparencia do texto do Fast Note e do Diff). Os outros sao lidos quando a
+ * janela abre ou a aba e montada.
+ */
+const AVISAM_AS_JANELAS = /^(?:aparencia\.|diff\.tema$)/;
 
 /** A janela que enviou a mensagem, ou null se ela ja tiver sido fechada. */
 function janelaDoEvento(evento) {
@@ -34,11 +44,27 @@ function registrar() {
     // se registrar porque outro programa ja usa a combinacao.
     situacaoBinds: atalhos.obterSituacao(),
     caminhoArquivo: config.caminhoArquivo(),
+    // Fonte e tamanho do texto, ja com os padroes onde faltar (so a janela
+    // que usa precisa saber o caminho de volta ate o valor).
+    aparencia: { note: config.obterAparencia('note'), diff: config.obterAparencia('diff') },
+    // O tema de cores do codigo no Diff.
+    diffTema: config.obterTemaDiff(),
+    // O que fazer ao concluir uma tarefa e em que arquivo fica a daily.
+    tarefas: config.obterTarefas(),
   }));
 
   ipcMain.handle('config:gravar', (_evento, caminho, valor) => {
     if (typeof caminho !== 'string') return false;
-    return config.definir(caminho, valor);
+    const gravou = config.definir(caminho, valor);
+
+    // Fonte e tamanho valem na hora, nas janelas que ja estao abertas: elas
+    // releem a configuracao quando recebem este aviso.
+    if (gravou && AVISAM_AS_JANELAS.test(caminho)) {
+      for (const janela of BrowserWindow.getAllWindows()) {
+        if (!janela.isDestroyed()) janela.webContents.send('config:mudou', { caminho });
+      }
+    }
+    return gravou;
   });
 
   // --- Janela --------------------------------------------------------------
@@ -75,6 +101,16 @@ function registrar() {
     return true;
   });
 
+  // --- Atualizacao ----------------------------------------------------------
+
+  // O botao "Atualizacao disponivel" de cada janela pergunta o estado ao abrir;
+  // depois disso o processo principal avisa sozinho (atualizacao:situacao).
+  ipcMain.handle('atualizacao:situacao', () => atualizacao.situacao());
+
+  // O clique no botao, ja confirmado na tela. So faz algo com a atualizacao
+  // pronta: em qualquer outro estado a funcao nao faz nada.
+  ipcMain.handle('atualizacao:instalar', () => atualizacao.instalarAgora(janelas.permitirEncerrar));
+
   // --- Comparacao de texto -------------------------------------------------
 
   // A janela do diff pede as linhas assim que carrega. Elas nao vao na URL
@@ -96,7 +132,59 @@ function registrar() {
     ultima: await notas.ultima(),
     // Os arquivos com o relogio (historico diario) ligado.
     historico: await notas.arquivosComHistorico(),
+    // Os arquivos com cadeado (reconhecidos pelo cabecalho do arquivo, nao por uma lista).
+    privados: await notas.listarPrivados(),
+    // Os arquivos em folha livre.
+    livres: await livres.arquivosLivres(),
   }));
+
+  // --- Arquivos com cadeado ------------------------------------------------------------
+  // Tudo passa pelo notas-privadas.js. A tela so recebe o conteudo de um arquivo ABERTO (com a
+  // senha) e nunca o login/senha de uma credencial, a nao ser pelo olhinho (que pede a senha de novo).
+
+  const ehTexto = (v) => typeof v === 'string';
+
+  ipcMain.handle('privado:ativar', async (_evento, arquivo, senha) => {
+    if (!ehTexto(arquivo) || !ehTexto(senha)) return { ok: false, motivo: 'entrada' };
+    return privadas.ativar(arquivo, senha);
+  });
+
+  ipcMain.handle('privado:desativar', async (_evento, arquivo, senha) => {
+    if (!ehTexto(arquivo) || !ehTexto(senha)) return { ok: false, motivo: 'entrada' };
+    return privadas.desativar(arquivo, senha);
+  });
+
+  ipcMain.handle('privado:abrir', async (_evento, arquivo, senha) => {
+    if (!ehTexto(arquivo) || !ehTexto(senha)) return { ok: false, motivo: 'entrada' };
+    return privadas.abrir(arquivo, senha);
+  });
+
+  ipcMain.handle('privado:trancar', (_evento, arquivo) => (ehTexto(arquivo) ? privadas.trancar(arquivo) : false));
+
+  ipcMain.handle('privado:salvar', async (_evento, arquivo, itens) => {
+    if (!ehTexto(arquivo) || !Array.isArray(itens)) return { ok: false, motivo: 'entrada' };
+    return privadas.salvar(arquivo, itens);
+  });
+
+  ipcMain.handle('privado:adicionarTexto', async (_evento, arquivo, conteudo) => {
+    if (!ehTexto(arquivo) || !ehTexto(conteudo)) return { ok: false, motivo: 'entrada' };
+    return privadas.adicionarTexto(arquivo, conteudo);
+  });
+
+  ipcMain.handle('privado:adicionarCredencial', async (_evento, arquivo, titulo, login, senha) => {
+    if (!ehTexto(arquivo) || !ehTexto(titulo) || !ehTexto(login) || !ehTexto(senha)) return { ok: false, motivo: 'entrada' };
+    return privadas.adicionarCredencial(arquivo, titulo, login, senha);
+  });
+
+  ipcMain.handle('privado:revelar', async (_evento, arquivo, id, senha) => {
+    if (!ehTexto(arquivo) || !ehTexto(id) || !ehTexto(senha)) return { ok: false, motivo: 'entrada' };
+    return privadas.revelar(arquivo, id, senha);
+  });
+
+  ipcMain.handle('privado:copiar', async (_evento, arquivo, id, campo) => {
+    if (!ehTexto(arquivo) || !ehTexto(id) || !ehTexto(campo)) return { ok: false, motivo: 'entrada' };
+    return privadas.copiar(arquivo, id, campo);
+  });
 
   // Marca ou tira a estrela. '' = nenhum principal.
   ipcMain.handle('notas:definirPrincipal', async (_evento, nome) => {
@@ -122,6 +210,12 @@ function registrar() {
 
     const limpo = texto.trim();
     if (limpo === '') return null;
+
+    // Uma folha livre recebe o paragrafo na folha; o .md dela nunca muda.
+    if (livres.ehLivre(arquivo)) {
+      const gravou = await livres.adicionarTexto(arquivo, limpo);
+      return gravou ? notas.nomeDeArquivo(arquivo) : null;
+    }
 
     return notas.adicionar(arquivo, limpo);
   });
@@ -153,10 +247,55 @@ function registrar() {
     return notas.salvarTarefas({ pendentes: tarefas.pendentes, concluidas: tarefas.concluidas });
   });
 
+  // Concluir ou desmarcar uma tarefa, e mexer na daily junto, de uma vez so (veja
+  // notas.alternarTarefa). O indice e o da lista DO ARQUIVO.
+  ipcMain.handle('tarefas:alternar', async (_evento, grupo, indice, texto, confirmado) => {
+    if (typeof grupo !== 'string' || !Number.isInteger(indice) || typeof texto !== 'string') {
+      return { ok: false, motivo: 'entrada' };
+    }
+    return notas.alternarTarefa({ grupo, indice, texto, confirmado: confirmado === true });
+  });
+
   // Manda o arquivo para a Lixeira: recuperavel se foi engano.
   ipcMain.handle('notas:excluir', async (_evento, arquivo) => {
     if (typeof arquivo !== 'string') return false;
-    return notas.excluir(arquivo);
+    const eraLivre = livres.ehLivre(arquivo);
+    const excluiu = await notas.excluir(arquivo);
+    // Em folha livre, a folha e as imagens que so ela usa vao para a Lixeira junto com o .md.
+    if (excluiu && eraLivre) await livres.descartarFolha(arquivo);
+    return excluiu;
+  });
+
+  // --- Folha livre ------------------------------------------------------------------------
+  // O editor (Quill) e o desenho moram na tela; aqui so se le e grava o JSON da folha e as imagens.
+
+  const ehString = (v) => typeof v === 'string';
+
+  ipcMain.handle('livre:ativar', async (_evento, arquivo) => (ehString(arquivo) ? livres.ativar(arquivo) : { ok: false, motivo: 'entrada' }));
+  ipcMain.handle('livre:desativar', async (_evento, arquivo) => (ehString(arquivo) ? livres.desativar(arquivo) : { ok: false, motivo: 'entrada' }));
+  ipcMain.handle('livre:ler', async (_evento, arquivo) => (ehString(arquivo) && livres.ehLivre(arquivo) ? livres.lerFolha(arquivo) : null));
+
+  ipcMain.handle('livre:salvar', async (_evento, arquivo, folha) => {
+    if (!ehString(arquivo) || !folha || typeof folha !== 'object') return { ok: false, motivo: 'entrada' };
+    return livres.salvar(arquivo, { conteudo: folha.conteudo, tinta: folha.tinta });
+  });
+
+  // Na hora de fechar a janela uma gravacao assincrona nao teria tempo de terminar: a tela pede esta, sincrona.
+  ipcMain.on('livre:salvarSincrono', (evento, arquivo, folha) => {
+    evento.returnValue = ehString(arquivo) && folha && typeof folha === 'object' ? livres.salvarSincrono(arquivo, { conteudo: folha.conteudo, tinta: folha.tinta }) : false;
+  });
+
+  ipcMain.handle('livre:anexarImagem', async (_evento, arquivo, bytes) => {
+    if (!ehString(arquivo)) return { ok: false, motivo: 'entrada' };
+    return livres.anexarImagem(arquivo, bytes);
+  });
+
+  // A janela do Fast Note troca de tamanho conforme o arquivo aberto: a folha livre tem o dela.
+  ipcMain.handle('janela:modoNota', (evento, livre) => {
+    const janela = janelaDoEvento(evento);
+    if (!janela) return false;
+    janelas.definirModoNota(janela, livre === true);
+    return true;
   });
 
   // --- Historico diario (o relogio) -----------------------------------------

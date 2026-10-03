@@ -11,6 +11,7 @@
  */
 
 const comparador = require('./comparador');
+const realce = require('./realce');
 const selecao = require('./selecao');
 const janelas = require('./janelas');
 const aviso = require('./aviso');
@@ -38,6 +39,26 @@ function temGuardado() {
 /** Descarta o primeiro texto. */
 function limpar() {
   guardado = null;
+}
+
+/**
+ * Compara dois textos e anexa as cores do codigo (se houver codigo) as linhas.
+ *
+ * O realce e um enfeite: se falhar por qualquer motivo, a comparacao abre do
+ * mesmo jeito, sem cor.
+ */
+function compararComRealce(a, b) {
+  const linhas = comparador.comparar(a, b);
+  try {
+    realce.anexar(linhas);
+  } catch (erro) {
+    console.warn('[ferramenta-diff] realce falhou:', erro.message);
+    for (const linha of linhas) {
+      delete linha.tokensEsquerda;
+      delete linha.tokensDireita;
+    }
+  }
+  return linhas;
 }
 
 /** O que a bind do Diff Checker faz. */
@@ -72,8 +93,7 @@ async function executar() {
       return;
     }
 
-    const linhas = comparador.comparar(primeiro, texto);
-    janelas.abrirDiff(linhas);
+    janelas.abrirDiff(compararComRealce(primeiro, texto));
   } catch (erro) {
     console.error('[ferramenta-diff] falhou:', erro);
     aviso.mostrar('Algo deu errado ao comparar os textos.');
@@ -110,7 +130,7 @@ function abrirExemplo() {
     'Reunião de retrospectiva marcada para sexta-feira.',
   ].join('\n');
 
-  janelas.abrirDiff(comparador.comparar(esquerda, direita));
+  janelas.abrirDiff(compararComRealce(esquerda, direita));
 }
 
-module.exports = { executar, abrirExemplo, temGuardado, limpar };
+module.exports = { executar, abrirExemplo, temGuardado, limpar, compararComRealce };

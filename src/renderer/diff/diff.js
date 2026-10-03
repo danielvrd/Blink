@@ -56,6 +56,20 @@
     return aplicadas.get(indice) === 'esq' ? linha.direita : linha.esquerda;
   }
 
+  /**
+   * As cores do codigo do que cada lado mostra hoje: seguem o TEXTO. Uma linha aplicada para
+   * a direita mostra, na direita, o texto da esquerda - e as cores da esquerda.
+   */
+  function tokensDireita(indice) {
+    const linha = linhas[indice];
+    return aplicadas.get(indice) === 'dir' ? linha.tokensEsquerda : linha.tokensDireita;
+  }
+
+  function tokensEsquerda(indice) {
+    const linha = linhas[indice];
+    return aplicadas.get(indice) === 'esq' ? linha.tokensDireita : linha.tokensEsquerda;
+  }
+
   /** Uma linha diferente que ainda nao foi aplicada pode ser escolhida. */
   function podeAplicar(indice) {
     return linhas[indice].diferente && !aplicadas.has(indice);
@@ -69,18 +83,70 @@
    * Sempre por textContent e nos de texto, nunca por innerHTML: uma SQL tem
    * "<" e "&" que nao podem virar HTML.
    */
-  function escrever(celula, texto, partes) {
-    if (!partes || texto === null) {
-      celula.textContent = texto ?? '';
+  function escrever(celula, texto, partes, tokens) {
+    if (texto === null) {
+      celula.textContent = '';
+      return;
+    }
+
+    // Os dois vem do processo principal e, juntos, tem que dar a linha. Se algum nao der, vale o texto puro.
+    const juntos = (lista, pegar) => lista.map(pegar).join('') === texto;
+    const mudancas = partes && juntos(partes, (p) => p.texto) ? partes : null;
+    const sintaxe = tokens && juntos(tokens, (t) => t[1]) ? tokens : null;
+
+    if (!mudancas && !sintaxe) {
+      celula.textContent = texto;
       return;
     }
 
     limpar(celula);
-    for (const parte of partes) {
-      celula.appendChild(
-        parte.mudou ? el('span', { class: 'mudou', texto: parte.texto }) : document.createTextNode(parte.texto)
-      );
+    for (const corrida of corridas(texto, mudancas, sintaxe)) {
+      if (!corrida.mudou && !corrida.classe) {
+        celula.appendChild(document.createTextNode(corrida.texto));
+        continue;
+      }
+      const classes = [];
+      // 'title function_' -> 'hl-title hl-function_': uma classe por escopo do highlight.js
+      if (corrida.classe) classes.push(...corrida.classe.split(' ').map((c) => `hl-${c}`));
+      if (corrida.mudou) classes.push('mudou');
+      celula.appendChild(el('span', { class: classes.join(' '), texto: corrida.texto }));
     }
+  }
+
+  /**
+   * Junta os pedacos "mudou" do comparador com os pedacos de sintaxe do realce, que dividem a
+   * mesma linha em lugares diferentes: cada corrida e o trecho em que os dois valem o mesmo.
+   * Devolve [{ texto, mudou, classe }].
+   */
+  function corridas(texto, mudancas, sintaxe) {
+    const A = mudancas || [{ texto, mudou: false }];
+    const B = sintaxe || [[null, texto]];
+    const saida = [];
+
+    let a = 0;
+    let b = 0;
+    let usadoA = 0;
+    let usadoB = 0;
+    while (a < A.length && b < B.length) {
+      const restoA = A[a].texto.length - usadoA;
+      const restoB = B[b][1].length - usadoB;
+      const n = Math.min(restoA, restoB);
+
+      if (n > 0) {
+        const trecho = A[a].texto.slice(usadoA, usadoA + n);
+        const mudou = A[a].mudou;
+        const classe = B[b][0];
+        const ultima = saida[saida.length - 1];
+        if (ultima && ultima.mudou === mudou && ultima.classe === classe) ultima.texto += trecho;
+        else saida.push({ texto: trecho, mudou, classe });
+      }
+
+      usadoA += n;
+      usadoB += n;
+      if (usadoA >= A[a].texto.length) { a += 1; usadoA = 0; }
+      if (usadoB >= B[b][1].length) { b += 1; usadoB = 0; }
+    }
+    return saida;
   }
 
   /** Atualiza as classes e o texto de uma linha depois de um clique. */
@@ -113,8 +179,8 @@
     // de aplicada os dois lados mostram o mesmo texto, e os pedacos calculados
     // para o par original nao descrevem mais o que esta na tela.
     const pendente = sentido === undefined;
-    escrever(esquerda, textoEsquerda(indice), pendente ? linha.partesEsquerda : null);
-    escrever(direita, textoDireita(indice), pendente ? linha.partesDireita : null);
+    escrever(esquerda, textoEsquerda(indice), pendente ? linha.partesEsquerda : null, tokensEsquerda(indice));
+    escrever(direita, textoDireita(indice), pendente ? linha.partesDireita : null, tokensDireita(indice));
 
     limpar(calha);
     if (!linha.diferente) return;
@@ -332,15 +398,23 @@
   botaoFechar.addEventListener('click', () => window.blink.janela.fechar());
   // Minimizar vai para a barra de tarefas; a janela volta pelo icone ou pela bind.
   document.getElementById('btn-minimizar').addEventListener('click', () => window.blink.janela.minimizar());
+  // Os botoes do cabecalho nunca tomam o foco do teclado.
+  for (const id of ['btn-minimizar', 'btn-fechar', 'btn-olho']) {
+    document.getElementById(id).addEventListener('mousedown', (evento) => evento.preventDefault());
+  }
 
   // O olho: abre as configuracoes na aba do Diff Checker e fecha esta janela.
   document.getElementById('btn-olho').addEventListener('click', () => window.blink.janela.abrirPrincipal('diff'));
 
+  // Esc minimiza (vai para a barra de tarefas), em vez de fechar e descartar a
+  // comparacao. Fechar de verdade e so pelo X.
   window.addEventListener('keydown', (evento) => {
-    if (evento.key === 'Escape') window.blink.janela.fechar();
+    if (evento.key === 'Escape') window.blink.janela.minimizar();
   });
 
   async function iniciar() {
+    // Fonte e tamanho das celulas, os da aba Diff Checker das configuracoes (valem na hora, com a janela aberta).
+    await window.Blink.aparencia.iniciar('diff');
     linhas = await window.blink.diff.linhas();
     desenhar();
   }

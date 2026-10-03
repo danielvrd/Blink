@@ -125,4 +125,43 @@ function tokenizar(texto) {
   return tokens;
 }
 
-module.exports = { tokenizar };
+/** Separadores da assinatura: caracteres de controle que nunca aparecem num token. */
+const SEPARA_CAMPO = String.fromCharCode(1);
+const SEPARA_TOKEN = String.fromCharCode(2);
+
+/**
+ * A "assinatura" de um texto: a sequencia de tokens, sem espacos e quebras de
+ * linha, numa string so. Dois textos com a mesma assinatura so diferem em
+ * espacos e quebras - e a TRAVA de quem arruma o layout (layout-tsql.js,
+ * estilo-sql.js). null se o texto nao da para ler.
+ */
+function assinatura(texto) {
+  const tokens = tokenizar(texto);
+  if (!tokens) return null;
+  return tokens.filter((t) => t.t !== 'esp' && t.t !== 'nl').map((t) => t.t + SEPARA_CAMPO + t.s).join(SEPARA_TOKEN);
+}
+
+/**
+ * Quantos parenteses ficaram abertos no fim do texto (abre menos fecha), fora
+ * de texto entre aspas e de comentario. 0 = equilibrado.
+ *
+ * null se nao tem como saber: aspas ou comentario sem fechar, ou um ")" que
+ * fecha sem ter aberto (ai faltar fechar nao explica o erro).
+ */
+function parentesesAbertos(texto) {
+  const tokens = tokenizar(texto);
+  if (!tokens) return null;
+
+  let abertos = 0;
+  for (const tok of tokens) {
+    if (tok.t !== 'sim') continue;
+    if (tok.s === '(') abertos += 1;
+    else if (tok.s === ')') {
+      abertos -= 1;
+      if (abertos < 0) return null;
+    }
+  }
+  return abertos;
+}
+
+module.exports = { tokenizar, assinatura, parentesesAbertos };

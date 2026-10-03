@@ -3,12 +3,29 @@
   Valores da secao 3 do design (design_handoff_blink/README.md).
 */
 
+/*
+  Fonte e tamanho do texto (topicos, edicao e rascunho). O padrao e este; a
+  aba Fast Note das configuracoes troca os dois (renderer/comum/aparencia.js poe
+  os valores escolhidos no <html>, que vencem estes).
+*/
+:root {
+  --fonte-conteudo: var(--fonte-mono);
+  --tamanho-conteudo: 12px;
+  /* A altura de uma linha de texto (16px a 12px) e a da primeira linha de um
+     topico: a de 22px do X de apagar, ou a do texto se ele for mais alto. O X, a
+     alca e a bolinha se centram nela - as margens abaixo saem destas contas. */
+  --linha-conteudo: calc(var(--tamanho-conteudo) * 1.3333);
+  --linha-primeira: max(22px, var(--linha-conteudo));
+}
+
 html,
 body {
   height: 100%;
 }
 
 .modal {
+  /* Referencia da pergunta de senha (.modal-privado), que cobre a janela toda. */
+  position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -526,12 +543,15 @@ body {
 
 .topico {
   display: flex;
-  align-items: center;
+  /* Tudo alinhado no TOPO: o X de apagar fica sempre ao lado da primeira
+     linha, em qualquer tamanho de bloco (antes ficava no meio, e num topico
+     grande era preciso procurar). */
+  align-items: flex-start;
   gap: 6px;
   padding: 6px 4px;
   border-radius: var(--raio-item);
-  font-size: 12px;
-  font-family: var(--fonte-mono);
+  font-size: var(--tamanho-conteudo);
+  font-family: var(--fonte-conteudo);
   color: var(--texto-2);
   cursor: grab;
 }
@@ -565,6 +585,11 @@ body {
   font-size: 11px;
   letter-spacing: -1px;
   user-select: none;
+  /* Com tudo no topo, estas margens (a de baixo cancela a de cima) deixam o
+     item de UMA linha exatamente como era quando tudo ficava centralizado:
+     o X tem 22px, a alca 14px e o texto 16px (a 12px de fonte). Medido, nao
+     chutado - e agora acompanha o tamanho da fonte (--linha-primeira). */
+  margin: calc((var(--linha-primeira) - 14px) / 2) 0 calc((var(--linha-primeira) - 14px) / -2);
 }
 
 .corpo-topico {
@@ -572,6 +597,7 @@ body {
   min-width: 0;
   display: flex;
   gap: 5px;
+  margin: calc((var(--linha-primeira) - var(--linha-conteudo)) / 2) 0 calc((var(--linha-primeira) - var(--linha-conteudo)) / -2);
 }
 
 .traco {
@@ -587,6 +613,11 @@ body {
   word-break: break-word;
   white-space: pre-wrap;
   user-select: text;
+  /* O TAB do campo de edicao guarda uma tabulacao: mostrar com 4 colunas. */
+  tab-size: 4;
+  /* Altura fixa de linha (e nao "normal"): cada fonte tem a sua, e as margens do
+     X e da alca contam com ela. */
+  line-height: var(--linha-conteudo);
 }
 
 /* O texto do topico se edita com um clique. */
@@ -611,16 +642,19 @@ body {
   border: 1px solid rgba(168, 57, 58, 0.55);
   border-radius: var(--raio-item);
   background: var(--superficie);
-  font: 12px/1.5 var(--fonte-mono);
+  font: var(--tamanho-conteudo)/1.5 var(--fonte-conteudo);
   color: var(--texto-forte);
   overflow-wrap: anywhere;
   word-break: break-word;
+  tab-size: 4;
 }
 
 .botao-apagar {
   width: 22px;
   height: 22px;
   flex: none;
+  /* So sobra margem quando a linha de texto e mais alta que o X (fonte grande): ele se centra na 1a linha. */
+  margin: calc((var(--linha-primeira) - 22px) / 2) 0 calc((var(--linha-primeira) - 22px) / -2);
   border: none;
   border-radius: 4px;
   background: transparent;
@@ -642,7 +676,8 @@ body {
   position: relative;
   width: 13px;
   height: 13px;
-  margin-top: 2.5px;
+  /* 2.5px a 12px de fonte: centrada na linha de texto, 1px abaixo do meio. */
+  margin-top: calc((var(--linha-conteudo) - 13px) / 2 + 1px);
   padding: 0;
   border: 1.5px solid var(--tarefa-pendente);
   border-radius: 50%;
@@ -704,6 +739,27 @@ body {
   background: var(--divisoria);
 }
 
+/* A vassoura das concluidas fecha a linha, na coluna do X de cada tarefa (o
+   X tem 22px e o item 4px de folga: centro a 15px da borda). O ::after vem
+   depois dos filhos no HTML, entao a ordem e dita aqui. */
+.divisor-tarefas {
+  padding-right: 5px;
+}
+.divisor-tarefas::after {
+  order: 1;
+}
+.divisor-tarefas .botao-limpar-concluidas {
+  order: 2;
+}
+
+/* A mesma vassoura, na cor das concluidas (o cinza da bolinha feita). */
+.botao-acao.cinza {
+  background: var(--rotulo);
+}
+.botao-acao.cinza:hover:not([disabled]) {
+  filter: brightness(1.2);
+}
+
 .vazio {
   font-size: 11.5px;
   color: var(--rotulo);
@@ -722,11 +778,13 @@ body {
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio-campo);
   padding: 8px 10px;
-  font-size: 12.5px;
-  font-family: var(--fonte-mono);
+  /* 12.5px a 12px de fonte: o rascunho e meio ponto maior que os topicos. */
+  font-size: calc(var(--tamanho-conteudo) + 0.5px);
+  font-family: var(--fonte-conteudo);
   color: var(--texto-forte);
   overflow-wrap: anywhere;
   word-break: break-word;
+  tab-size: 4;
 }
 
 /* --- Autocomplete de "/" (autocompletar.js) --------------------------------- */
@@ -794,4 +852,782 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* --- Topico recolhivel da daily ------------------------------------------------
+  Gerado ao concluir uma tarefa no modo "Daily com topico": o titulo com uma seta
+  e, embaixo, as anotacoes (uma textarea que grava sozinha). Fechado por padrao.
+------------------------------------------------------------------------------- */
+
+.corpo-topico.caixa-recolhivel {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.linha-titulo {
+  display: flex;
+  gap: 5px;
+}
+
+.seta-recolher {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  /* Centrada na linha do titulo, como a bolinha das tarefas. */
+  margin-top: calc((var(--linha-conteudo) - 13px) / 2 + 1px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--rotulo);
+  font-size: 12px;
+  line-height: 13px;
+  text-align: center;
+}
+
+.seta-recolher:hover {
+  color: var(--texto-forte);
+}
+
+/* Ha anotacoes dentro: a seta se destaca mesmo fechada. */
+.seta-recolher.tem-corpo {
+  color: var(--destaque-estado);
+}
+
+.corpo-recolhivel {
+  width: 100%;
+  resize: none;
+  overflow: hidden;
+  padding: 4px 8px;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-item);
+  background: var(--superficie);
+  font: var(--tamanho-conteudo)/1.5 var(--fonte-conteudo);
+  color: var(--texto-forte);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  tab-size: 4;
+}
+
+.corpo-recolhivel[hidden] {
+  display: none;
+}
+
+.corpo-recolhivel:focus {
+  border-color: rgba(168, 57, 58, 0.55);
+}
+
+/* --- Arquivos com cadeado --------------------------------------------------------
+  O cadeado no seletor, a tela da senha no lugar da lista, a barra "arquivo privado",
+  a pergunta de senha (um modal por cima da janela) e as credenciais.
+------------------------------------------------------------------------------- */
+
+/* O cadeado de cada arquivo (antes do relogio): vazio, ou vermelho quando o arquivo e privado. */
+.seletor-cadeado {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--rotulo);
+}
+
+.seletor-cadeado rect,
+.seletor-cadeado path {
+  fill: none;
+  stroke: currentColor;
+}
+
+.seletor-cadeado .furo {
+  fill: currentColor;
+}
+
+.seletor-cadeado:hover {
+  color: var(--texto-2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.seletor-cadeado.marcado {
+  color: var(--destaque-estado);
+}
+
+/* Cadeado e relogio nao andam juntos: o que nao vale no arquivo fica apagado (o title explica). */
+.seletor-cadeado.bloqueado,
+.seletor-relogio.bloqueado {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.seletor-cadeado.bloqueado:hover,
+.seletor-relogio.bloqueado:hover {
+  background: transparent;
+  color: var(--rotulo);
+}
+
+/* O cadeado do botao fechado so enfeita. */
+.seletor-cadeado-fixo {
+  flex: none;
+  color: var(--destaque-estado);
+}
+
+.seletor-cadeado-fixo rect,
+.seletor-cadeado-fixo path {
+  fill: none;
+  stroke: currentColor;
+}
+
+.seletor-cadeado-fixo .furo {
+  fill: currentColor;
+}
+
+/* A tela da senha, no lugar da lista. */
+.tela-senha {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.tela-senha[hidden] {
+  display: none;
+}
+
+.cadeado-grande {
+  color: var(--destaque-estado);
+}
+
+.nome-privado {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-forte);
+}
+
+.dica-privado {
+  font-size: 11.5px;
+  color: var(--rotulo);
+}
+
+.campo-privado {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+  background: var(--superficie);
+  color: var(--texto-forte);
+  font-size: 12.5px;
+}
+
+.campo-privado:focus {
+  border-color: rgba(168, 57, 58, 0.55);
+}
+
+.erro-privado {
+  font-size: 11.5px;
+  color: var(--apagar);
+}
+
+.erro-privado[hidden] {
+  display: none;
+}
+
+.botao-abrir-privado {
+  width: 100%;
+  padding: 7px 0;
+  border-radius: var(--raio-item);
+  font-size: 12px;
+}
+
+.botao-abrir-privado:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* A faixa "arquivo privado" com o botao de nova credencial. */
+.barra-privado {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--rotulo);
+}
+
+.barra-privado[hidden] {
+  display: none;
+}
+
+.botao-credencial {
+  padding: 4px 9px;
+  border-radius: var(--raio-item);
+  font-size: 11px;
+}
+
+/* A pergunta de senha, por cima da janela inteira. */
+.modal-privado {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--sobreposicao);
+}
+
+.modal-privado[hidden] {
+  display: none;
+}
+
+.caixa-privado {
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-modal-nota);
+  border-radius: var(--raio-campo);
+  box-shadow: var(--sombra-popover);
+}
+
+.titulo-privado {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-forte);
+}
+
+.texto-privado {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--texto-2);
+}
+
+.texto-privado[hidden] {
+  display: none;
+}
+
+.campos-privado {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rotulo-privado {
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--rotulo);
+}
+
+.botoes-privado {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.botoes-privado button {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: var(--raio-item);
+  font-size: 11.5px;
+}
+
+.botoes-privado button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Uma credencial na lista: titulo com a chave e o olhinho, e login / senha embaixo. */
+.icone-chave {
+  flex: none;
+  display: flex;
+  align-items: center;
+  margin-top: calc((var(--linha-conteudo) - 13px) / 2);
+  color: var(--destaque-estado);
+}
+
+.titulo-credencial {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--texto-forte);
+  line-height: var(--linha-conteudo);
+}
+
+.botao-olhinho {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: calc((var(--linha-conteudo) - 22px) / 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--rotulo);
+}
+
+.botao-olhinho:hover {
+  color: var(--texto-forte);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.botao-olhinho.ligado {
+  color: var(--destaque-estado);
+}
+
+.linha-credencial {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 18px;
+  line-height: var(--linha-conteudo);
+}
+
+.rotulo-credencial {
+  flex: none;
+  width: 34px;
+  font-size: 10.5px;
+  color: var(--rotulo);
+}
+
+.valor-credencial {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--texto-secundario);
+  user-select: none;
+}
+
+.valor-credencial.revelado {
+  color: var(--texto-forte);
+  user-select: text;
+}
+
+.botao-copiar-campo {
+  flex: none;
+  padding: 1px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--texto-2);
+  font-size: 10.5px;
+}
+
+.botao-copiar-campo:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--texto-forte);
+}
+
+/* Com a tela da senha no lugar da lista, a lista some de verdade (o display do .lista vence o atributo hidden). */
+.lista[hidden] {
+  display: none;
+}
+
+.area-rascunho[hidden] {
+  display: none;
+}
+
+/* --- Folha livre (folha.js, tinta.js) ---------------------------------------------
+  Um editor de pagina (Quill) numa folha de largura fixa (794 px, um A4) que da zoom para
+  caber na janela, com o desenho de caneta (SVG) por cima. O editor e o desenho moram na
+  mesma folha, entao o zoom nao desalinha um do outro.
+
+  Cor do texto e marca-texto sao CLASSES (ql-color-<nome>, ql-bg-<nome>): o CSP bloqueia
+  style="" - e as cores de cada nome ficam so aqui.
+------------------------------------------------------------------------------------ */
+
+:root {
+  --folha-papel: #19191d;
+  --folha-fundo: #101012;
+  --folha-texto: #e8e9ee;
+  --folha-azul: #74c0fc;
+}
+
+.folha-livre {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* O display do .folha-livre (e dos botoes abaixo) vence o atributo hidden: aqui ele vale de novo. */
+.folha-livre[hidden],
+.folha-livre [hidden] {
+  display: none !important;
+}
+
+/* Barra de ferramentas: texto, caneta, marca-texto, borracha, e (com uma de desenho ligada) espessura, cores e desfazer. */
+.folha-ferramentas {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.folha-ferramenta,
+.folha-acao,
+.folha-espessura {
+  height: 24px;
+  min-width: 26px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--raio-item);
+  background: transparent;
+  color: var(--texto-secundario);
+  font-size: 13px;
+}
+
+.folha-ferramenta:hover:not(:disabled),
+.folha-acao:hover:not(:disabled),
+.folha-espessura:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--texto-forte);
+}
+
+.folha-ferramenta.ligada,
+.folha-espessura.ligada {
+  background: var(--segmentado-ativo);
+  border-color: var(--borda-modal-nota);
+  color: var(--texto-forte);
+}
+
+.folha-acao:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.folha-grupo-tinta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--divisoria);
+}
+
+/* O ponto que mostra a espessura: tres tamanhos. */
+.folha-espessura .ponto {
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.folha-espessura .ponto-0 { width: 3px; height: 3px; }
+.folha-espessura .ponto-1 { width: 6px; height: 6px; }
+.folha-espessura .ponto-2 { width: 10px; height: 10px; }
+
+.folha-cor-tinta,
+.folha-cor {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+}
+
+.folha-cor-tinta.ligada {
+  outline: 2px solid var(--texto-forte);
+  outline-offset: 1px;
+}
+
+/* A area que rola: a folha escalada fica no meio. scrollbar-gutter evita que a barra de rolagem, ao aparecer,
+   mude a largura e, com ela, o zoom. */
+.folha-area {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  background: var(--folha-fundo);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+}
+
+/* O tamanho da caixa e o da folha JA escalada (folha.js): e ela que da a altura da rolagem. */
+.folha-caixa {
+  position: relative;
+  margin: 12px auto;
+}
+
+.folha-papel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* Um A4 a 96 dpi (LARGURA_DA_FOLHA e ALTURA_MINIMA_DA_FOLHA em folha.js). */
+  width: 794px;
+  min-height: 1123px;
+  transform-origin: 0 0;
+  background: var(--folha-papel);
+  border-radius: 2px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+}
+
+/* O Quill: cresce com o texto (a rolagem e da area), e o visual e o da folha. */
+.folha-editor.ql-container {
+  height: auto;
+  font-family: var(--fonte-conteudo);
+  font-size: calc(var(--tamanho-conteudo) + 3px);
+  color: var(--folha-texto);
+}
+
+.folha-editor .ql-editor {
+  height: auto;
+  min-height: 1123px;
+  overflow-y: visible;
+  padding: 56px 64px;
+  line-height: 1.6;
+  color: var(--folha-texto);
+  caret-color: var(--folha-texto);
+}
+
+.folha-editor .ql-editor.ql-blank::before {
+  left: 64px;
+  right: 64px;
+  color: var(--rotulo);
+  font-style: normal;
+}
+
+.folha-editor .ql-editor h1 { font-size: 2em; line-height: 1.25; margin: 0.5em 0 0.2em; }
+.folha-editor .ql-editor h2 { font-size: 1.5em; line-height: 1.3; margin: 0.45em 0 0.2em; }
+.folha-editor .ql-editor h3 { font-size: 1.2em; line-height: 1.35; margin: 0.4em 0 0.15em; }
+
+.folha-editor .ql-editor blockquote {
+  margin: 0.3em 0;
+  padding-left: 14px;
+  border-left: 3px solid var(--destaque);
+  color: var(--texto-2);
+}
+
+.folha-editor .ql-editor .ql-code-block-container {
+  margin: 0.4em 0;
+  padding: 10px 14px;
+  border-radius: var(--raio-item);
+  background: rgba(255, 255, 255, 0.06);
+  font-family: var(--fonte-mono);
+  font-size: 0.92em;
+}
+
+.folha-editor .ql-editor hr {
+  margin: 1em 0;
+  border: 0;
+  border-top: 1px solid var(--borda-fantasma);
+}
+
+.folha-editor .ql-editor img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+/* Cores do texto e do marca-texto (classes, nunca style=""). */
+.folha-editor .ql-color-branco { color: #ffffff; }
+.folha-editor .ql-color-vermelho { color: #ff6b6b; }
+.folha-editor .ql-color-laranja { color: #ffa94d; }
+.folha-editor .ql-color-amarelo { color: #ffe066; }
+.folha-editor .ql-color-verde { color: #69db7c; }
+.folha-editor .ql-color-azul { color: #74c0fc; }
+.folha-editor .ql-color-roxo { color: #b197fc; }
+.folha-editor .ql-color-rosa { color: #faa2c1; }
+
+.folha-editor .ql-bg-amarelo { background: rgba(255, 224, 102, 0.28); border-radius: 2px; }
+.folha-editor .ql-bg-verde { background: rgba(105, 219, 124, 0.26); border-radius: 2px; }
+.folha-editor .ql-bg-azul { background: rgba(116, 192, 252, 0.26); border-radius: 2px; }
+.folha-editor .ql-bg-rosa { background: rgba(250, 162, 193, 0.28); border-radius: 2px; }
+.folha-editor .ql-bg-laranja { background: rgba(255, 169, 77, 0.28); border-radius: 2px; }
+.folha-editor .ql-bg-cinza { background: rgba(173, 181, 189, 0.3); border-radius: 2px; }
+
+/* A camada de desenho: por cima do texto, do tamanho da folha. Quem liga e desliga o pointer-events e a tinta.js. */
+.folha-tinta {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  overflow: visible;
+}
+
+/* Com uma ferramenta de desenho ligada, arrastar nao seleciona texto. */
+.folha-livre.desenhando .folha-editor {
+  user-select: none;
+}
+
+/* A barra que flutua sobre o texto selecionado, e o menu "/": dentro da area que rola, na posicao da selecao. */
+.folha-flutuante {
+  position: absolute;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-modal-nota);
+  border-radius: var(--raio-campo);
+  box-shadow: var(--sombra-popover);
+}
+
+.folha-formato {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--raio-item);
+  background: transparent;
+  color: var(--texto-2);
+  font: 600 12px var(--fonte);
+}
+
+.folha-formato:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.folha-formato.ligado {
+  background: var(--segmentado-ativo);
+  color: var(--texto-forte);
+}
+
+.folha-formato.italico { font-style: italic; }
+.folha-formato.sublinhado { text-decoration: underline; }
+.folha-formato.riscado { text-decoration: line-through; }
+
+.folha-grupo-cor {
+  position: relative;
+  display: flex;
+}
+
+/* A fileira de cores abre logo abaixo do botao da barra. */
+.folha-cores {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-modal-nota);
+  border-radius: var(--raio-campo);
+  box-shadow: var(--sombra-popover);
+}
+
+.folha-cor.sem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--texto-secundario);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.folha-menu {
+  position: absolute;
+  z-index: 9;
+  width: 210px;
+  max-height: 330px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-modal-nota);
+  border-radius: var(--raio-campo);
+  box-shadow: var(--sombra-popover);
+}
+
+.folha-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--raio-item);
+  font-size: 12px;
+  color: var(--texto-2);
+  cursor: pointer;
+}
+
+.folha-menu-item.destacado {
+  color: var(--texto-forte);
+  background: rgba(168, 57, 58, 0.18);
+}
+
+.folha-menu-dica {
+  font: 11px var(--fonte-mono);
+  color: var(--rotulo);
+}
+
+/* A folha no seletor: o mesmo desenho do cadeado e do relogio, em azul quando ligada. */
+.seletor-folha {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--rotulo);
+}
+
+.seletor-folha rect,
+.seletor-folha path {
+  fill: none;
+  stroke: currentColor;
+}
+
+.seletor-folha:hover {
+  color: var(--texto-2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.seletor-folha.marcado {
+  color: var(--folha-azul);
+}
+
+.seletor-folha.bloqueado {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.seletor-folha.bloqueado:hover {
+  background: transparent;
+  color: var(--rotulo);
+}
+
+.seletor-folha-fixa {
+  flex: none;
+  color: var(--folha-azul);
+}
+
+.seletor-folha-fixa rect,
+.seletor-folha-fixa path {
+  fill: none;
+  stroke: currentColor;
 }

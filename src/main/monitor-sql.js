@@ -42,8 +42,14 @@ const TEMPO_APOS_SAIR = 5000;
  * Comeca com uma das palavras de SQL, ignorando espacos e caixa. DECLARE
  * entra porque muito script comeca declarando as variaveis - sem ele, a
  * copia nunca era formatada sozinha.
+ *
+ * Antes da palavra podem vir comentarios ("-- busca", "/ * ... * /") e um ";":
+ * o ";WITH" e o jeito de comecar um CTE no SQL Server, e quem copia um
+ * trecho de script leva o comentario junto. Um texto de log com "select" no
+ * MEIO continua nao contando: so o que vem ANTES da primeira palavra e que
+ * pode ser comentario.
  */
-const PARECE_SQL = /^\s*(SELECT|INSERT|UPDATE|DELETE|WITH|DECLARE)\b/i;
+const PARECE_SQL = /^(?:\s|;|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)*(SELECT|INSERT|UPDATE|DELETE|WITH|DECLARE)\b/i;
 
 /** Quando a janela da frente foi remota pela ultima vez. */
 let ultimaVezRemoto = 0;
@@ -145,11 +151,16 @@ async function verificar() {
 
   const tipo = ehXml ? 'xml' : ehJson ? 'json' : 'sql';
   diagnostico.registrar(`${tipo}-auto`, { janela: titulo, caracteres: texto.length });
+
+  // SQL copiada sem o fim (parenteses abertos): formatou assim mesmo, e o aviso diz.
+  const incompleta = resultado.faltavam
+    ? ` (${ferramentaSql.descreverIncompleta(resultado.faltavam)})`
+    : '';
   aviso.mostrar(
     {
       xml: 'XML da Área de Trabalho Remota formatado. Cole com Ctrl + V.',
       json: 'JSON da Área de Trabalho Remota formatado. Cole com Ctrl + V.',
-      sql: 'SQL da Área de Trabalho Remota formatada. Cole com Ctrl + V.',
+      sql: `SQL da Área de Trabalho Remota formatada${incompleta}. Cole com Ctrl + V.`,
     }[tipo]
   );
 }

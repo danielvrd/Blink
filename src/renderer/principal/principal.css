@@ -135,7 +135,10 @@ body {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* Uma aba mais alta que a janela (o Fast Note ganha opcoes a cada pack) rola
+     em vez de cortar o rodape. Cabendo, nada aparece. */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /*
@@ -380,4 +383,15 @@ body {
   color: var(--rotulo);
   margin-bottom: 10px;
   text-wrap: pretty;
+}
+
+/* Observacao pequena embaixo de um campo (ex.: "ligue o relogio de um arquivo"). */
+.nota-campo {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--rotulo);
+}
+
+.nota-campo[hidden] {
+  display: none;
 }

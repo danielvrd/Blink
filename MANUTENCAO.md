@@ -95,11 +95,35 @@ A Release sai publicada, não como rascunho — o app não enxerga rascunho.
 
 - Procura ao iniciar e a cada 6 horas.
 - Achou: baixa em segundo plano e avisa por notificação.
-- Baixou: avisa de novo, e o menu da bandeja passa a mostrar **"Reiniciar para atualizar"**.
+- Baixou: avisa de novo, o menu da bandeja passa a mostrar **"Reiniciar para atualizar"** e todas as
+  janelas (principal, Fast Note e Diff) mostram o botão **"Atualização disponível"**.
 - Se o usuário não clicar, a atualização se aplica sozinha na próxima vez que o Blink fechar.
 
-Nada disso funciona pelo `npm start`: sem instalador não há o que trocar, e o menu mostra o item
-desabilitado.
+Nada disso funciona pelo `npm start`: sem instalador não há o que trocar, o menu mostra o item
+desabilitado e o botão das janelas fica escondido.
+
+**A regra que não pode voltar atrás: "pronta" não encerra a busca.** Até a 0.6.1 o `procurar()` do
+`src/main/atualizacao.js` não procurava nada com a atualização baixada. Quem deixava o Blink aberto
+instalava a 0.5.0 mesmo com a 0.6.0 já publicada (o usuário subiu 0.4.0 → 0.5.0 → 0.6.0 um degrau
+por vez). O `electron-updater` sempre pega a última Release; o bloqueio era nosso. Hoje:
+
+- `procurar()` só deixa de procurar enquanto está **baixando**. Com uma versão pronta ele procura de
+  novo, e o estado continua `'pronta'` durante a checagem (`versaoBaixada` guarda o instalador que
+  já está no disco; sem isso o botão sumiria a cada checagem de 6 horas). A mesma versão achada de
+  novo não muda nada nem avisa de novo.
+- `instalarAgora()` (botão ou menu) faz uma última olhada (`checkForUpdates()`, limite de 10 s).
+  Saiu algo mais novo que o baixado → baixa e só instala no `update-downloaded` ("Saiu a versão X; o
+  Blink reinicia quando terminar de baixar"). Sem internet, travado ou erro → instala o que já está
+  baixado. O `quitAndInstall` nunca roda duas vezes (`reiniciando`).
+- Cada mudança de estado vai para todas as janelas (`atualizacao:situacao`, `BrowserWindow
+  .getAllWindows()`) e o clique volta por `atualizacao:instalar`. O botão é um componente comum,
+  `src/renderer/comum/atualizacao.js` (carregado depois do `ui.js`), que se encaixa no
+  `.botoes-janela` de cada cabeçalho; o texto curto ("Atualizar") vale abaixo de 380 px
+  (`base.css`) e, no Diff, abaixo de 700 px (`diff.css`: o cabeçalho dele já é apertado, e no
+  tamanho mínimo o título cede com reticências em vez de os botões quebrarem).
+- Teste: `.verif/teste-atualizacao.js` (electron-updater falso por `require.cache`; `app.isPackaged`
+  forçado a `true`). Contra a versão antiga do módulo ele falha no caso "0.5.0 pronta, procurar() não
+  procura".
 
 ## Organização do código
 
@@ -113,7 +137,8 @@ src/
 
 É JavaScript puro: **sem TypeScript, sem React, sem bundler**. O código do `src/renderer/` roda
 direto no navegador do Electron, sem passo de build. As bibliotecas do npm ficam todas no processo
-`main` e são acessadas pelas telas através do `preload`. Os comentários estão em português.
+`main` e são acessadas pelas telas através do `preload` — **com uma exceção: o Quill**, o editor da folha
+livre, que a tela do Fast Note carrega direto de `node_modules` (ver "Folha livre"). Os comentários estão em português.
 
 ### Por que as janelas não são transparentes
 
@@ -315,14 +340,53 @@ resultado não bater com o que entrou, valem a saída e o comportamento de antes
 `functionCase` e `dataTypeCase` da `sql-formatter` recebem a mesma opção das palavras-chave
 (`opcoes()`); o risco aceito é uma coluna com nome de tipo (`date`, `text`) mudar só de caixa.
 
+#### SQL: o estilo "Alinhado" (`estilo-sql.js`) e a SQL incompleta
+
+`arrumar()` em `ferramenta-sql.js` aplica, nesta ordem, o layout de procedure (`layout-tsql.js`, só T-SQL)
+e o estilo. `sql.estilo` é `'alinhado'` (padrão) ou `'classico'`; **configuração antiga não tem o campo e
+vale 'alinhado'**, então quem lê usa `!== 'classico'` (o campo não é `required` no schema). O estilo vale
+para todos os dialetos. `'classico'` é exatamente a saída de antes (o golden prova, byte a byte).
+
+`estilo-sql.js` trabalha por **linhas** sobre a saída da biblioteca, com seis regras (cada uma re-tokeniza o
+texto, via `linhasDe()`): `regraWith` (`WITH` sozinho + CTEs → `WITH Nome AS (`, e a seção dos CTEs um nível
+para a esquerda), `regraPontoEVirgulaWith` (`;` que abre o comando + `WITH` → `;WITH`; o `;` que fecha o
+comando anterior não é tocado), `regraFrom` (`FROM` sozinho + 1ª tabela na linha de baixo; não junta se a
+linha seguinte começa com `(` ou comentário), `regraOn` (AND/OR do `ON` alinhados na coluna do `ON`; e o bloco
+`ON (` … `)` vira `ON (cond1` / AND sob o ON / `)` colado na última condição) e `regraCase` (END do CASE na
+coluna dos WHEN, com pilha de CASE) e `regraDeclare` (sem linha em branco entre DECLAREs).
+A unidade de indentação é a da aba: com Tab, o **nível** é Tab e o **alinhamento** (a distância até o `ON`)
+são espaços.
+
+Cautelas (cada uma tem teste): linha que começa **dentro** de um texto de várias linhas ou de um
+comentário de bloco é "opaca" e nunca é tocada; bloco do `ON` com algo aninhado em várias linhas, com
+comentário de linha na última condição (o `)` cairia dentro do comentário) ou com `saldo` de parênteses ≠ 0
+numa linha fica como está; qualquer exceção ou dúvida devolve `null` e vale o texto de antes. **A TRAVA**
+(igual à do `layout-tsql.js`): `assinatura()` (em `lexer-sql.js`) da saída tem que ser idêntica à da
+entrada, e sem espaços o texto também — só espaços e quebras mudam. É idempotente, e o texto já alinhado,
+formatado de novo, volta igual (`teste-estilo-sql.js` confere os dois no corpus e num fuzz).
+
+**SQL incompleta** (`formatar()`): se a biblioteca recusa e `lexer.parentesesAbertos(texto)` dá de 1 a 5
+(fora de texto e comentário; `null` com aspas abertas ou ")" a mais), formata `texto + \n + ")".repeat(k)` (a quebra de linha antes: se o texto termina em `-- comentário`, o `)` não pode cair dentro dele), passa o
+layout e o estilo **com o texto equilibrado** e só no fim `tirarFechamentos()` remove os `k` últimos `)`
+(por token; se o fim não for esse, recusa como antes). O resultado traz `faltavam: k`, que a bind e o
+modo automático usam no aviso ("estava incompleta: faltava fechar k parêntese(s)").
+
+`PARECE_SQL` (modo automático) aceita comentários (`--` de linha, `/* */`), espaços e `;` antes da primeira
+palavra: `;WITH` e `-- busca` + `SELECT`. Um texto de log com `select` no **meio** continua não contando.
+
 #### O teste de referência ("golden") do Formatter
 
 Como o Formatter mexe em texto de produção, toda mudança nele é conferida contra o **comportamento
 anterior**, e não só contra testes escritos à mão. Em `.verif/` (fora do git):
 
-- `corpus-formatter.js`: ~300 entradas determinísticas (SQL, procedures, XML, JSON, listas, logs).
+- `corpus-formatter.js`: ~365 entradas determinísticas (SQL, procedures, XML, JSON, listas, logs). As do
+  estilo Alinhado (os 5 exemplos do arquivo do Daniel, `;WITH`, comentário + WITH, WITH incompleto, formas de
+  JOIN/CASE/CTE) ficam em `corpus-estilo.js`.
 - `golden.js`: roda o `executar()` **e** o `monitor.verificar()` reais sobre o corpus, em três
-  configurações (T-SQL maiúsculas/4, T-SQL minúsculas/tab, PostgreSQL/2), com teclado e aviso falsos.
+  configurações (T-SQL maiúsculas/4, T-SQL minúsculas/tab, PostgreSQL/2) **em estilo `classico`** — têm que
+  bater byte a byte com o baseline —, e em mais três `...-alinhado`, que não têm baseline: cada resultado é
+  comparado com o da gêmea clássica da mesma entrada e só pode diferir em espaços e quebras de linha (no
+  automático, uma SQL que já estava no layout clássico passa a ser re-estilizada, com aviso).
   `gerar` grava `golden-antes.json` (só com `src/` igual ao commit de referência); `atual` roda e
   compara; `comparar` reavalia as regras sobre o último resultado, sem recoletar.
 - `golden-regras.js`: as **mudanças intencionais**, uma regra por etapa, cada uma com a saída esperada
@@ -330,9 +394,57 @@ anterior**, e não só contra testes escritos à mão. Em `.verif/` (fora do git
   fora das regras é regressão. Ao final, `golden-relatorio.md` lista o antes/depois de cada mudança.
 
 O baseline do pack de 0.6.0 foi gerado no commit `6c8b367` (v0.5.0); o do pack seguinte (`DECLARE`, botões
-do Fast Note), no `45fc94d` (v0.6.0). Para cada rodada de mudanças no Formatter, gere um baseline novo do
+do Fast Note), no `45fc94d` (v0.6.0). O do pack 0.7 (estilo Alinhado, SQL incompleta, `PARECE_SQL`) foi gerado no `0877cb5` (v0.6.1; a
+árvore de trabalho tinha só mudanças das fases 1 a 3, que não tocam no Formatter — conferido com `git diff`
+nos arquivos dele — e por isso foi gerado com `--forcar`). As regras desse pack, em `golden-regras.js`:
+`sql-incompleta` e `parece-sql-comentario-e-ponto-e-virgula`. Para cada rodada de mudanças no Formatter, gere um baseline novo do
 commit atual (`electron .verif/golden.js gerar --forcar`, com `src/` limpo), esvazie as regras e acrescente
 ao corpus as entradas do que vai mudar.
+
+### Diff Checker: cores do código (`realce.js`) e temas
+
+**Onde roda:** no processo principal, como as outras bibliotecas. `ferramenta-diff.js`
+(`compararComRealce()`, usado na bind e no `abrirExemplo`) chama `comparador.comparar()` e depois
+`realce.anexar(linhas)`, que põe `tokensEsquerda`/`tokensDireita` em cada linha: uma lista de pedaços
+`[classe, texto]` (`classe` = escopo do highlight.js sem o `hljs-`, ou `null`). Os pedaços de uma linha,
+juntos, são a linha — o realce confere (`pedacosPorLinha`) e, se não bater, não anexa nada. Qualquer
+exceção do realce é engolida: a comparação abre sem cor. Textos com mais de 300 KB (soma dos dois
+lados) não são realçados; 300 KB levam ~200 ms.
+
+**Descobrir a linguagem (a parte delicada).** O `highlightAuto` sozinho **não serve**: a relevância dele
+cresce com o número de linhas e não separa código de texto comum (um log de 20 linhas pontuou mais que
+5 linhas de JavaScript; uma prosa saiu "css"; JSON de uma linha saiu "css"; Java saiu "typescript").
+Por isso são duas etapas: (1) **marcadores** por linguagem (`MARCADORES` em `realce.js`: `const x =`,
+`def f():`, `SELECT ... FROM`, tag fechada, JSON válido…) dizem quais linguagens são candidatas — sem
+nenhuma, **sem cor** (melhor sem cor que cor aleatória num log ou numa lista); (2) com mais de uma
+candidata (JavaScript/TypeScript, CSS/SCSS), o `highlightAuto` desempata **só entre elas**. Cuidados:
+Java e C# compartilham `public class` (`COMPARTILHADOS`: só vale se nenhum dos dois tem marcador
+exclusivo); marcadores "fracos" (YAML, PHP) exigem 3 linhas; YAML só conta linha **aninhada** (`Nome: Ana`
+solto é formulário/e-mail); Markdown só com título **e** outro sinal (`#` também é comentário de
+bash/python); SQL em prosa inglesa ("select the item from the menu") não conta — SELECT...FROM em
+maiúsculas, ou minúsculas com `*`/lista com vírgula. `teste-realce.js` tem as 24 amostras de código
+(e a linguagem esperada) e 20 textos que **não podem** ganhar cor: acrescente ali o caso novo antes de
+mexer nos marcadores. Só 14 linguagens são registradas (`highlight.js/lib/core` + cada módulo): carregar
+as 190 custaria memória e tempo de abertura.
+
+**Na tela** (`diff.js`, `escrever()`): as cores e os pedaços "mudou" do comparador dividem a linha em
+lugares diferentes; `corridas()` junta os dois por posição de caractere, e cada corrida vira um
+`<span class="hl-<escopo> mudou">` — sempre por `textContent`, nunca `innerHTML`. Dados de realce que não
+somam a linha são ignorados (texto puro). As cores **seguem o texto**: uma linha aplicada para a direita
+mostra o texto da esquerda com as cores da esquerda (`tokensEsquerda()`/`tokensDireita()`).
+
+**Temas** (`diff.tema`: `darkplus` (padrão), `monokai`, `onedark`, `dracula`, `githubdark`, `semcores`; lista
+em `config.js` `TEMAS_DIFF` e em `aparencia.js` `TEMAS` — o teste confere). Em `diff.css`, cada escopo do
+highlight.js aponta para uma **variável** (`--hl-keyword`, `--hl-string`…) e cada tema (classe
+`tema-<nome>` no `<html>`, posta por `aparencia.js`) só define as variáveis; `semcores` não define
+nenhuma e o `var(--hl-x, inherit)` cai na cor da célula (uma regra reafirma o texto mais claro do
+`.mudou`). Escopos aninhados levam as duas classes (`hl-meta hl-string`): vale a regra que vem **por
+último** no CSS, então a ordem das regras vai do mais geral ao mais específico. `diff.tema` também dispara
+o `config:mudou` (`AVISAM_AS_JANELAS`), e a troca vale na hora na janela aberta. Para um tema novo:
+acrescente em `TEMAS_DIFF`, em `TEMAS` (rótulo) e as variáveis em `diff.css`.
+
+Testes: `teste-realce.js` (Node) e `teste-diff-temas.js` (Electron: spans `hl-*`, o "mudou" com a cor de
+string, cada tema trocado pela aba com o Diff aberto, "Sem cores", linha aplicada, reabrir, texto comum).
 
 ### Diff Checker: destaque dentro da linha
 
@@ -360,6 +472,214 @@ copiado). O ✓ é um botão que faz `aplicadas.delete(i)` e redesenha.
 A calha do meio tem 60px (`grid-template-columns: 1fr 60px 1fr`) para caber as duas setas; as
 "páginas" cinza atrás de cada lado usam `calc(50% - 30px)` e precisam acompanhar essa largura se ela
 mudar de novo.
+
+### Arquivos com cadeado (`privado.js`, `notas-privadas.js`, `area-segura.js`)
+
+**Formato no disco.** O `.md` inteiro vira `BLINK-PRIVADO 1` + quebra de linha + uma linha de JSON
+`{"kdf":{"nome":"scrypt","salt","N":32768,"r":8,"p":1},"iv","tag","dados"}` (base64). Cifra **AES-256-GCM**, chave
+do **scrypt** (N=2^15, r=8, p=1, sal de 16 bytes, ~100 ms, 32 MiB — o `maxmem` sobe para 128 MiB porque o
+limite padrão do Node é exatamente o que ele usa), iv de 12 bytes **sorteado a cada gravação**, tag de 16 bytes, e o
+cabeçalho como dado autenticado (AAD). A senha é normalizada em **NFC** (o mesmo "ç" composto ou decomposto abre
+igual). Senha errada e arquivo adulterado dão o **mesmo** erro (`SenhaIncorretaOuAdulterado`); cabeçalho/JSON
+estragado é `FormatoInvalido`, e parâmetros do scrypt absurdos (N de 2^30…) são recusados **antes** de gastar
+memória. Conteúdo cifrado: `{ v: 1, cabecalho, rodape, topicos: [{tipo:'texto',texto} | {tipo:'credencial',titulo,login,senha}] }`.
+O arquivo é reconhecido **pelo cabeçalho** (`notas.ehArquivoPrivado`, lê 24 bytes), nunca por uma lista no config.
+
+**O que nunca pode ir para disco em claro:** o `.md`, o `config.json`, o `blink.log` (`teste-privado.js` varre os
+três atrás de textos conhecidos) e arquivo temporário (a gravação escreve o texto **já cifrado** em
+`.nome.md.<hex>.tmp` ao lado e renomeia por cima; uma queda deixa o original inteiro). **Trava no resto do Blink:**
+`salvarTopicos`/`adicionar`/`limpar`/`salvarDiaHistorico`/`migrarParaHistorico` recusam um arquivo privado (gravar texto
+puro por cima destruiria o cifrado), o relógio não liga nele, `ler()` devolve `{ privado: true }` sem tópicos, e
+`arquivoDaily()` ignora privados.
+
+**Sessão (`notas-privadas.js`).** Abrir com a senha deixa, **só na memória do processo principal**, a chave derivada e o
+conteúdo decifrado; gravar de novo usa a mesma chave com outro iv (sem repetir o scrypt). A tela recebe os itens
+`{tipo:'texto'}` e `{tipo:'credencial', id, titulo}` — **login e senha nunca vão para a tela**, só pelo olhinho
+(`revelar`, que deriva a chave de novo e compara em tempo constante), e o `id` é sorteado a cada abertura. Copiar
+(`copiar`) acontece no principal. Senha errada: atraso de 1 s por arquivo no **principal** (e a tela também para o botão).
+**Trancar** (`trancar`/`trancarTudo`, que zera a chave com `fill(0)`): ao trocar de arquivo (a tela chama
+`privado:trancar`), ao **minimizar** e ao **fechar** a janela (`janelas.js`; o `minimize` também manda
+`privado:trancou` para a tela apagar o conteúdo) e ao **recarregar** (`did-start-loading`). A tela apaga o DOM —
+até o texto do modal "Ver credencial", que cita o título (o teste confere que **nada** do conteúdo sobra no
+`outerHTML` depois de trocar de arquivo ou minimizar). Strings em JavaScript não se zeram; é o limite da proteção
+em memória.
+
+**Copiar sem histórico (`area-segura.js`).** O Windows guarda o histórico (Win+V) e sincroniza com a nuvem; os formatos
+`ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory` (DWORD 0) e `CanUploadToCloudClipboard`
+(DWORD 0) pedem para ficar de fora. A API de clipboard do Electron não junta texto e formato próprio (cada
+`writeBuffer` apaga o anterior), então é feito pelo Win32 via **koffi**: `OpenClipboard(hwnd de uma BrowserWindow)` (com
+HWND nulo o `SetClipboardData` falha), `EmptyClipboard`, texto em `CF_UNICODETEXT` e os três formatos, tudo numa operação.
+**NUNCA escreva em memória nativa pelo JavaScript aqui:** `koffi.view()` (um `ArrayBuffer` sobre memória de fora)
+**derruba o processo inteiro** no Electron (`napi_get_last_error_info`, sem exceção para capturar) — foi descoberto na
+sonda, não no uso. O bloco vem de `GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT)` (zerado: os DWORD 0 já estão prontos) e o
+texto entra por `lstrcpyW` (o koffi passa a string do JS). Qualquer falha cai no `clipboard.writeText` e `escrever()`
+devolve `false` — a tela avisa "pode aparecer no histórico do Windows". O teste confere os três formatos com
+`IsClipboardFormatAvailable`; **que o Win+V de fato deixa de mostrar** só dá para ver na mão. Limpeza: `setTimeout` de
+30 s que só limpa se o clipboard ainda tiver a senha (e `before-quit` limpa também); `definirTempoDeLimpeza` e
+`definirAtrasoAposErro` existem para os testes.
+
+**Tela (`note.js`, `seletor.js`).** O cadeado entra antes do relógio no seletor (apagado nos arquivos com relógio, e o
+relógio apagado nos privados; o `task.md` não tem nenhum dos dois). A lista de um arquivo privado mistura strings e
+`{ credencial: true, id, titulo }`. `trancarAoSair()` é chamado em **todo** lugar que troca `arquivo` (escolher,
+"/outra nota", tarefas). O `.lista[hidden]` precisa de `display: none` explícito: o `display` do `.lista` vence o atributo,
+e a tela da senha aparecia embaixo de uma lista "escondida" (o teste olha o **estilo calculado**, não a propriedade).
+Decisão: o título da credencial fica visível (login e senha mascarados) — um gerenciador de senhas precisa mostrar qual
+é qual; muda em `montarCredencial` se preferir mascarar.
+
+Testes: `teste-privado.js` (parte A: criptografia, sessão, trava, cópia com limpeza e formatos; parte B: a tela, o
+seletor, a senha, as credenciais, o olhinho, trancar ao trocar/minimizar/recarregar/fechar, o `/`, Esc, tirar o cadeado).
+
+### Folha livre (`notas-livres.js`, `folha.js`, `tinta.js`)
+
+**Formato no disco.** O `.md` **nunca** muda neste modo. A folha mora em `<pasta de notas>/.blink/livre/<nome>.json`:
+`{ versao: 1, conteudo: <Delta do Quill>, tinta: [{ t: 'caneta'|'marca', c: '#rrggbb', w, p: [[x, y], ...] }], atualizado }`,
+e as imagens em `<pasta>/.blink/anexos/<uuid>.<ext>`. Quem está em folha livre é a lista `notasLivres` do config (só o
+processo principal grava, como o relógio). `salvar` valida tudo antes de escrever (Delta só de `{ insert, attributes? }`;
+traço com tipo caneta/marca, cor `#rrggbb`, espessura ≤ 80, ≤ 20 mil traços e ≤ 400 mil pontos; JSON ≤ 25 MB) e grava
+pelo arquivo temporário + `rename`. O tipo de uma imagem sai dos **bytes** (PNG/JPEG/GIF/WebP), nunca da extensão; ≤ 15 MB.
+
+**Ligar e desligar.** `ativar` recusa o `task.md`, arquivo com relógio e arquivo com cadeado; copia os tópicos do `.md`
+como lista (`deltaDosTopicos`: cada tópico uma linha de lista, as linhas a mais do tópico recuadas) ou, se já existe um
+`.json` (ligado antes), devolve a folha como estava. `desativar` só tira o arquivo de `notasLivres`: a folha e as imagens
+ficam. A exclusividade tem trava dos **dois lados** (`definirHistorico`, `salvarTopicos`, `salvarDiaHistorico`,
+`privadas.ativar` recusam um arquivo livre) e o resto do Blink escreve nele pelo caminho certo: `notas:adicionar`
+(o `/nome texto`) vira `livres.adicionarTexto`. Excluir manda para a Lixeira o `.json` e as imagens que **nenhuma outra
+folha** cita (`descartarFolha`) e limpa o config. Imagens que ficaram sem uso porque o usuário apagou a imagem da folha
+**não** são limpas (não há coleta de órfãs).
+
+**O protocolo `blink-anexo://<uuid>.<ext>`.** `registerSchemesAsPrivileged` (standard, secure, fetch) tem que rodar
+**antes** do `ready` (`main.js` chama `registrarEsquema()` logo depois dos `require`; o teste também) e o `protocol.handle`
+depois (`atenderProtocolo`, no `whenReady`, antes do `ipc.registrar()`). Só serve o nome que casa com `NOME_DE_ANEXO`
+(`^[0-9a-f-]{36}\.(png|jpe?g|gif|webp)$`) dentro da pasta de anexos; o resto é recusado. O parser de URL normaliza
+(`BLINK-ANEXO://UUID.PNG` e `blink-anexo:///uuid.png` caem no **mesmo** arquivo permitido, nunca em outro; `%2e%2e` dá erro
+de rede) — quem decide é sempre o nome exato. CSP da tela do Fast Note: `img-src 'self' data: blink-anexo:`.
+
+**O Quill (`folha.js`).** `quill@2.0.3`, versão exata, carregado por `<script>` direto de `node_modules/quill/dist/quill.js`
+(+ `quill.core.css`) no `note/index.html`: o `electron-builder` leva a dependência para o `app.asar`. É a única biblioteca
+do npm usada na tela. O `npm audit` aponta um aviso **baixo** do Quill (GHSA-v3m3-f69x-jf25) sobre a exportação para HTML:
+o Blink só usa o **Delta em JSON** — nunca `getSemanticHTML()`; não passe a usá-lo, nem `dangerouslyPasteHTML` com conteúdo
+de fora (o matcher `IMG` descarta qualquer imagem que não seja `blink-anexo://`).
+- **Cores por classe.** O CSP bloqueia `style=""`, e o `formats/color` e o `formats/background` padrão do Quill 2 escrevem
+  estilo inline. Foram trocados por `ClassAttributor` com **lista fechada** de nomes (`ql-color-<nome>`, `ql-bg-<nome>`);
+  os nomes estão em `folha.js` (`CORES_DO_TEXTO`, `CORES_DO_MARCA_TEXTO`) e as cores em `note.css`. O teste confere que o
+  editor não tem nenhum `[style]`.
+- **Blots próprios.** `divider` (`BlockEmbed` com `<hr>`) e a imagem, cujo `sanitize` só aceita `blink-anexo://<uuid>.<ext>`
+  (o padrão do Quill aceitaria http, https e data).
+- **Atalhos de Markdown** entram pelas **opções** `modules.keyboard.bindings`, não por `addBinding()`: o Enter padrão do
+  Quill é registrado logo depois das opções e, se os nossos viessem depois dele, nunca seriam chamados. O Quill 2 já faz
+  `- `, `* `, `1. ` e `[] `. O formato de bloco de código volta como `'code-block': 'plain'`.
+- **Menu `/`.** `getSelection()` dentro do `text-change` ainda devolve a posição de **antes** do que foi digitado, então
+  o menu é atualizado com `setTimeout(0)`. O teclado dele (setas, Enter, Tab, Esc) é um `keydown` em captura no
+  `.ql-editor` com `stopImmediatePropagation`, e o Esc fechar só o menu depende disso (senão chega no `note.js` e minimiza).
+- **Posição da barra e do menu** usa `getBoundingClientRect` (que já vem com o zoom), não `quill.getBounds`.
+
+**Zoom.** A folha tem 794 px de largura (um A4) e `min-height: 1123px`, fixos no CSS (`.folha-papel`);
+`transform: scale(zoom)` com `zoom = min(1, (largura da área − 24) / 794)`. A `.folha-caixa` tem o tamanho **já
+escalado** (é ela que dá a altura da rolagem). O `ResizeObserver` reencaixa dentro de um `requestAnimationFrame` (ajustar
+tamanho de dentro do observador dá "ResizeObserver loop completed…" no console — o teste vigia isso), e a área usa
+`scrollbar-gutter: stable` para a barra de rolagem não mudar a largura e, com ela, o zoom.
+
+**A tinta (`tinta.js`).** Um `<svg>` do tamanho da folha por cima do editor. Cada traço guarda pontos em **coordenadas
+da folha** (`(clientX − svg.left) / zoom`, 1 casa decimal), então o zoom não desalinha o desenho. O SVG só pega o mouse
+com uma ferramenta de desenho ligada (`svg.style.pointerEvents`, pelo CSSOM por causa do CSP); com "texto", o clique cai no
+editor. A borracha apaga o **traço inteiro** tocado (raio 7). Desfazer/refazer são só da tinta (o texto usa os do Quill);
+com uma ferramenta de desenho ligada o Ctrl+Z/Y da janela valem para a tinta.
+
+**Gravar.** `folha.js` junta as mudanças e avisa a tela 1 s depois da última; `note.js` chama `salvarAgora()` (assíncrono).
+Minimizar (`visibilitychange`) grava; fechar/recarregar (`beforeunload`) usa `salvarSincrono` (`ipcRenderer.sendSync` → o
+principal escreve de forma síncrona: uma gravação assíncrona não termina antes de a janela morrer); trocar de arquivo e
+desligar a folha gravam **antes**. Excluir chama `folha.esvaziar()` antes, para uma gravação pendente não recriar o `.json`
+(e `salvar` recusa quem não está mais em `notasLivres`). Gravação recusada deixa a folha "suja" e avisa na dica.
+Uma folha com JSON estragado no disco abre **vazia** e é sobrescrita na próxima gravação.
+
+**Janela.** `janelas.notaLivre` (padrão 760×600, mínimo 480×420) é lembrado **separado** de `nota`. A tela avisa o modo
+com `janela:modoNota` quando `desenhar()` vê o modo mudar (e sempre na primeira vez, para um recarregar acertar o estado
+do principal) → `janelas.definirModoNota`: troca o tamanho e o tamanho **mínimo**, limita à área útil do monitor e traz a
+janela para dentro da tela. `lembrarTamanho` aceita uma função para gravar no nome certo. O `note.js` também impede o
+`drop` de arquivo fora do editor (senão o Electron abre a imagem no lugar do Fast Note).
+
+Testes: `teste-folha.js` (parte A: armazenamento, validação, imagens, protocolo, Lixeira; parte B: a tela — seletor,
+atalhos, menu `/`, barra, gravar/fechar/abrir, colar imagem, caneta/marca-texto/borracha/desfazer, zoom em dois tamanhos de
+janela, tamanhos por modo, desligar/ligar, C, vassoura, `/nome texto`, excluir, console sem erros). As capturas ficam em
+`.verif/folha-*.png`.
+
+### Tarefas concluídas → daily (`notas.alternarTarefa`)
+
+**Formato no `task.md`:** a data da conclusão fica **escondida** no fim da tarefa, num comentário que nenhum
+editor mostra: `- [x] texto <!-- feita 2026-10-01 -->` (tarefa de várias linhas: no fim da última). Os
+arrays do renderer continuam sendo **strings** — o comentário é parte do texto (`separarTarefas`/
+`montarTarefas` não mudaram). A tela nunca o mostra: `semData()` na lista, na edição e no botão C, e
+`comDataDe()` o devolve ao salvar uma edição. Sem data (feita antes desta função) volta para "A fazer" sem
+mexer na daily.
+
+**Config:** `tarefas: { aoConcluir: 'nada'|'daily'|'dailyTopico' (padrão 'daily'), arquivoDaily: '' }`
+(`config.obterTarefas()`; campo faltando vale o padrão). Padrão `''` = nada é registrado. Quem valida o arquivo é
+`notas.arquivoDaily()`, **na hora de usar**: tem que existir na pasta, ter o relógio ligado e não ser o
+`task.md`; senão `null` e nada é gerado (sem erro).
+
+**Atômico, no principal.** O clique na bolinha manda `tarefas:alternar(grupo, indice, texto, confirmado)` (o
+`indice` é o da lista **do arquivo**; a tela mostra invertido) e recebe as tarefas novas. `alternarTarefa`
+lê o `task.md`, **confere que o texto está no índice** (senão devolve `desatualizado` com as tarefas de agora e
+nada muda), move, põe/tira a data, mexe na daily e grava. Tudo numa fila (`naFilaDasTarefas`): `salvarTarefas`
+e `adicionarTarefa` também passam por ela, e uma regravação da tela no meio de um alternar não o sobrescreve.
+Dois cliques ao mesmo tempo → só um vale.
+
+- **Concluir:** a tarefa vai para o fim de "Concluídas" com a data de hoje e, com a daily válida e o modo ≠
+  'nada', `adicionarHistorico(daily, hoje, texto)` — ou `"▸ " + texto` no modo 'dailyTopico'. Cada tarefa =
+  um tópico.
+- **Desmarcar:** lê a data escondida e tira da daily, **naquele dia**, o **último** tópico igual ao texto (ou
+  `"▸ "` + a 1ª linha). Um recolhível cujo corpo **não é o que o Blink gerou** (as linhas da tarefa depois
+  da primeira) tem anotações do usuário: devolve `precisaConfirmar` sem mudar nada (a tela mostra "O tópico na
+  daily tem anotações. Remover mesmo assim?"; `confirmado` remove). Não achou (o texto foi editado lá) →
+  `nao-achou`: a tarefa volta mas nada some da daily e a dica avisa. A remoção vale mesmo com o modo em
+  'nada' (o tópico pode ter sido criado quando o modo era outro).
+- "Limpar concluídas" e apagar uma tarefa são regravações do `task.md` pela tela e **não** mexem na daily.
+
+**Tópico recolhível** (`montarRecolhivel` em `note.js`; só no histórico): item cuja 1ª linha começa com
+`"▸ "` — título com seta ▸/▾ e, abaixo, uma `textarea` com as linhas seguintes. Fechado ao
+desenhar (o estado aberto fica em `recolhiveisAbertos`, só na memória, chave `dia|título`, e sobrevive a
+redesenhos). O corpo grava com debounce de 600 ms e ao sair do campo (`salvarDiaHistorico`; confere que o
+índice ainda é o mesmo tópico antes de gravar). Editar o título preserva o corpo (quebra de linha no título
+vira espaço). O C copia `- título` + corpo indentado, sem o prefixo.
+
+**Tela:** `ajustarAltura()` também serve ao corpo do recolhível. A aba Fast Note das configurações ganhou o
+segmentado "Ao concluir uma tarefa" e o select "Arquivo da daily" (só arquivos com relógio + "Nenhum"); com o
+conteúdo mais alto que a janela mínima (460×530) a área das abas **rola** (`overflow-y: auto`, fase 5).
+
+Testes: `teste-tarefas-daily.js` (parte A: 42 casos no principal, numa pasta temporária; parte B: a tela, com a
+aba e o recolhível).
+
+### Fonte e tamanho do Fast Note e do Diff
+
+Config `aparencia: { note: { fonte, tamanho }, diff: { fonte, tamanho } }` (padrões JetBrains Mono 12 e 13).
+**Nenhum campo é obrigatório**: gravar só a fonte não cria o tamanho, e quem lê usa
+`config.obterAparencia(janela)`, que completa com o padrão (e trata valor fora da lista como padrão).
+O schema recusa fonte fora de `FONTES_VALIDAS` e tamanho fora de 10–20 (`definir` lança erro, como em todo
+campo com enum). A lista de fontes é **fixa** (o Electron não enumera as instaladas) e existe em dois
+lugares: `config.js` (`FONTES_VALIDAS`, o enum do schema) e `renderer/comum/aparencia.js` (`FONTES`, com a
+pilha de CSS de cada uma) — `teste-aparencia.js` confere que batem.
+
+Como chega à tela: o CSS das duas janelas lê `--fonte-conteudo` e `--tamanho-conteudo` (padrões em
+`note.css` e `diff.css`); `aparencia.js` os põe no `<html>` (por `style.setProperty`, que o CSP permite).
+Cada janela chama `Blink.aparencia.iniciar('note'|'diff')` ao abrir e escuta o `config:mudou`, que o
+`ipc.js` manda a **todas** as janelas quando um caminho `aparencia.*` é gravado (`AVISAM_AS_JANELAS`: só
+esses; o resto é lido ao abrir a janela ou montar a aba). O `config:ler` já devolve `aparencia` com os
+padrões aplicados.
+
+A geometria do Fast Note depende do tamanho: `--linha-conteudo` = tamanho × 1,3333 (16px a 12px), e
+`--linha-primeira` = `max(22px, linha)` (o X de apagar tem 22px). A alça, o `.corpo-topico`, o X e a
+bolinha das tarefas se **centram na primeira linha** com margens calculadas dessas duas variáveis (a de baixo
+cancela a de cima). No padrão dá os mesmos valores medidos na fase 1 (item 34px, X 22, linha 16, alça 4px,
+corpo 3px, bolinha 2,5px); `teste-aparencia.js` confere o centro do X, da alça e da bolinha em oito
+combinações de fonte e tamanho. O rascunho usa tamanho + 0,5px (12,5 no padrão) e o campo de edição
+`font: tamanho/1.5`. Mudar o tamanho com um campo de edição aberto o reajusta (`aoAplicar`).
+
+**`ajustarAltura()` precisa terminar sempre**: ao fixar a altura do campo, a lista pode ganhar a barra de
+rolagem, o campo estreita e quebra uma linha a mais. Medir de novo voltando a `height: auto` tira a barra e
+cai no mesmo ciclo (sem ponto fixo: 8 linhas sem barra, 9 com ela). Por isso a segunda medida **só cresce**
+(até 3 voltas) e nunca volta a `auto`.
+
+A área das abas da janela principal (`.conteudo`) rola (`overflow-y: auto`) quando uma aba passa da altura.
 
 ### Fast Note: qual arquivo abre, e o olho do cabeçalho
 
@@ -397,7 +717,42 @@ selecionado; no `task.md` as caixinhas `- [ ]`/`- [x]`. Fica desabilitado como a
 **Botão minimizar** (`#btn-minimizar`, Fast Note e Diff): usa o `janela:minimizar` que a principal já
 tinha; vai para a barra de tarefas. Em `janelas.js`, `abrirNota()` com a janela minimizada só faz
 `restore()` — **sem** `reload()`: o rascunho não é gravado em disco e o recarregamento o perderia.
-`abrirDiff()` restaura e recarrega (a comparação nova precisa das linhas novas).
+`abrirDiff()` restaura e recarrega (a comparação nova precisa das linhas novas). **Esc minimiza** nas duas
+janelas (fechar é só o `×`). **Foco ao voltar:** `focarCampoDaNota()` (em `janelas.js`) manda `nota:focar`
+na restauração — pela bind (`abrirNota`) e pelo evento `restore` (ícone da barra de tarefas) — e a tela foca o
+campo de edição aberto, ou o `campoNome` em "+ Criar nova nota", ou o rascunho. Os botões do cabeçalho
+ignoram o `mousedown` (`preventDefault`) para nunca ficarem com o foco do teclado.
+
+**Detalhes de tela do Fast Note** (cada um tem verificação em `.verif/teste-fastnote-ajustes.js`, que usa
+teclado e mouse **reais** via `sendInputEvent`, porque estes defeitos só aparecem digitando):
+
+- **Sem ligaduras em lugar nenhum** (`* { font-variant-ligatures: none !important }` em `comum/base.css`). A
+  JetBrains Mono tem uma ligadura para `..`/`...` desenhada pelo **último** caractere; digitando, ao teclar o
+  terceiro ponto o primeiro sumia (2 pontos na tela, 3 no texto) — por atribuição de `value` não aparecia, e só
+  no zoom de 125%. O `!important` é por causa do atalho `font:` do `.campo-edicao`, que zera as ligaduras. O teste
+  conta os pontos **no print**, com o campo sem foco (sem cursor).
+- **O X fica no topo do bloco:** `.topico { align-items: flex-start }` com margens compensadas na alça (`4px/-4px`)
+  e no texto (`3px/-3px`); item de uma linha continua com 34px, idêntico ao de antes (medido: X 22px, texto 16px,
+  alça 14px).
+- **Edição que não empurra a tela:** `ajustarAltura()` põe a altura em `auto` para medir, o que encurta a lista e
+  faz o navegador cortar a rolagem — a rolagem é guardada e devolvida na hora. O foco usa `preventScroll`, e o
+  cursor entra **onde se clicou** (`caretRangeFromPoint`), não no fim (num tópico comprido o fim está fora da
+  tela e a primeira tecla rolava até lá). `desenhar({ manter: true })` (editar, apagar, concluir, reordenar)
+  mantém a rolagem; o padrão volta ao topo (item novo, outro arquivo/dia).
+- **Tab indenta** (`indentarComTab`, rascunho e campo de edição) por `execCommand('insertText')`, para o Ctrl+Z
+  funcionar. A tabulação é guardada nos três formatos; no **histórico**, `LINHA_CONTINUACAO_DIA` tira exatamente os
+  4 espaços que o `escreverTopicoDia` grava (o resto é indentação do usuário) e `LINHA_TOPICO_DIA` só aceita
+  espaços antes do traço (senão "`<tab>- filho`" dentro de um tópico viraria tópico novo). Limitação antiga e
+  deliberadamente fora do pedido: em nota comum e no `task.md`, indentação com **espaços** na continuação ainda é
+  engolida na leitura (a tabulação não).
+- **Vassoura cinza das concluídas:** botão no `.divisor-tarefas` (`order` no CSS, porque o `::after` vem depois dos
+  filhos), centrado na coluna do X; reaproveita o popover da vassoura do topo com `limparModo = 'concluidas'`.
+
+**Testes e perfil:** os testes rodam com `electron .verif/x.js`, cujo perfil é `%APPDATA%\Electron` — **separado**
+do Blink instalado (`%APPDATA%\Blink`), então não mexem na sua configuração. Eles **usam a área de transferência
+real**: copiar algo no PC durante a rodada derruba `teste-auto`/`teste-copiar` e contamina o golden (rode de novo).
+Nunca use `webContents.setZoomFactor` numa sonda: o Chromium **guarda o zoom** no perfil de teste e todas as
+janelas `file://` passam a abrir com ele (desfaça com `setZoomFactor(1)`).
 
 ### I18n
 
@@ -444,6 +799,23 @@ abertura, ele apaga o `config.json` antigo e recomeça dos padrões — a mesma 
 `clearInvalidConfig`, só que também para "JSON válido, schema desatualizado". Ao adicionar um novo
 campo `required` no futuro, esse caminho já cobre sozinho; não precisa de nenhuma migração manual.
 
+### O Ctrl que continua apertado depois da bind
+
+`selecao.js` manda o Ctrl+C por baixo para capturar a seleção. Antes, `soltarModificadores()` mandava um
+Ctrl "para cima" falso e depois `keyTap('c', ['control'])`, que aperta e **solta** o Ctrl: o Windows passava a achar
+o Ctrl solto mesmo com o dedo do usuário nele, e quem soltava só o Alt e o F e emendava um Ctrl+V recebia um "v".
+Agora `teclado.js` lê o estado real do Ctrl (`GetAsyncKeyState` da `user32`, chamado pelo **koffi**, que traz o
+binário pronto — pacote opcional `@koromix/koffi-win32-x64`; o `asarUnpack` de `**/*.node` já o cobre):
+
+- Ctrl apertado → só `keyTap('c')`, o Ctrl do usuário já vale; Alt e Shift continuam sendo "soltos".
+- Ctrl solto → `keyTap('c', ['control'])`, como sempre foi.
+- koffi indisponível (`null`) → solta tudo e manda Ctrl+C, o comportamento antigo.
+
+A pergunta é feita **na hora de mandar o C** (`mandarCtrlC()`), não na da bind: entre as duas passam ~100 ms e o
+usuário pode ter soltado o Ctrl — mandar um "c" puro substituiria a seleção dele. O log de diagnóstico ganhou
+`ctrl="apertado|solto|desconhecido"` em cada captura (útil para investigar um relato). O teste
+(`.verif/teste-ctrl.js`) usa o estado do Ctrl e a `libnut` falsos: **nunca** mande tecla de verdade num teste.
+
 ### Testes que mexem no teclado
 
 **Nunca rode um teste que chame `selecao.capturar()` com o teclado de verdade.** Ele manda
@@ -461,7 +833,14 @@ npm run gerar-icone
 ```
 
 Os dois SVGs têm a mesma geometria de propósito: a bandeja usa os tamanhos pequenos do `.ico` e a
-barra de tarefas os grandes.
+barra de tarefas os grandes. O desenho é uma **caixa de aplicativo** (quadrado arredondado escuro) com
+o olho dentro — anel claro, íris escarlate, pupila e brilho. `olho-simples.svg` é chapado (16, 20, 24 e
+32 px) e `olho.svg` tem degradê e um filete claro na caixa (48 e 256 px). O mesmo desenho está
+copiado, em SVG embutido, no cabeçalho das três janelas (`principal/index.html`, `note/index.html` e
+`diff/index.html`, a 16 px, com um filete claro na caixa para ela não sumir no fundo escuro do
+cabeçalho): mudou o desenho, mude os cinco lugares. O `.ico` guarda as imagens pequenas como BMP
+(DIB) e a de 256 px como PNG — para conferir o que foi empacotado, `.verif/olhos/extrair-ico.js` abre o
+arquivo e monta uma folha com cada tamanho.
 
 ## Referência de design
 

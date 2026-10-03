@@ -25,6 +25,10 @@ const ferramentaI18n = require('./ferramenta-i18n');
 const aviso = require('./aviso');
 const atualizacao = require('./atualizacao');
 const monitorSql = require('./monitor-sql');
+const notasLivres = require('./notas-livres');
+
+// O esquema blink-anexo:// (as imagens da folha livre) precisa ser declarado ANTES de o app ficar pronto.
+notasLivres.registrarEsquema();
 
 /**
  * O que cada bind faz.
@@ -83,6 +87,9 @@ if (!app.requestSingleInstanceLock()) {
 
     atalhos.definirAcao(acionarFerramenta);
     bandeja.definirAcao(acionarFerramenta);
+
+    // Serve as imagens da folha livre (so os nomes que o notas-livres.js reconhece).
+    notasLivres.atenderProtocolo();
 
     ipc.registrar();
     atalhos.registrarTodas();

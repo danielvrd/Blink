@@ -22,6 +22,15 @@ const formatadorLista = require('./formatador-lista');
 const prefixoLog = require('./prefixo-log');
 const nomeNeutro = require('./nome-neutro');
 const layoutTsql = require('./layout-tsql');
+const estiloSql = require('./estilo-sql');
+const lexer = require('./lexer-sql');
+
+/**
+ * Ate quantos parenteses faltando ainda valem o conserto automatico da SQL
+ * incompleta (veja formatar). Mais que isso nao e um pedaco cortado no fim: e
+ * outro problema, e a recusa de sempre e a resposta certa.
+ */
+const MAX_PARENTESES_FALTANDO = 5;
 
 /**
  * Evita dois formatadores rodando ao mesmo tempo.
@@ -133,7 +142,62 @@ function opcoes() {
 }
 
 /**
+ * Tira os k ")" do FIM do texto - so eles, e so se forem mesmo os ultimos k
+ * tokens. null se o fim do texto nao e esse.
+ */
+function tirarFechamentos(texto, k) {
+  const tokens = lexer.tokenizar(texto);
+  if (!tokens) return null;
+
+  let corte = texto.length;
+  let restantes = k;
+  for (let i = tokens.length - 1; i >= 0 && restantes > 0; i--) {
+    const tok = tokens[i];
+    if (tok.t === 'esp' || tok.t === 'nl') continue;
+    if (tok.t !== 'sim' || tok.s !== ')') return null;
+    corte = tok.i;
+    restantes -= 1;
+  }
+  if (restantes > 0) return null;
+
+  return texto.slice(0, corte).replace(/\s+$/, '');
+}
+
+/**
+ * Da a saida da biblioteca o layout de procedures (T-SQL) e o estilo escolhido.
+ * Cada passo devolve null - e o texto fica como estava - se nao ha o que arrumar
+ * ou se a sua trava reprovar.
+ */
+function arrumar(texto, opcs) {
+  const unidade = opcs.useTabs ? '\t' : ' '.repeat(opcs.tabWidth);
+  let saida = texto;
+
+  // Procedures, triggers e funcoes do T-SQL: o layout de BEGIN / END / IF /
+  // ELSE / WHILE, que a biblioteca nao faz.
+  if (opcs.language === 'transactsql') {
+    const arrumado = layoutTsql.aplicar(saida, unidade);
+    if (arrumado !== null) saida = arrumado;
+  }
+
+  // O estilo "Alinhado" e o padrao; "Classico" e a saida da biblioteca como ela e.
+  // Configuracao antiga nao tem o campo: vale o padrao.
+  if (config.obter('sql').estilo !== 'classico') {
+    const alinhado = estiloSql.aplicar(saida, unidade);
+    if (alinhado !== null) saida = alinhado;
+  }
+
+  return saida;
+}
+
+/**
  * Formata um texto. Devolve { ok, texto } ou { ok: false, erro }.
+ *
+ * SQL incompleta - copiada sem o fim, com k parenteses ainda abertos (um
+ * "WITH x AS (" sem o ")" e sem o SELECT) - a biblioteca recusa. Entao, so
+ * quando a recusa acontece e faltam de 1 a 5 parenteses (contados com o lexer,
+ * fora de texto e comentario): formata com os ")" que faltam, passa o layout e
+ * o estilo e, no fim, tira esses mesmos ")" do fim da saida. O resultado traz
+ * `faltavam: k` para a tela avisar.
  *
  * Separado do executar() para dar para testar a formatacao sem mexer no
  * teclado nem na area de transferencia.
@@ -142,16 +206,37 @@ function formatar(texto) {
   const opcs = opcoes();
   // Com nomes neutros onde a biblioteca tropeca (placeholders, colunas com
   // nome reservado, um pedaco estranho). Sem nada disso, e o format() de sempre.
-  const resultado = nomeNeutro.formatar(texto, (t) => format(t, opcs), opcs.language);
+  const biblioteca = (t) => nomeNeutro.formatar(t, (x) => format(x, opcs), opcs.language);
 
-  // Procedures, triggers e funcoes do T-SQL: o layout de BEGIN / END / IF /
-  // ELSE / WHILE, que a biblioteca nao faz. Devolve null - e fica a saida da
-  // biblioteca - se nao ha o que arrumar ou se a trava reprovar.
-  if (resultado.ok && opcs.language === 'transactsql') {
-    const arrumado = layoutTsql.aplicar(resultado.texto, opcs.useTabs ? '\t' : ' '.repeat(opcs.tabWidth));
-    if (arrumado !== null) return { ok: true, texto: arrumado };
+  let resultado = biblioteca(texto);
+  let faltavam = 0;
+
+  if (!resultado.ok) {
+    const k = lexer.parentesesAbertos(texto);
+    if (k !== null && k >= 1 && k <= MAX_PARENTESES_FALTANDO) {
+      // A quebra de linha antes: se o texto termina num comentario de linha, o ")" nao pode cair dentro dele.
+      const completa = biblioteca(texto + '\n' + ')'.repeat(k));
+      if (completa.ok) {
+        resultado = completa;
+        faltavam = k;
+      }
+    }
   }
-  return resultado;
+
+  if (!resultado.ok) return resultado;
+
+  let saida = arrumar(resultado.texto, opcs);
+  if (faltavam > 0) {
+    saida = tirarFechamentos(saida, faltavam);
+    if (saida === null) return { ok: false, erro: 'nao foi possivel tirar os parenteses acrescentados' };
+    return { ok: true, texto: saida, faltavam };
+  }
+  return { ok: true, texto: saida };
+}
+
+/** "estava incompleta: faltava fechar 1 parêntese" - para os avisos da bind e do modo automatico. */
+function descreverIncompleta(k) {
+  return `estava incompleta: faltava fechar ${k} ${k === 1 ? 'parêntese' : 'parênteses'}`;
 }
 
 /**
@@ -244,6 +329,12 @@ function decidir(original) {
 
   // Sem este aviso a bind nao daria nenhum sinal de vida: o arquivo de
   // origem fica igual e a area de transferencia nao aparece na tela.
+  if (resultado.faltavam) {
+    return {
+      texto: resultado.texto,
+      mensagem: `SQL formatada e copiada (${descreverIncompleta(resultado.faltavam)}). Cole onde quiser com Ctrl + V.`,
+    };
+  }
   return {
     texto: resultado.texto,
     mensagem: resultado.texto === normalizar(original)
@@ -297,4 +388,4 @@ async function executar() {
   }
 }
 
-module.exports = { executar, decidir, formatar, opcoes, guardarContraSobrescrita, normalizar, paraWindows };
+module.exports = { executar, decidir, formatar, opcoes, guardarContraSobrescrita, normalizar, paraWindows, descreverIncompleta };

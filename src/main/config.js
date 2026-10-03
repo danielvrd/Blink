@@ -9,6 +9,37 @@
 const fs = require('fs');
 const Store = require('electron-store');
 
+/**
+ * As fontes que as abas do Fast Note e do Diff oferecem. Lista FIXA: o Electron
+ * nao enumera as fontes instaladas, e estas vem com o Windows (menos a
+ * JetBrains Mono, que o Blink traz dentro dele). A tela tem a mesma lista com a
+ * pilha de fontes de cada uma (renderer/comum/aparencia.js) e um teste confere
+ * que as duas batem.
+ */
+const FONTES_VALIDAS = [
+  'JetBrains Mono', 'Cascadia Mono', 'Consolas', 'Courier New', 'Lucida Console',
+  'Segoe UI', 'Arial', 'Calibri', 'Verdana', 'Tahoma',
+];
+
+/**
+ * Os temas de cores do codigo no Diff (o realce de sintaxe). 'semcores' desliga
+ * as cores. As cores de cada um ficam em renderer/diff/diff.css, e a tela tem a
+ * mesma lista com os nomes (renderer/comum/aparencia.js).
+ */
+const TEMAS_DIFF = ['darkplus', 'monokai', 'onedark', 'dracula', 'githubdark', 'semcores'];
+
+/**
+ * O que acontece com uma tarefa ao ser concluida:
+ *   'nada'         nao registra em lugar nenhum
+ *   'daily'        vira um topico (o texto da tarefa) no dia de hoje da daily
+ *   'dailyTopico'  vira um topico recolhivel ("▸ texto") no dia de hoje da daily
+ */
+const MODOS_AO_CONCLUIR = ['nada', 'daily', 'dailyTopico'];
+
+/** Tamanho do texto do Fast Note e do Diff, em pixels. */
+const TAMANHO_FONTE_MINIMO = 10;
+const TAMANHO_FONTE_MAXIMO = 20;
+
 /** Valores usados na primeira execucao e sempre que um campo faltar. */
 const PADROES = {
   binds: {
@@ -27,10 +58,17 @@ const PADROES = {
   // Arquivos do Fast Note com o historico diario (o relogio) ligado. Pode
   // ter varios ao mesmo tempo - diferente da estrela, que e so um.
   notasHistorico: [],
+  // Arquivos do Fast Note no modo "folha livre" (um editor tipo Notion com desenho
+  // por cima; veja notas-livres.js). Como o relogio, so o processo principal grava.
+  notasLivres: [],
   sql: {
     dialeto: 'transactsql',
     palavrasChave: 'upper',
     indentacao: '4',
+    // 'alinhado' (padrao): FROM na mesma linha, AND do ON sob o ON, CTEs do WITH
+    // mais para a esquerda... 'classico' e a saida pura da biblioteca (veja
+    // estilo-sql.js). Configuracao antiga nao tem o campo: vale 'alinhado'.
+    estilo: 'alinhado',
     // Formatar sozinho a SQL copiada de dentro de uma Area de Trabalho
     // Remota, sem precisar do atalho (veja monitor-sql.js).
     autoRemoto: true,
@@ -41,6 +79,30 @@ const PADROES = {
   // Tamanho de cada janela, depois que o usuario redimensiona. Vazio =
   // tamanho padrao do design.
   janelas: {},
+  // Fonte e tamanho do texto do Fast Note (topicos e rascunho) e do Diff
+  // (as celulas). Quem le trata campo faltando como o padrao daqui (veja
+  // obterAparencia): gravar so a fonte nao cria o tamanho.
+  aparencia: {
+    note: { fonte: 'JetBrains Mono', tamanho: 12 },
+    diff: { fonte: 'JetBrains Mono', tamanho: 13 },
+  },
+  // Do Diff: o tema das cores do codigo (veja TEMAS_DIFF). Quem le trata
+  // campo faltando como o padrao (obterTemaDiff).
+  diff: { tema: 'darkplus' },
+  // O que fazer ao concluir uma tarefa do task.md (veja MODOS_AO_CONCLUIR) e em
+  // que arquivo (com o relogio ligado) fica a daily. Sem arquivo ('') nada e
+  // registrado. Quem le trata campo faltando como o padrao (obterTarefas).
+  tarefas: { aoConcluir: 'daily', arquivoDaily: '' },
+};
+
+/** Fonte e tamanho do texto de uma janela. Nenhum dos dois campos e obrigatorio. */
+const APARENCIA = {
+  type: 'object',
+  properties: {
+    fonte: { type: 'string', enum: FONTES_VALIDAS },
+    tamanho: { type: 'integer', minimum: TAMANHO_FONTE_MINIMO, maximum: TAMANHO_FONTE_MAXIMO },
+  },
+  additionalProperties: false,
 };
 
 /** Formato de um tamanho de janela salvo. Reaproveitado para as tres janelas. */
@@ -75,6 +137,7 @@ const ESQUEMA = {
   notaPrincipal: { type: 'string' },
   ultimaNota: { type: 'string' },
   notasHistorico: { type: 'array', items: { type: 'string' } },
+  notasLivres: { type: 'array', items: { type: 'string' } },
   sql: {
     type: 'object',
     properties: {
@@ -90,6 +153,10 @@ const ESQUEMA = {
         type: 'string',
         enum: ['2', '4', 'tab'],
       },
+      estilo: {
+        type: 'string',
+        enum: ['alinhado', 'classico'],
+      },
       autoRemoto: { type: 'boolean' },
       autoRemotoJson: { type: 'boolean' },
     },
@@ -100,19 +167,44 @@ const ESQUEMA = {
     type: 'string',
     enum: ['diff', 'note', 'sql', 'i18n'],
   },
+  aparencia: {
+    type: 'object',
+    properties: {
+      note: APARENCIA,
+      diff: APARENCIA,
+    },
+    additionalProperties: false,
+  },
+  diff: {
+    type: 'object',
+    properties: {
+      tema: { type: 'string', enum: TEMAS_DIFF },
+    },
+    additionalProperties: false,
+  },
+  tarefas: {
+    type: 'object',
+    properties: {
+      aoConcluir: { type: 'string', enum: MODOS_AO_CONCLUIR },
+      arquivoDaily: { type: 'string', maxLength: 255 },
+    },
+    additionalProperties: false,
+  },
   janelas: {
     type: 'object',
     properties: {
       principal: TAMANHO,
       diff: TAMANHO,
       nota: TAMANHO,
+      // A janela do Fast Note com um arquivo em folha livre: tamanho proprio, lembrado a parte.
+      notaLivre: TAMANHO,
     },
     additionalProperties: false,
   },
 };
 
 /** As janelas que tem tamanho salvo. */
-const JANELAS = new Set(['principal', 'diff', 'nota']);
+const JANELAS = new Set(['principal', 'diff', 'nota', 'notaLivre']);
 
 /**
  * Unicos caminhos que as telas podem gravar.
@@ -130,8 +222,16 @@ const CAMINHOS_GRAVAVEIS = new Set([
   'sql.dialeto',
   'sql.palavrasChave',
   'sql.indentacao',
+  'sql.estilo',
   'sql.autoRemoto',
   'sql.autoRemotoJson',
+  'aparencia.note.fonte',
+  'aparencia.note.tamanho',
+  'aparencia.diff.fonte',
+  'aparencia.diff.tamanho',
+  'diff.tema',
+  'tarefas.aoConcluir',
+  'tarefas.arquivoDaily',
   'abaAtiva',
 ]);
 
@@ -173,6 +273,45 @@ const store = criarStore();
 module.exports = {
   PADROES,
   CAMINHOS_GRAVAVEIS,
+  FONTES_VALIDAS,
+  TEMAS_DIFF,
+  MODOS_AO_CONCLUIR,
+  TAMANHO_FONTE_MINIMO,
+  TAMANHO_FONTE_MAXIMO,
+
+  /**
+   * As opcoes de concluir tarefa, sempre com os dois campos: o que faltar (ou
+   * estiver fora da lista) vale o padrao ('daily', sem arquivo = nada registrado).
+   */
+  obterTarefas() {
+    const salvo = store.get('tarefas') || {};
+    return {
+      aoConcluir: MODOS_AO_CONCLUIR.includes(salvo.aoConcluir) ? salvo.aoConcluir : PADROES.tarefas.aoConcluir,
+      arquivoDaily: typeof salvo.arquivoDaily === 'string' ? salvo.arquivoDaily : PADROES.tarefas.arquivoDaily,
+    };
+  },
+
+  /** O tema de cores do Diff; o que faltar (ou estiver fora da lista) vale o padrao. */
+  obterTemaDiff() {
+    const tema = store.get('diff.tema');
+    return TEMAS_DIFF.includes(tema) ? tema : PADROES.diff.tema;
+  },
+
+  /**
+   * Fonte e tamanho do texto de uma janela ('note' ou 'diff'), sempre com os
+   * dois campos: o que faltar (ou estiver fora da lista) vale o padrao.
+   */
+  obterAparencia(janela) {
+    const padrao = PADROES.aparencia[janela];
+    if (!padrao) return null;
+
+    const salvo = store.get(`aparencia.${janela}`) || {};
+    const tamanhoOk = Number.isInteger(salvo.tamanho) && salvo.tamanho >= TAMANHO_FONTE_MINIMO && salvo.tamanho <= TAMANHO_FONTE_MAXIMO;
+    return {
+      fonte: FONTES_VALIDAS.includes(salvo.fonte) ? salvo.fonte : padrao.fonte,
+      tamanho: tamanhoOk ? salvo.tamanho : padrao.tamanho,
+    };
+  },
 
   /** Todas as configuracoes de uma vez, para a tela montar de uma so leitura. */
   obterTudo() {
@@ -267,6 +406,18 @@ module.exports = {
   definirHistoricoArquivos(lista) {
     if (!Array.isArray(lista) || !lista.every((v) => typeof v === 'string')) return false;
     store.set('notasHistorico', lista);
+    return true;
+  },
+
+  /**
+   * Grava a lista de arquivos do Fast Note em folha livre.
+   *
+   * Fora dos CAMINHOS_GRAVAVEIS pelo mesmo motivo do relogio: quem chama e o
+   * processo principal, depois de validar cada nome contra a pasta de notas.
+   */
+  definirNotasLivres(lista) {
+    if (!Array.isArray(lista) || !lista.every((v) => typeof v === 'string')) return false;
+    store.set('notasLivres', lista);
     return true;
   },
 

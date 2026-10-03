@@ -3,6 +3,16 @@
   Valores da secao 2 do design (design_handoff_blink/README.md).
 */
 
+/*
+  Fonte e tamanho do texto das celulas. O padrao e este; a aba Diff Checker das
+  configuracoes troca os dois (renderer/comum/aparencia.js poe os valores
+  escolhidos no <html>, que vencem estes).
+*/
+:root {
+  --fonte-conteudo: var(--fonte-mono);
+  --tamanho-conteudo: 13px;
+}
+
 html,
 body {
   height: 100%;
@@ -35,9 +45,18 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
+  /* No tamanho minimo da janela o botao "Atualizar" aperta o cabecalho: quem
+     cede espaco e o titulo (com reticencias), nunca os botoes. */
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--texto);
+}
+
+.cabecalho .titulo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* O olho do titulo: clicavel, abre as configuracoes do Blink. Sem o no-drag
@@ -59,6 +78,7 @@ body {
 }
 
 .acoes {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -66,6 +86,7 @@ body {
 }
 
 .botao-contorno {
+  white-space: nowrap;
   padding: 6px 12px;
   border-radius: var(--raio-botao-pequeno);
   border: 1px solid var(--borda-modal);
@@ -103,6 +124,17 @@ body {
 
 .botao-x:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+/* O botao "Atualizacao disponivel" (base.css) usa o texto curto ate 700px: o
+   cabecalho do Diff tem dois botoes de copiar e nao comporta o longo. */
+@media (max-width: 699px) {
+  .botao-atualizacao .texto-longo {
+    display: none;
+  }
+  .botao-atualizacao .texto-curto {
+    display: inline;
+  }
 }
 
 /* --- Corpo ---------------------------------------------------------------- */
@@ -230,7 +262,7 @@ body {
   padding: 8px 18px;
   margin: 1px 0;
   border-radius: 5px;
-  font: 13px/1.6 var(--fonte-mono);
+  font: var(--tamanho-conteudo)/1.6 var(--fonte-conteudo);
   color: var(--texto);
   border-left: 3px solid transparent;
   white-space: pre-wrap;
@@ -363,4 +395,244 @@ body {
 
 .rodape .dica {
   margin-left: auto;
+}
+
+/* --- Cores do codigo (realce de sintaxe) -----------------------------------------
+  O processo principal manda, para cada linha, pedacos com o escopo do highlight.js
+  (realce.js); diff.js poe um <span class="hl-<escopo>"> em cada um. Aqui cada escopo
+  aponta para uma VARIAVEL de cor, e cada tema (uma classe no <html>, poes por
+  aparencia.js) so define as variaveis.
+
+  O tema "Sem cores" nao define nenhuma: o var(--hl-x, inherit) cai na cor da celula.
+
+  As regras vem depois do ".mudou": o pedaco que mudou mantem a cor do codigo (o fundo
+  laranja ja diz que mudou). Escopos aninhados ("meta string") levam as duas classes;
+  vale a regra que vem por ultimo, por isso a ordem abaixo vai do mais geral ao mais
+  especifico.
+--------------------------------------------------------------------------------- */
+
+.celula .hl-operator,
+.celula .hl-punctuation {
+  color: var(--hl-operator, inherit);
+}
+
+.celula .hl-meta {
+  color: var(--hl-meta, inherit);
+}
+
+.celula .hl-keyword,
+.celula .hl-selector-tag,
+.celula .hl-symbol,
+.celula .hl-bullet {
+  color: var(--hl-keyword, inherit);
+}
+
+.celula .hl-literal {
+  color: var(--hl-literal, inherit);
+}
+
+.celula .hl-built_in {
+  color: var(--hl-builtin, inherit);
+}
+
+.celula .hl-type,
+.celula .hl-class_,
+.celula .hl-selector-class,
+.celula .hl-selector-id,
+.celula .hl-selector-pseudo,
+.celula .hl-selector-attr {
+  color: var(--hl-type, inherit);
+}
+
+.celula .hl-title,
+.celula .hl-section,
+.celula .hl-function_ {
+  color: var(--hl-function, inherit);
+}
+
+.celula .hl-title.hl-class_,
+.celula .hl-title.hl-class_.hl-inherited__ {
+  color: var(--hl-type, inherit);
+}
+
+.celula .hl-variable,
+.celula .hl-template-variable,
+.celula .hl-params,
+.celula .hl-subst {
+  color: var(--hl-variable, inherit);
+}
+
+.celula .hl-variable.hl-language_ {
+  color: var(--hl-keyword, inherit);
+}
+
+.celula .hl-attr,
+.celula .hl-attribute,
+.celula .hl-property {
+  color: var(--hl-attr, inherit);
+}
+
+.celula .hl-tag,
+.celula .hl-name {
+  color: var(--hl-tag, inherit);
+}
+
+.celula .hl-number {
+  color: var(--hl-number, inherit);
+}
+
+.celula .hl-regexp {
+  color: var(--hl-regexp, inherit);
+}
+
+.celula .hl-string,
+.celula .hl-link {
+  color: var(--hl-string, inherit);
+}
+
+.celula .hl-comment,
+.celula .hl-quote,
+.celula .hl-doctag {
+  color: var(--hl-comment, inherit);
+  font-style: var(--hl-comment-estilo, normal);
+}
+
+.celula .hl-addition {
+  color: var(--hl-adicao, inherit);
+}
+
+.celula .hl-deletion {
+  color: var(--hl-remocao, inherit);
+}
+
+.celula .hl-emphasis {
+  font-style: var(--hl-enfase, normal);
+}
+
+.celula .hl-strong,
+.celula .hl-section {
+  font-weight: var(--hl-negrito, inherit);
+}
+
+/* Cada tema define as variaveis. Cores pensadas para o fundo escuro do Diff. */
+
+/* Dark+ (o tema padrao do VS Code) */
+.tema-darkplus {
+  --hl-keyword: #569cd6;
+  --hl-literal: #569cd6;
+  --hl-builtin: #4ec9b0;
+  --hl-type: #4ec9b0;
+  --hl-function: #dcdcaa;
+  --hl-variable: #9cdcfe;
+  --hl-attr: #9cdcfe;
+  --hl-tag: #569cd6;
+  --hl-number: #b5cea8;
+  --hl-string: #ce9178;
+  --hl-regexp: #d16969;
+  --hl-comment: #6a9955;
+  --hl-comment-estilo: italic;
+  --hl-meta: #c586c0;
+  --hl-operator: #d4d4d4;
+  --hl-adicao: #b5cea8;
+  --hl-remocao: #f48771;
+  --hl-enfase: italic;
+  --hl-negrito: 700;
+}
+
+/* Monokai */
+.tema-monokai {
+  --hl-keyword: #f92672;
+  --hl-literal: #ae81ff;
+  --hl-builtin: #66d9ef;
+  --hl-type: #66d9ef;
+  --hl-function: #a6e22e;
+  --hl-variable: #f8f8f2;
+  --hl-attr: #a6e22e;
+  --hl-tag: #f92672;
+  --hl-number: #ae81ff;
+  --hl-string: #e6db74;
+  --hl-regexp: #e6db74;
+  --hl-comment: #88846f;
+  --hl-comment-estilo: italic;
+  --hl-meta: #fd971f;
+  --hl-operator: #f92672;
+  --hl-adicao: #a6e22e;
+  --hl-remocao: #f92672;
+  --hl-enfase: italic;
+  --hl-negrito: 700;
+}
+
+/* One Dark (Atom) */
+.tema-onedark {
+  --hl-keyword: #c678dd;
+  --hl-literal: #d19a66;
+  --hl-builtin: #e6c07b;
+  --hl-type: #e6c07b;
+  --hl-function: #61afef;
+  --hl-variable: #e06c75;
+  --hl-attr: #d19a66;
+  --hl-tag: #e06c75;
+  --hl-number: #d19a66;
+  --hl-string: #98c379;
+  --hl-regexp: #56b6c2;
+  --hl-comment: #7f848e;
+  --hl-comment-estilo: italic;
+  --hl-meta: #61afef;
+  --hl-operator: #56b6c2;
+  --hl-adicao: #98c379;
+  --hl-remocao: #e06c75;
+  --hl-enfase: italic;
+  --hl-negrito: 700;
+}
+
+/* Dracula */
+.tema-dracula {
+  --hl-keyword: #ff79c6;
+  --hl-literal: #bd93f9;
+  --hl-builtin: #8be9fd;
+  --hl-type: #8be9fd;
+  --hl-function: #50fa7b;
+  --hl-variable: #f8f8f2;
+  --hl-attr: #50fa7b;
+  --hl-tag: #ff79c6;
+  --hl-number: #bd93f9;
+  --hl-string: #f1fa8c;
+  --hl-regexp: #ffb86c;
+  --hl-comment: #6e7db0;
+  --hl-comment-estilo: italic;
+  --hl-meta: #ffb86c;
+  --hl-operator: #ff79c6;
+  --hl-adicao: #50fa7b;
+  --hl-remocao: #ff5555;
+  --hl-enfase: italic;
+  --hl-negrito: 700;
+}
+
+/* GitHub Dark */
+.tema-githubdark {
+  --hl-keyword: #ff7b72;
+  --hl-literal: #79c0ff;
+  --hl-builtin: #ffa657;
+  --hl-type: #ffa657;
+  --hl-function: #d2a8ff;
+  --hl-variable: #ffa657;
+  --hl-attr: #79c0ff;
+  --hl-tag: #7ee787;
+  --hl-number: #79c0ff;
+  --hl-string: #a5d6ff;
+  --hl-regexp: #a5d6ff;
+  --hl-comment: #8b949e;
+  --hl-comment-estilo: italic;
+  --hl-meta: #79c0ff;
+  --hl-operator: #ff7b72;
+  --hl-adicao: #7ee787;
+  --hl-remocao: #ffa198;
+  --hl-enfase: italic;
+  --hl-negrito: 700;
+}
+
+/* "Sem cores" (.tema-semcores): nenhuma variavel definida de proposito. So reafirma o texto mais claro do pedaco que
+   mudou, que as regras acima (var(--hl-x, inherit)) passariam por cima. */
+.tema-semcores .celula .mudou {
+  color: var(--texto-forte);
 }

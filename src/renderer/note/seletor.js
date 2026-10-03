@@ -1,16 +1,20 @@
 /**
- * Seletor de arquivos do Fast Note, com a estrela do arquivo principal e o
- * relogio do historico diario.
+ * Seletor de arquivos do Fast Note, com a estrela do arquivo principal, o
+ * relogio do historico diario, o cadeado dos arquivos privados e a folha dos
+ * arquivos em folha livre.
  *
  * Substitui o <select> do Windows porque ele nao aceita nada clicavel
  * dentro da lista - e cada item precisa dos seus icones. Por fora continua
  * parecido com o campo de antes: o nome do arquivo e uma seta.
  *
  *   Fechado  nome do arquivo aberto + estrela amarela se ele for o
- *            principal + relogio verde se tiver o historico ligado + seta
- *   Aberto   lista com todos os arquivos, cada um com sua estrela e seu
- *            relogio (menos o task.md, que nao tem relogio), e
- *            "+ Criar nova nota" no fim
+ *            principal + relogio verde se tiver o historico ligado +
+ *            cadeado se for privado + folha se for folha livre + seta
+ *   Aberto   lista com todos os arquivos, cada um com sua folha, seu
+ *            cadeado, seu relogio e sua estrela (o task.md nao tem folha,
+ *            cadeado nem relogio), e "+ Criar nova nota" no fim. Folha,
+ *            cadeado e relogio nao andam juntos: um arquivo com um deles
+ *            nao pode ter outro
  *
  * Clicar no nome escolhe o arquivo. Clicar na estrela ou no relogio marca
  * (ou desmarca) sem fechar a lista nem trocar de arquivo.
@@ -35,6 +39,20 @@ window.Blink = window.Blink || {};
     '<path d="M12 7v5.5l4 2.3" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
     '</svg>';
 
+  const CADEADO =
+    '<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<rect x="5" y="10.5" width="14" height="10" rx="2.2" fill="none" stroke-width="1.8"></rect>' +
+    '<path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7" fill="none" stroke-width="1.8" stroke-linecap="round"></path>' +
+    '<circle cx="12" cy="15.4" r="1.3" class="furo"></circle>' +
+    '</svg>';
+
+  /** A folha: um retangulo em pe, tipo A4, com tres riscos ondulados de texto. */
+  const FOLHA =
+    '<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<rect x="5" y="2.5" width="14" height="19" rx="2" fill="none" stroke-width="1.8"></rect>' +
+    '<path d="M8.4 8.2q1.1-1.2 2.2 0t2.2 0 2.2 0M8.4 12q1.1-1.2 2.2 0t2.2 0 2.2 0M8.4 15.8q1.1-1.2 2.2 0t2.2 0" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>' +
+    '</svg>';
+
   const SETA =
     '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">' +
     '<path d="M1.5 3.5 L5 7 L8.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4"' +
@@ -46,15 +64,19 @@ window.Blink = window.Blink || {};
    *   aoEscolher(valor)          o usuario escolheu um arquivo (ou "criar nova")
    *   aoMarcar(valor)            o usuario clicou na estrela de um arquivo
    *   aoAlternarHistorico(valor) o usuario clicou no relogio de um arquivo
+   *   aoAlternarPrivado(valor)   o usuario clicou no cadeado de um arquivo
+   *   aoAlternarLivre(valor)     o usuario clicou na folha de um arquivo
    *   aoAbrir()                  a lista vai abrir - para fechar o que estiver aberto
    *
    * Devolve { definir, fechar, estaAberto, focar }.
    */
-  function criar(raiz, { aoEscolher, aoMarcar, aoAlternarHistorico, aoAbrir, rotuloNovo, valorNovo }) {
+  function criar(raiz, { aoEscolher, aoMarcar, aoAlternarHistorico, aoAlternarPrivado, aoAlternarLivre, aoAbrir, rotuloNovo, valorNovo }) {
     let itens = [];
     let atual = '';
     let principal = '';
     let historico = [];
+    let privados = [];
+    let livres = [];
     let arquivoTarefas = '';
     let aberto = false;
     let destaque = 0;
@@ -64,6 +86,10 @@ window.Blink = window.Blink || {};
     estrelaFixa.classList.add('seletor-estrela-fixa');
     const relogioFixo = svg(RELOGIO);
     relogioFixo.classList.add('seletor-relogio-fixo');
+    const cadeadoFixo = svg(CADEADO);
+    cadeadoFixo.classList.add('seletor-cadeado-fixo');
+    const folhaFixa = svg(FOLHA);
+    folhaFixa.classList.add('seletor-folha-fixa');
 
     const botao = el('button', {
       class: 'seletor-botao',
@@ -71,7 +97,7 @@ window.Blink = window.Blink || {};
       'aria-haspopup': 'listbox',
       'aria-expanded': 'false',
     });
-    window.Blink.ui.anexar(botao, [nome, estrelaFixa, relogioFixo, svg(SETA)]);
+    window.Blink.ui.anexar(botao, [nome, estrelaFixa, relogioFixo, cadeadoFixo, folhaFixa, svg(SETA)]);
 
     const lista = el('div', { class: 'seletor-lista', role: 'listbox', hidden: true });
     window.Blink.ui.anexar(raiz, [botao, lista]);
@@ -82,6 +108,14 @@ window.Blink = window.Blink || {};
 
     function temHistorico(valor) {
       return historico.some((h) => h.toLowerCase() === valor.toLowerCase());
+    }
+
+    function ehPrivado(valor) {
+      return privados.some((p) => p.toLowerCase() === valor.toLowerCase());
+    }
+
+    function ehLivre(valor) {
+      return livres.some((l) => l.toLowerCase() === valor.toLowerCase());
     }
 
     /** O task.md nao tem relogio: ja tem o proprio formato de secoes. */
@@ -95,10 +129,14 @@ window.Blink = window.Blink || {};
       nome.textContent = item ? item.rotulo : '';
       estrelaFixa.style.display = ehPrincipal(atual) ? '' : 'none';
       relogioFixo.style.display = temHistorico(atual) ? '' : 'none';
+      cadeadoFixo.style.display = ehPrivado(atual) ? '' : 'none';
+      folhaFixa.style.display = ehLivre(atual) ? '' : 'none';
 
       const marcas = [];
       if (ehPrincipal(atual)) marcas.push('arquivo principal');
       if (temHistorico(atual)) marcas.push('histórico diário');
+      if (ehPrivado(atual)) marcas.push('com cadeado');
+      if (ehLivre(atual)) marcas.push('folha livre');
       botao.title = marcas.length > 0 ? `${nome.textContent} — ${marcas.join(', ')}` : nome.textContent;
     }
 
@@ -128,16 +166,70 @@ window.Blink = window.Blink || {};
         // borda direita) - e a mesma ordem do design.
         if (item.marcavel && podeHistorico(item.valor)) {
           const ligado = temHistorico(item.valor);
-          const relogio = el('button', {
-            class: ligado ? 'seletor-relogio marcado' : 'seletor-relogio',
+          const privado = ehPrivado(item.valor);
+          const livre = ehLivre(item.valor);
+
+          // A folha vem primeiro. Folha, cadeado e relogio nao andam juntos: o que nao vale no arquivo fica apagado.
+          const folha = el('button', {
+            class: livre ? 'seletor-folha marcado' : privado || ligado ? 'seletor-folha bloqueado' : 'seletor-folha',
             type: 'button',
-            title: ligado ? 'Desligar o histórico diário' : 'Ligar o histórico diário',
+            title: livre
+              ? 'Voltar para os tópicos (a folha fica guardada)'
+              : privado
+                ? 'Arquivos com cadeado não podem ser folha livre: tire o cadeado antes'
+                : ligado
+                  ? 'Arquivos com histórico diário não podem ser folha livre: desligue o relógio antes'
+                  : 'Folha livre: um editor de página, com texto formatado, imagens e caneta',
+            'aria-pressed': String(livre),
+            'aria-disabled': String(!livre && (privado || ligado)),
+            'aria-label': livre ? `Desligar a folha livre de ${item.rotulo}` : `Ligar a folha livre de ${item.rotulo}`,
+            onmousedown: (evento) => evento.preventDefault(),
+            onclick: (evento) => {
+              evento.stopPropagation();
+              if (!livre && (privado || ligado)) return;
+              aoAlternarLivre(item.valor);
+            },
+          });
+          folha.appendChild(svg(FOLHA));
+          linha.appendChild(folha);
+
+          // O cadeado vem antes do relogio. Um arquivo com o relogio ligado nao pode ter cadeado (e o contrario):
+          // o botao fica apagado e o title explica.
+          const cadeado = el('button', {
+            class: privado ? 'seletor-cadeado marcado' : ligado || livre ? 'seletor-cadeado bloqueado' : 'seletor-cadeado',
+            type: 'button',
+            title: privado
+              ? 'Tirar o cadeado (pede a senha)'
+              : ligado
+                ? 'Arquivos com histórico diário não podem ter cadeado: desligue o relógio antes'
+                : livre
+                  ? 'Arquivos em folha livre não podem ter cadeado: desligue a folha antes'
+                  : 'Pôr um cadeado: o arquivo vira privado e criptografado',
+            'aria-pressed': String(privado),
+            'aria-disabled': String(!privado && (ligado || livre)),
+            'aria-label': privado ? `Tirar o cadeado de ${item.rotulo}` : `Pôr um cadeado em ${item.rotulo}`,
+            onmousedown: (evento) => evento.preventDefault(),
+            onclick: (evento) => {
+              evento.stopPropagation();
+              if (!privado && (ligado || livre)) return;
+              aoAlternarPrivado(item.valor);
+            },
+          });
+          cadeado.appendChild(svg(CADEADO));
+          linha.appendChild(cadeado);
+
+          const relogio = el('button', {
+            class: ligado ? 'seletor-relogio marcado' : privado || livre ? 'seletor-relogio bloqueado' : 'seletor-relogio',
+            type: 'button',
+            title: ligado ? 'Desligar o histórico diário' : privado ? 'Arquivos com cadeado não podem ter histórico diário' : livre ? 'Arquivos em folha livre não podem ter histórico diário' : 'Ligar o histórico diário',
             'aria-pressed': String(ligado),
+            'aria-disabled': String(!ligado && (privado || livre)),
             'aria-label': ligado ? `Desligar o histórico diário de ${item.rotulo}` : `Ligar o histórico diário de ${item.rotulo}`,
             onmousedown: (evento) => evento.preventDefault(),
             onclick: (evento) => {
               // Nao escolhe o arquivo nem fecha a lista: so alterna.
               evento.stopPropagation();
+              if (!ligado && (privado || livre)) return;
               aoAlternarHistorico(item.valor);
             },
           });
@@ -244,6 +336,8 @@ window.Blink = window.Blink || {};
      *   atual          o arquivo aberto (ou o valor de "criar nova")
      *   principal      o arquivo da estrela, ou ''
      *   historico      arquivos com o relogio ligado
+   *   privados       arquivos com cadeado
+   *   livres         arquivos em folha livre
      *   arquivoTarefas nome do task.md, que nunca tem relogio
      *
      * Pode ser chamado com a lista aberta - e o que acontece ao marcar uma
@@ -257,6 +351,8 @@ window.Blink = window.Blink || {};
       atual = dados.atual;
       principal = dados.principal || '';
       historico = dados.historico || [];
+      privados = dados.privados || [];
+      livres = dados.livres || [];
       arquivoTarefas = dados.arquivoTarefas || '';
       if (destaque >= itens.length) destaque = itens.length - 1;
       desenharBotao();

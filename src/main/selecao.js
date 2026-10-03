@@ -19,6 +19,7 @@ const { clipboard, ClipboardItem } = require('electron');
 const libnut = require('@nut-tree-fork/libnut-win32');
 
 const diagnostico = require('./diagnostico');
+const teclado = require('./teclado');
 
 /**
  * Quanto esperar o programa da frente responder ao Ctrl+C.
@@ -115,19 +116,48 @@ async function devolverAreaDeTransferencia(copia) {
 }
 
 /**
- * Solta Ctrl, Alt e Shift.
+ * Solta Alt e Shift - e o Ctrl so quando nao da para saber se ele esta apertado.
  *
  * Sem isto, as teclas que o usuario ainda segura da bind se misturam com as
- * que a gente manda.
+ * que a gente manda (um Ctrl+Alt+C nao copia).
+ *
+ * O Ctrl e a excecao, e e de proposito. "Soltar" aqui e um aperto FALSO: o
+ * Windows passa a achar que o Ctrl esta solto mesmo com o dedo do usuario em
+ * cima dele. Quem solta o Alt e o F e segura o Ctrl para ja emendar um Ctrl+V
+ * recebia so um "v". O Ctrl fica como o usuario deixou, e o capturarTexto
+ * decide como mandar o C (veja la). Sem koffi (ctrl desconhecido), vale o
+ * comportamento de antes: solta tudo.
  */
 function soltarModificadores() {
-  for (const tecla of ['control', 'alt', 'shift']) {
+  const teclas = teclado.ctrlPressionado() === null ? ['control', 'alt', 'shift'] : ['alt', 'shift'];
+
+  for (const tecla of teclas) {
     try {
       libnut.keyToggle(tecla, 'up');
     } catch (erro) {
       // Soltar uma tecla que nao estava pressionada nao e problema.
     }
   }
+}
+
+/**
+ * Manda o Ctrl+C.
+ *
+ *   Ctrl apertado de verdade  so o C: o Ctrl do usuario ja esta valendo, e
+ *                             mandar Ctrl+C "completo" acabaria soltando ele
+ *   Ctrl solto (ou incerto)   o Blink aperta o Ctrl, manda o C e solta
+ *
+ * A pergunta e feita AGORA, na hora de mandar, e nao la atras na bind: entre
+ * uma e outra passam uns 100ms, e o usuario pode ter soltado o Ctrl nesse
+ * meio tempo. Devolve como estava o Ctrl, para o diagnostico.
+ */
+function mandarCtrlC() {
+  const ctrl = teclado.ctrlPressionado();
+
+  if (ctrl === true) libnut.keyTap('c');
+  else libnut.keyTap('c', ['control']);
+
+  return ctrl === null ? 'desconhecido' : ctrl ? 'apertado' : 'solto';
 }
 
 /** Fica olhando a area de transferencia ate aparecer texto ou o tempo acabar. */
@@ -232,13 +262,14 @@ async function capturarTexto() {
   const guardado = await guardarAreaDeTransferencia();
   const textoAntes = await clipboard.readText();
   let texto = '';
+  let ctrl = 'desconhecido';
 
   try {
     soltarModificadores();
     await esperar(remoto ? PAUSA_APOS_SOLTAR_REMOTO : PAUSA_APOS_SOLTAR);
 
     clipboard.clear();
-    libnut.keyTap('c', ['control']);
+    ctrl = mandarCtrlC();
 
     texto = await esperarTexto(limite);
   } finally {
@@ -259,6 +290,7 @@ async function capturarTexto() {
     janela: titulo,
     remoto,
     limite,
+    ctrl,
     resultado: texto === '' ? 'nada' : tardio ? 'chegou-tarde' : 'ok',
     ms: Date.now() - inicio,
     caracteres: texto.length,
