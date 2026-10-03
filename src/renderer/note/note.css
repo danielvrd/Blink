@@ -1826,14 +1826,16 @@ body.impressao {
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio-item);
   background: var(--superficie);
-  color: var(--texto-secundario);
-  font-size: 11.5px;
+  /* Fora da ativa o texto era fino e apagado: peso 600 e a cor do texto comum para ler bem. */
+  color: var(--texto-2);
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   user-select: none;
 }
 
 .aba-nota:hover {
-  color: var(--texto-2);
+  color: var(--texto-forte);
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -1859,21 +1861,13 @@ body.impressao {
   white-space: nowrap;
 }
 
-/* A aba rapida (nunca salva) fica em italico, com um pontinho de "nao salva". */
-.aba-nota.rapida .aba-nome {
-  font-style: italic;
-}
-
+/* A aba rapida (nunca salva) nao tem estilo proprio no nome (nada de italico: dificulta a leitura); so o pontinho de "nao salva". */
 .aba-nota.nao-salva .aba-nome::after {
   content: " \2022";
   color: var(--destaque-estado);
 }
 
-/* Fora da aba ativa o X so aparece com o mouse em cima (e o botao do meio fecha de qualquer jeito). */
-.aba-nota:not(.ativa):not(:hover) .aba-fechar {
-  display: none;
-}
-
+/* O X fica SEMPRE no layout (so muda a opacidade): tirar e pôr o X no hover mudava a largura do nome e a aba "pulava". */
 .aba-fechar {
   flex: none;
   width: 15px;
@@ -1892,6 +1886,11 @@ body.impressao {
 .aba-nota:hover .aba-fechar,
 .aba-nota.ativa .aba-fechar {
   opacity: 0.8;
+}
+
+/* Invisivel, o X nao pode receber clique (fecharia a aba sem querer). */
+.aba-nota:not(.ativa):not(:hover) .aba-fechar {
+  pointer-events: none;
 }
 
 .aba-fechar:hover {

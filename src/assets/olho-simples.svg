@@ -1,31 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Olho do Blink - versao simplificada, para os tamanhos pequenos do .ico
-  (16, 20, 24 e 32 px).
+  Blink - versao simplificada, para os tamanhos pequenos do .ico (16, 20, 24 e 32 px).
 
-  O icone e uma CAIXA de aplicativo (quadrado arredondado vinho) com o olho
-  dentro: um anel claro, a iris rosada, a pupila e o brilho. A caixa e o que
-  faz o icone parecer um app, e as formas grandes e chapadas e o que sobrevive
-  a 16 px - sem gradiente e sem tracos finos, que virariam borrao.
+  O icone e uma CAIXA de aplicativo (quadrado arredondado escuro) com um OLHO FECHADO, piscando: o arco da palpebra,
+  tres cilios e uma faisca vermelha no canto - o "blink" como acao. A caixa e o que faz o icone parecer um app, e as
+  formas chapadas de tracos grossos sao o que sobrevive a 16 px - sem gradiente e sem tracos finos, que virariam borrao.
 
-  A geometria e a MESMA do olho.svg (a versao com degrade, dos tamanhos
-  grandes). A bandeja pega os tamanhos pequenos do .ico e a barra de tarefas
-  pega os grandes; se os dois desenhos divergissem, o mesmo app apareceria com
-  dois icones diferentes na mesma tela.
+  A geometria e a MESMA do olho.svg (a versao com degrade, dos tamanhos grandes). A bandeja pega os tamanhos pequenos
+  do .ico e a barra de tarefas pega os grandes; se os dois desenhos divergissem, o mesmo app apareceria com dois icones
+  diferentes na mesma tela.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24">
   <!-- a caixa -->
-  <rect x="1" y="1" width="22" height="22" rx="6.5" fill="#810c3d"/>
+  <rect x="1" y="1" width="22" height="22" rx="6.5" fill="#1b1c23"/>
 
-  <!-- anel claro do olho -->
-  <circle cx="12" cy="12" r="6.7" fill="none" stroke="#d6d9e0" stroke-width="1.7"/>
+  <!-- a palpebra fechada -->
+  <path d="M5 11 Q12 17.4 19 11" fill="none" stroke="#e6e8ee" stroke-width="1.9" stroke-linecap="round"/>
 
-  <!-- iris chapada -->
-  <circle cx="12" cy="12" r="4" fill="#a56464"/>
+  <!-- os cilios -->
+  <path d="M8.2 14.4 L7 16.9 M12 15.8 V18.6 M15.8 14.4 L17 16.9" fill="none" stroke="#e6e8ee" stroke-width="1.5" stroke-linecap="round"/>
 
-  <!-- pupila -->
-  <circle cx="12" cy="12" r="1.8" fill="#14050a"/>
-
-  <!-- brilho -->
-  <circle cx="13.2" cy="10.8" r="0.9" fill="#ffffff" opacity="0.92"/>
+  <!-- a faisca -->
+  <path d="M18.4 3.6 C18.6 5.2 19.4 6 21 6.2 C19.4 6.4 18.6 7.2 18.4 8.8 C18.2 7.2 17.4 6.4 15.8 6.2 C17.4 6 18.2 5.2 18.4 3.6 Z" fill="#ff5a6b"/>
 </svg>

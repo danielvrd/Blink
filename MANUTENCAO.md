@@ -968,8 +968,8 @@ npm run gerar-icone
 ```
 
 Os dois SVGs têm a mesma geometria de propósito: a bandeja usa os tamanhos pequenos do `.ico` e a
-barra de tarefas os grandes. O desenho é uma **caixa de aplicativo** (quadrado arredondado vinho, `#810c3d`) com
-o olho dentro — anel claro, íris rosada (`#a56464`, r=4; o anel tem r=6.7), pupila e brilho. `olho-simples.svg` é chapado (16, 20, 24 e
+barra de tarefas os grandes. O desenho é uma **caixa de aplicativo** (quadrado arredondado escuro, `#1b1c23`) com
+um **olho fechado, piscando** — o arco da pálpebra (`M5 11 Q12 17.4 19 11`), três cílios e uma faísca vermelha (`#ff5a6b`) no canto. `olho-simples.svg` é chapado (16, 20, 24 e
 32 px) e `olho.svg` tem degradê e um filete claro na caixa (48 e 256 px). O mesmo desenho está
 copiado, em SVG embutido, no cabeçalho das três janelas (`principal/index.html`, `note/index.html` e
 `diff/index.html`, a 16 px, com um filete claro na caixa para ela não sumir no fundo escuro do

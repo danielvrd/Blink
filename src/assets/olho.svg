@@ -1,53 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Olho do Blink - versao para os tamanhos grandes do .ico (48 e 256 px),
-  usados pela barra de tarefas, pela janela do app e pelo instalador.
+  Blink - versao para os tamanhos grandes do .ico (48 e 256 px), usados pela barra de tarefas, pela janela do app e
+  pelo instalador.
 
-  Tem a MESMA geometria do olho-simples.svg: a caixa, o anel, a iris, a pupila
-  e o brilho no mesmo lugar. A unica diferenca e o acabamento - degrade na
-  caixa, na iris e na pupila, e um filete claro por dentro da caixa, que so
-  fazem sentido onde ha pixels suficientes para aparecer.
+  Tem a MESMA geometria do olho-simples.svg: a caixa, a palpebra, os cilios e a faisca no mesmo lugar. A unica
+  diferenca e o acabamento - degrade na caixa e na faisca, e um filete claro por dentro da caixa, que so fazem sentido
+  onde ha pixels suficientes para aparecer.
 
-  Manter a geometria igual nao e capricho: a bandeja pega os tamanhos
-  pequenos do .ico e a barra de tarefas pega os grandes. Se os dois
-  desenhos divergissem, o mesmo app apareceria com dois icones diferentes
-  na mesma tela.
+  Manter a geometria igual nao e capricho: a bandeja pega os tamanhos pequenos do .ico e a barra de tarefas pega os
+  grandes. Se os dois desenhos divergissem, o mesmo app apareceria com dois icones diferentes na mesma tela.
 
-  O width/height de 256 existe so para o sharp rasterizar em alta resolucao
-  antes de reduzir. O desenho em si vive no viewBox de 24x24.
+  O width/height de 256 existe so para o sharp rasterizar em alta resolucao antes de reduzir. O desenho em si vive no
+  viewBox de 24x24.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24">
   <defs>
     <linearGradient id="fundo" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#96174d"/>
-      <stop offset="100%" stop-color="#6a0932"/>
+      <stop offset="0%" stop-color="#262731"/>
+      <stop offset="100%" stop-color="#111217"/>
     </linearGradient>
-    <radialGradient id="iris" cx="42%" cy="38%" r="65%">
-      <stop offset="0%" stop-color="#c88a8a"/>
-      <stop offset="45%" stop-color="#a56464"/>
-      <stop offset="100%" stop-color="#6b3a3a"/>
-    </radialGradient>
-    <radialGradient id="pupila" cx="38%" cy="35%" r="70%">
-      <stop offset="0%" stop-color="#4a1218"/>
-      <stop offset="70%" stop-color="#120406"/>
-      <stop offset="100%" stop-color="#000000"/>
-    </radialGradient>
+    <linearGradient id="faisca" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff7a88"/>
+      <stop offset="100%" stop-color="#ee4256"/>
+    </linearGradient>
   </defs>
 
   <!-- a caixa, com um filete claro por dentro -->
   <rect x="1" y="1" width="22" height="22" rx="6.5" fill="url(#fundo)"/>
   <rect x="1.4" y="1.4" width="21.2" height="21.2" rx="6.1" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="0.6"/>
 
-  <!-- anel claro do olho: identico ao do olho-simples.svg -->
-  <circle cx="12" cy="12" r="6.7" fill="none" stroke="#d6d9e0" stroke-width="1.7"/>
+  <!-- a palpebra fechada: identica a do olho-simples.svg -->
+  <path d="M5 11 Q12 17.4 19 11" fill="none" stroke="#e6e8ee" stroke-width="1.9" stroke-linecap="round"/>
 
-  <!-- iris -->
-  <circle cx="12" cy="12" r="4" fill="url(#iris)"/>
-  <circle cx="12" cy="12" r="4" fill="none" stroke="#3a1418" stroke-width="0.4"/>
+  <!-- os cilios -->
+  <path d="M8.2 14.4 L7 16.9 M12 15.8 V18.6 M15.8 14.4 L17 16.9" fill="none" stroke="#e6e8ee" stroke-width="1.5" stroke-linecap="round"/>
 
-  <!-- pupila -->
-  <circle cx="12" cy="12" r="1.8" fill="url(#pupila)"/>
-
-  <!-- brilho -->
-  <circle cx="13.2" cy="10.8" r="0.9" fill="#ffffff" opacity="0.92"/>
+  <!-- a faisca -->
+  <path d="M18.4 3.6 C18.6 5.2 19.4 6 21 6.2 C19.4 6.4 18.6 7.2 18.4 8.8 C18.2 7.2 17.4 6.4 15.8 6.2 C17.4 6 18.2 5.2 18.4 3.6 Z" fill="url(#faisca)"/>
 </svg>
