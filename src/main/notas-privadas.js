@@ -152,6 +152,8 @@ async function ativar(arquivo, senha) {
   if (notas.mesmoArquivo(nome, notas.ARQUIVO_TAREFAS)) return { ok: false, motivo: 'tarefas' };
   if ((config.obter('notasHistorico') || []).some((h) => notas.mesmoArquivo(h, nome))) return { ok: false, motivo: 'historico' };
   if (notas.ehArquivoLivre(nome)) return { ok: false, motivo: 'livre' };
+  if (notas.ehArquivoQuadro(nome)) return { ok: false, motivo: 'quadro' };
+  if (notas.ehArquivoTexto(nome)) return { ok: false, motivo: 'texto' };
 
   const completo = notas.caminhoDe(nome);
   if (await notas.ehArquivoPrivado(completo)) return { ok: false, motivo: 'ja-privado' };

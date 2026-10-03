@@ -20,6 +20,11 @@ const ferramentaI18n = require('./ferramenta-i18n');
 const notas = require('./notas');
 const privadas = require('./notas-privadas');
 const livres = require('./notas-livres');
+const imagemFolha = require('./imagem-folha');
+const links = require('./links');
+const quadros = require('./notas-quadro');
+const textos = require('./notas-texto');
+const abas = require('./abas');
 const aviso = require('./aviso');
 const atualizacao = require('./atualizacao');
 
@@ -117,6 +122,14 @@ function registrar() {
   // porque sao dois textos inteiros.
   ipcMain.handle('diff:linhas', () => janelas.obterLinhasDiff());
 
+  // A demonstracao do Diff: qual exemplo esta aberto (null numa comparacao de verdade) e a troca de linguagem.
+  ipcMain.handle('diff:exemplo', () => ({ atual: janelas.obterExemploDiff(), opcoes: ferramentaDiff.LINGUAGENS_DO_EXEMPLO }));
+  ipcMain.handle('diff:abrirExemplo', (_evento, linguagem) => {
+    if (!ferramentaDiff.LINGUAGENS_DO_EXEMPLO.includes(linguagem) || janelas.obterExemploDiff() === null) return false;
+    ferramentaDiff.abrirExemplo(linguagem);
+    return true;
+  });
+
   // --- Fast Note -----------------------------------------------------------
 
   // Tudo que a janela de notas precisa para se montar, em uma leitura so.
@@ -136,6 +149,10 @@ function registrar() {
     privados: await notas.listarPrivados(),
     // Os arquivos em folha livre.
     livres: await livres.arquivosLivres(),
+    // Os arquivos em quadro branco (Excalidraw).
+    quadros: await quadros.arquivosQuadro(),
+    // Os arquivos em modo texto (o .md inteiro como um editor de texto).
+    textos: await textos.arquivosTexto(),
   }));
 
   // --- Arquivos com cadeado ------------------------------------------------------------
@@ -211,6 +228,15 @@ function registrar() {
     const limpo = texto.trim();
     if (limpo === '') return null;
 
+    // Um arquivo em modo texto recebe a linha no fim do .md.
+    if (textos.ehTexto(arquivo)) {
+      const gravou = await textos.adicionarTexto(arquivo, limpo);
+      return gravou ? notas.nomeDeArquivo(arquivo) : null;
+    }
+
+    // Um quadro branco nao recebe texto (o .md dele nunca muda e nao ha onde escrever).
+    if (quadros.ehQuadro(arquivo)) return null;
+
     // Uma folha livre recebe o paragrafo na folha; o .md dela nunca muda.
     if (livres.ehLivre(arquivo)) {
       const gravou = await livres.adicionarTexto(arquivo, limpo);
@@ -260,11 +286,20 @@ function registrar() {
   ipcMain.handle('notas:excluir', async (_evento, arquivo) => {
     if (typeof arquivo !== 'string') return false;
     const eraLivre = livres.ehLivre(arquivo);
+    const eraQuadro = quadros.ehQuadro(arquivo);
+    const eraTexto = textos.ehTexto(arquivo);
     const excluiu = await notas.excluir(arquivo);
     // Em folha livre, a folha e as imagens que so ela usa vao para a Lixeira junto com o .md.
     if (excluiu && eraLivre) await livres.descartarFolha(arquivo);
+    // O mesmo no quadro branco: o .excalidraw vai para a Lixeira junto.
+    if (excluiu && eraQuadro) await quadros.descartarQuadro(arquivo);
+    if (excluiu && eraTexto) textos.esquecer(arquivo);
     return excluiu;
   });
+
+  // --- Links ------------------------------------------------------------------------------
+  // Clicar num link das anotacoes: so http, https e mailto abrem (links.js recusa o resto).
+  ipcMain.handle('link:abrir', (_evento, url) => links.abrir(url));
 
   // --- Folha livre ------------------------------------------------------------------------
   // O editor (Quill) e o desenho moram na tela; aqui so se le e grava o JSON da folha e as imagens.
@@ -285,16 +320,49 @@ function registrar() {
     evento.returnValue = ehString(arquivo) && folha && typeof folha === 'object' ? livres.salvarSincrono(arquivo, { conteudo: folha.conteudo, tinta: folha.tinta }) : false;
   });
 
+  // "Copiar como imagem": o print da folha inteira vai para a area de transferencia (a tela grava a folha antes).
+  ipcMain.handle('livre:copiarImagem', async (_evento, arquivo) => (ehString(arquivo) ? imagemFolha.copiar(arquivo) : { ok: false, motivo: 'entrada' }));
+
   ipcMain.handle('livre:anexarImagem', async (_evento, arquivo, bytes) => {
     if (!ehString(arquivo)) return { ok: false, motivo: 'entrada' };
     return livres.anexarImagem(arquivo, bytes);
   });
 
-  // A janela do Fast Note troca de tamanho conforme o arquivo aberto: a folha livre tem o dela.
-  ipcMain.handle('janela:modoNota', (evento, livre) => {
+  // --- Modo texto e abas ----------------------------------------------------------------------
+  // O modo texto abre o .md inteiro num editor de texto simples; as abas guardam o que ficou aberto.
+  ipcMain.handle('texto:ativar', async (_evento, arquivo) => (ehString(arquivo) ? textos.ativar(arquivo) : { ok: false, motivo: 'entrada' }));
+  ipcMain.handle('texto:desativar', async (_evento, arquivo) => (ehString(arquivo) ? textos.desativar(arquivo) : { ok: false, motivo: 'entrada' }));
+  ipcMain.handle('texto:ler', async (_evento, arquivo) => (ehString(arquivo) ? textos.ler(arquivo) : { ok: false, motivo: 'entrada' }));
+  ipcMain.handle('texto:salvar', async (_evento, arquivo, texto) => (ehString(arquivo) ? textos.salvar(arquivo, texto) : { ok: false, motivo: 'entrada' }));
+  ipcMain.on('texto:salvarSincrono', (evento, arquivo, texto) => {
+    evento.returnValue = ehString(arquivo) ? textos.salvarSincrono(arquivo, texto) : false;
+  });
+  // Salvar uma aba rapida: cria o .md com o texto exato e o poe em modo texto.
+  ipcMain.handle('texto:criar', async (_evento, nome, texto) => (ehString(nome) ? textos.criar(nome, texto) : { ok: false, motivo: 'entrada' }));
+
+  ipcMain.handle('abas:ler', () => abas.lerEstado());
+  ipcMain.handle('abas:salvar', (_evento, estado) => abas.salvarEstado(estado));
+  ipcMain.on('abas:salvarSincrono', (evento, estado) => {
+    evento.returnValue = abas.salvarEstado(estado);
+  });
+
+  // --- Quadro branco ------------------------------------------------------------------------
+  // O Excalidraw mora numa pagina propria (renderer/quadro, dentro de um iframe); aqui so se le e grava o JSON.
+  ipcMain.handle('quadro:ativar', async (_evento, arquivo) => (ehString(arquivo) ? quadros.ativar(arquivo) : { ok: false, motivo: 'entrada' }));
+  ipcMain.handle('quadro:desativar', async (_evento, arquivo) => (ehString(arquivo) ? quadros.desativar(arquivo) : { ok: false, motivo: 'entrada' }));
+  ipcMain.handle('quadro:ler', async (_evento, arquivo) => (ehString(arquivo) && quadros.ehQuadro(arquivo) ? quadros.lerQuadro(arquivo) : null));
+  ipcMain.handle('quadro:salvar', async (_evento, arquivo, cena) => (ehString(arquivo) ? quadros.salvar(arquivo, cena) : { ok: false, motivo: 'entrada' }));
+  ipcMain.on('quadro:salvarSincrono', (evento, arquivo, cena) => {
+    evento.returnValue = ehString(arquivo) ? quadros.salvarSincrono(arquivo, cena) : false;
+  });
+  ipcMain.handle('quadro:copiarImagem', async (_evento, bytes) => quadros.copiarImagem(bytes));
+
+  // A janela do Fast Note troca de tamanho conforme o arquivo aberto: a folha livre e o quadro tem o deles.
+  // O modo e 'nota' | 'livre' | 'quadro' (true/false, de antes, valem como 'livre'/'nota').
+  ipcMain.handle('janela:modoNota', (evento, modo) => {
     const janela = janelaDoEvento(evento);
     if (!janela) return false;
-    janelas.definirModoNota(janela, livre === true);
+    janelas.definirModoNota(janela, modo === true ? 'livre' : modo === 'livre' || modo === 'quadro' ? modo : 'nota');
     return true;
   });
 

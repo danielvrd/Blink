@@ -261,7 +261,7 @@ async function salvarTopicos(arquivo, topicos) {
   // Gravar texto puro por cima de um arquivo com cadeado destruiria o conteudo cifrado; e um arquivo em
   // folha livre nao muda o .md.
   if (await ehArquivoPrivado(completo)) return false;
-  if (ehArquivoLivre(path.basename(completo))) return false;
+  if (ehArquivoEspecial(path.basename(completo))) return false;
 
   let partes = { cabecalho: [], topicos: [], rodape: [] };
   try {
@@ -610,6 +610,22 @@ function ehArquivoLivre(nome) {
   return (config.obter('notasLivres') || []).some((a) => mesmoArquivo(a, nome));
 }
 
+/** O arquivo esta em quadro branco? (notas-quadro.js) - o .md tambem nunca muda. */
+function ehArquivoQuadro(nome) {
+  return (config.obter('notasQuadro') || []).some((a) => mesmoArquivo(a, nome));
+}
+
+/** O arquivo esta em modo texto (editor de texto simples; notas-texto.js)? */
+function ehArquivoTexto(nome) {
+  return (config.obter('notasTexto') || []).some((a) => mesmoArquivo(a, nome));
+}
+
+/**
+ * Folha livre, quadro branco ou modo texto: o resto do Blink nao grava TOPICOS nesses arquivos (o .md de uma folha
+ * ou de um quadro nunca muda, e o de modo texto so muda pelo editor de texto).
+ */
+const ehArquivoEspecial = (nome) => ehArquivoLivre(nome) || ehArquivoQuadro(nome) || ehArquivoTexto(nome);
+
 /**
  * O arquivo principal, se ainda existir na pasta. Um principal apagado ou
  * renomeado por fora conta como nenhum.
@@ -872,7 +888,7 @@ async function salvarDiaHistorico(arquivo, data, topicos) {
   const completo = caminhoDe(arquivo);
   if (!completo) return false;
   if (await ehArquivoPrivado(completo)) return false;
-  if (ehArquivoLivre(path.basename(completo))) return false;
+  if (ehArquivoEspecial(path.basename(completo))) return false;
 
   let partes = { cabecalho: [], correntes: [], dias: [], rodape: [] };
   try {
@@ -951,7 +967,7 @@ async function definirHistorico(arquivo, ligado) {
   // Cadeado e relogio nao andam juntos: o arquivo cifrado nao tem dias para o Blink ler. Nem folha livre e relogio:
   // o relogio reescreve o .md, e a folha livre nao mexe nele.
   if (ligado && (await ehArquivoPrivado(caminhoDe(existente)))) return false;
-  if (ligado && ehArquivoLivre(existente)) return false;
+  if (ligado && ehArquivoEspecial(existente)) return false;
 
   const atuais = config.obter('notasHistorico') || [];
   const jaLigado = atuais.some((a) => mesmoArquivo(a, existente));
@@ -976,6 +992,8 @@ module.exports = {
   caminhoDe,
   ehArquivoPrivado,
   ehArquivoLivre,
+  ehArquivoQuadro,
+  ehArquivoTexto,
   listarPrivados,
   mesmoArquivo,
   ARQUIVO_TAREFAS,

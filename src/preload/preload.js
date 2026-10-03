@@ -32,7 +32,7 @@ contextBridge.exposeInMainWorld('blink', {
     /** O X da janela principal: esconde na bandeja, nao encerra o app. */
     esconder: () => ipcRenderer.invoke('janela:esconder'),
     /** O Fast Note troca de tamanho conforme o arquivo: true = folha livre (tamanho proprio), false = nota comum. */
-    modoNota: (livre) => ipcRenderer.invoke('janela:modoNota', livre),
+    modoNota: (modo) => ipcRenderer.invoke('janela:modoNota', modo),
     /** Maximiza, ou restaura se ja estiver maximizada. */
     alternarMaximizar: () => ipcRenderer.invoke('janela:alternarMaximizar'),
     /** O X e o Esc das janelas das ferramentas: fecham de verdade. */
@@ -58,6 +58,10 @@ contextBridge.exposeInMainWorld('blink', {
   diff: {
     /** As linhas da comparacao, pedidas assim que a janela carrega. */
     linhas: () => ipcRenderer.invoke('diff:linhas'),
+    /** Na demonstracao: { atual, opcoes } (atual = null numa comparacao de verdade). */
+    exemplo: () => ipcRenderer.invoke('diff:exemplo'),
+    /** Troca o exemplo (so vale com a demonstracao aberta). */
+    abrirExemplo: (linguagem) => ipcRenderer.invoke('diff:abrirExemplo', linguagem),
   },
 
   notas: {
@@ -104,6 +108,42 @@ contextBridge.exposeInMainWorld('blink', {
    * Folha livre: um editor tipo Notion (Quill) com desenho por cima, guardado em .blink/livre/<nome>.json ao lado
    * do .md (que nunca muda). A tela manda e recebe o Delta e os tracos como JSON.
    */
+  link: {
+    /** Abre um link no navegador padrao. So http, https e mailto: devolve false para o resto. */
+    abrir: (url) => ipcRenderer.invoke('link:abrir', url),
+  },
+
+  texto: {
+    /** Liga o modo texto num arquivo. Devolve { ok, texto } (o .md inteiro). */
+    ativar: (arquivo) => ipcRenderer.invoke('texto:ativar', arquivo),
+    desativar: (arquivo) => ipcRenderer.invoke('texto:desativar', arquivo),
+    /** O .md inteiro de um arquivo em modo texto: { ok, texto }. */
+    ler: (arquivo) => ipcRenderer.invoke('texto:ler', arquivo),
+    salvar: (arquivo, texto) => ipcRenderer.invoke('texto:salvar', arquivo, texto),
+    salvarSincrono: (arquivo, texto) => ipcRenderer.sendSync('texto:salvarSincrono', arquivo, texto),
+    /** Salva uma aba rapida como arquivo novo (em modo texto): { ok, nome } ou { ok: false, motivo }. */
+    criar: (nome, texto) => ipcRenderer.invoke('texto:criar', nome, texto),
+  },
+
+  abas: {
+    /** O que ficou aberto: { abertas, ativa, rapidas } (rapidas: id -> texto). */
+    ler: () => ipcRenderer.invoke('abas:ler'),
+    salvar: (estado) => ipcRenderer.invoke('abas:salvar', estado),
+    salvarSincrono: (estado) => ipcRenderer.sendSync('abas:salvarSincrono', estado),
+  },
+
+  quadro: {
+    /** Liga o quadro branco num arquivo. Devolve { ok, cena } (o quadro guardado ou um vazio). */
+    ativar: (arquivo) => ipcRenderer.invoke('quadro:ativar', arquivo),
+    desativar: (arquivo) => ipcRenderer.invoke('quadro:desativar', arquivo),
+    /** O quadro guardado (o JSON do Excalidraw) ou null. */
+    ler: (arquivo) => ipcRenderer.invoke('quadro:ler', arquivo),
+    salvar: (arquivo, cena) => ipcRenderer.invoke('quadro:salvar', arquivo, cena),
+    salvarSincrono: (arquivo, cena) => ipcRenderer.sendSync('quadro:salvarSincrono', arquivo, cena),
+    /** Copia uma imagem PNG (bytes) para a area de transferencia. */
+    copiarImagem: (bytes) => ipcRenderer.invoke('quadro:copiarImagem', bytes),
+  },
+
   livre: {
     /** Liga a folha num arquivo. Devolve { ok, folha: { conteudo, tinta } } (os topicos do .md em lista, ou a folha guardada). */
     ativar: (arquivo) => ipcRenderer.invoke('livre:ativar', arquivo),
@@ -116,6 +156,8 @@ contextBridge.exposeInMainWorld('blink', {
     salvarSincrono: (arquivo, folha) => ipcRenderer.sendSync('livre:salvarSincrono', arquivo, folha),
     /** Guarda uma imagem colada ou arrastada (bytes). Devolve { ok, url } com o endereco blink-anexo://... */
     anexarImagem: (arquivo, bytes) => ipcRenderer.invoke('livre:anexarImagem', arquivo, bytes),
+    /** Copia o print da folha inteira (a gravada no disco) para a area de transferencia. Devolve { ok, largura, altura, cortada }. */
+    copiarImagem: (arquivo) => ipcRenderer.invoke('livre:copiarImagem', arquivo),
   },
 
   /**

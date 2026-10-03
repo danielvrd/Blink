@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blink-anexo:;">
+        content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blink-anexo:; frame-src 'self';">
   <title>Fast Note</title>
 
   <link rel="stylesheet" href="../comum/tokens.css">
@@ -22,13 +22,15 @@
         <button class="botao-olho" id="btn-olho" title="Abrir as configurações do Blink" aria-label="Abrir as configurações do Blink">
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="1" y="1" width="22" height="22" rx="6.5" fill="#1b1c23" stroke="#ffffff" stroke-opacity="0.14" stroke-width="0.8"></rect>
-            <circle cx="12" cy="12" r="6.7" fill="none" stroke="#d6d9e0" stroke-width="1.7"></circle>
-            <circle cx="12" cy="12" r="4" fill="#e0263b"></circle>
+            <circle cx="12" cy="12" r="6" fill="none" stroke="#d6d9e0" stroke-width="1.7"></circle>
+            <circle cx="12" cy="12" r="3.5" fill="#cb3e3e"></circle>
             <circle cx="12" cy="12" r="1.8" fill="#14050a"></circle>
             <circle cx="13.2" cy="10.8" r="0.9" fill="#ffffff" opacity="0.92"></circle>
           </svg>
         </button>
-        <span>Fast Note</span>
+        <!-- O seletor de arquivos (com todas as marcas: estrela, relogio, cadeado, folha, quadro, texto) fica no
+             cabecalho; abrir um arquivo por ele (ou por "/nome") abre ou ativa a aba dele (seletor.js, abas.js) -->
+        <div class="seletor" id="seletor-arquivo"></div>
       </div>
       <div class="botoes-janela">
         <button class="botao-x" id="btn-minimizar" title="Minimizar" aria-label="Minimizar">
@@ -42,16 +44,36 @@
 
     <div class="corpo">
 
-      <!-- Escolha do arquivo, e os botoes de limpar tudo e excluir -->
+      <!-- As abas abertas, e os botoes: nova aba, salvar (aba rapida), imagem, copiar, limpar tudo e excluir -->
       <div class="linha-arquivo">
-        <!-- Seletor de arquivos com a estrela do principal e o relogio do
-             historico diario (seletor.js) -->
-        <div class="seletor" id="seletor-arquivo"></div>
-
-        <!-- So aparece com o relogio ligado no arquivo aberto (calendario.js) -->
-        <div class="calendario" id="calendario-historico" hidden></div>
+        <div class="barra-abas" id="barra-abas"></div>
 
         <div class="acoes-arquivo">
+          <button class="botao-acao botao-nova-aba" id="btn-nova-aba" title="Nova aba rápida: só texto, para colar algo (Ctrl+T)" aria-label="Nova aba rápida">
+            <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"></path>
+            </svg>
+          </button>
+
+          <!-- So na aba rapida: salva o texto como um arquivo (pede o nome) -->
+          <button class="botao-acao" id="btn-salvar-aba" title="Salvar como arquivo (Ctrl+S)" aria-label="Salvar a aba como arquivo" hidden>
+            <!-- disquete -->
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4.5 4.5h12l3 3v12h-15z" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linejoin="round"></path>
+              <path d="M8 4.5v5h7v-5M8 19.5v-6h8v6" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linejoin="round"></path>
+            </svg>
+          </button>
+
+          <!-- So em folha livre: copia o print da folha inteira -->
+          <button class="botao-acao" id="btn-imagem" title="Copiar a folha como imagem" aria-label="Copiar a folha como imagem" hidden>
+            <!-- moldura com montanha e sol -->
+            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3.5" y="5" width="17" height="14" rx="2.2" fill="none" stroke="#ffffff" stroke-width="1.8"></rect>
+              <circle cx="9" cy="10" r="1.6" fill="#ffffff"></circle>
+              <path d="M4.5 17.5 L10 13 L13.5 16 L16 14 L19.5 17.5" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"></path>
+            </svg>
+          </button>
+
           <button class="botao-acao" id="btn-copiar" title="Copiar todas as anotações" aria-label="Copiar as anotações">
             <!-- letra C, desenhada por traço para não depender de fonte -->
             <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
@@ -111,13 +133,22 @@
         </div>
       </div>
 
+      <!-- So aparece com o relogio ligado no arquivo aberto (calendario.js) -->
+      <div class="calendario" id="calendario-historico" hidden></div>
+
       <!-- Só aparece quando "+ Criar nova nota" está escolhido -->
       <input class="campo-nome" id="campo-nome" placeholder="nome-da-nota.md" hidden>
 
       <div class="lista" id="lista"></div>
 
+      <!-- Uma aba rapida (so texto) ou um arquivo em modo texto: o texto inteiro num editor simples -->
+      <textarea class="texto-livre" id="texto-livre" placeholder="Cole ou escreva aqui…" spellcheck="false" hidden></textarea>
+
       <!-- Arquivo em folha livre: o editor de pagina (folha.js) no lugar da lista e do rascunho -->
       <div class="folha-livre" id="folha-livre" hidden></div>
+
+      <!-- Arquivo em quadro branco: o Excalidraw num iframe (quadro.js; a pagina e renderer/quadro) -->
+      <div class="quadro-livre" id="quadro-livre" hidden></div>
 
       <!-- Arquivo com cadeado, ainda fechado: a senha no lugar da lista (notas-privadas.js guarda a chave so
            enquanto o arquivo esta aberto) -->
@@ -160,6 +191,7 @@
         <div class="erro-privado" id="erro-privado" hidden></div>
         <div class="botoes-privado">
           <button class="botao-primario" id="btn-privado-ok">OK</button>
+          <button class="botao-fantasma" id="btn-privado-nao" hidden>Não salvar</button>
           <button class="botao-fantasma" id="btn-privado-cancelar">Cancelar</button>
         </div>
       </div>
@@ -167,12 +199,15 @@
   </div>
 
   <script src="../comum/ui.js"></script>
+  <script src="../comum/links.js"></script>
   <script src="../comum/atualizacao.js"></script>
   <script src="../comum/aparencia.js"></script>
   <script src="../../../node_modules/quill/dist/quill.js"></script>
   <script src="tinta.js"></script>
   <script src="folha.js"></script>
+  <script src="quadro.js"></script>
   <script src="seletor.js"></script>
+  <script src="abas.js"></script>
   <script src="calendario.js"></script>
   <script src="autocompletar.js"></script>
   <script src="note.js"></script>

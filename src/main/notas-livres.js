@@ -39,6 +39,8 @@ const TIPOS = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'i
 
 /** A cor e a espessura aceitas num traco da tinta, e o limite de pontos (uma folha nao precisa de mais). */
 const COR_VALIDA = /^#[0-9a-f]{6}$/i;
+const FORMAS = ['retangulo', 'elipse', 'linha', 'seta'];
+const TIPOS_DE_TRACO = ['caneta', 'marca', ...FORMAS];
 const MAXIMO_DE_TRACOS = 20000;
 const MAXIMO_DE_PONTOS = 400000;
 
@@ -105,10 +107,12 @@ function tintaValida(tinta) {
   if (!Array.isArray(tinta) || tinta.length > MAXIMO_DE_TRACOS) return false;
   let pontos = 0;
   for (const traco of tinta) {
-    if (!traco || (traco.t !== 'caneta' && traco.t !== 'marca')) return false;
+    if (!traco || !TIPOS_DE_TRACO.includes(traco.t)) return false;
     if (typeof traco.c !== 'string' || !COR_VALIDA.test(traco.c)) return false;
     if (typeof traco.w !== 'number' || !(traco.w > 0 && traco.w <= 80)) return false;
     if (!Array.isArray(traco.p) || traco.p.length === 0) return false;
+    // Uma forma (retangulo, elipse, linha, seta) tem exatamente dois pontos: o inicio e o fim.
+    if (FORMAS.includes(traco.t) && traco.p.length !== 2) return false;
     pontos += traco.p.length;
     if (pontos > MAXIMO_DE_PONTOS) return false;
     if (!traco.p.every((p) => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]))) return false;
@@ -192,6 +196,8 @@ async function ativar(arquivo) {
   if (!existente) return { ok: false, motivo: 'inexistente' };
   if (notas.mesmoArquivo(existente, notas.ARQUIVO_TAREFAS)) return { ok: false, motivo: 'tarefas' };
   if ((config.obter('notasHistorico') || []).some((h) => notas.mesmoArquivo(h, existente))) return { ok: false, motivo: 'historico' };
+  if (notas.ehArquivoQuadro(existente)) return { ok: false, motivo: 'quadro' };
+  if (notas.ehArquivoTexto(existente)) return { ok: false, motivo: 'texto' };
 
   const completo = notas.caminhoDe(existente);
   if (await notas.ehArquivoPrivado(completo)) return { ok: false, motivo: 'privado' };

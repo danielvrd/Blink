@@ -15,6 +15,7 @@
     "publicar": "node scripts/publicar.js"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "0.17.6",
     "@nut-tree-fork/libnut-win32": "2.7.5",
     "diff": "9.0.0",
     "electron-store": "8.2.0",
@@ -22,6 +23,8 @@
     "highlight.js": "11.12.0",
     "koffi": "3.3.2",
     "quill": "2.0.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "sql-formatter": "15.9.0",
     "xml-formatter": "3.7.0"
   },
@@ -42,6 +45,17 @@
     "files": [
       "src/**/*",
       "!src/**/*.map",
+      "!node_modules/@excalidraw/excalidraw/dist/excalidraw-assets-dev/**",
+      "!node_modules/@excalidraw/excalidraw/dist/excalidraw.development.js",
+      "!node_modules/@excalidraw/excalidraw/dist/excalidraw-with-preact.*",
+      "!node_modules/@excalidraw/excalidraw/types/**",
+      "!node_modules/react/umd/*.development.js",
+      "!node_modules/react/umd/*.profiling.min.js",
+      "!node_modules/react-dom/umd/*.development.js",
+      "!node_modules/react-dom/umd/*.profiling.min.js",
+      "!node_modules/react-dom/umd/react-dom-server*",
+      "!node_modules/react-dom/umd/react-dom-test-utils*",
+      "!node_modules/**/*.map",
       "package.json"
     ],
     "asarUnpack": [
@@ -68,6 +82,7 @@
       "shortcutName": "Blink",
       "installerIcon": "src/assets/icones/blink.ico",
       "uninstallerIcon": "src/assets/icones/blink.ico",
+      "include": "build/instalador.nsh",
       "deleteAppDataOnUninstall": false
     },
     "publish": [

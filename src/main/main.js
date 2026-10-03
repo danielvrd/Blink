@@ -26,6 +26,7 @@ const aviso = require('./aviso');
 const atualizacao = require('./atualizacao');
 const monitorSql = require('./monitor-sql');
 const notasLivres = require('./notas-livres');
+const links = require('./links');
 
 // O esquema blink-anexo:// (as imagens da folha livre) precisa ser declarado ANTES de o app ficar pronto.
 notasLivres.registrarEsquema();
@@ -71,6 +72,9 @@ function acionarFerramenta(nome) {
  * conseguiria registrar nenhuma e ficaria muda. Se o usuario abrir o Blink de
  * novo, a instancia que ja esta rodando mostra a janela e a nova encerra.
  */
+// Nenhuma tela do Blink navega para outro endereco nem abre janela: link http/https vai para o navegador padrao.
+links.protegerNavegacao(app);
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -82,8 +86,13 @@ if (!app.requestSingleInstanceLock()) {
      *
      * Sem isto as notificacoes aparecem como "electron.app.Blink" e o
      * Windows pode agrupar os icones da barra de tarefas errado.
+     *
+     * O Windows junta o botao da barra de tarefas ao atalho que tem o MESMO id e
+     * mostra o icone DO ATALHO. No `npm start` o id igual ao do Blink instalado
+     * fazia o botao mostrar o icone do app instalado (o antigo); em
+     * desenvolvimento o id e outro e vale o icone da janela.
      */
-    app.setAppUserModelId('com.danielvrd.blink');
+    app.setAppUserModelId(app.isPackaged ? 'com.danielvrd.blink' : 'com.danielvrd.blink.dev');
 
     atalhos.definirAcao(acionarFerramenta);
     bandeja.definirAcao(acionarFerramenta);

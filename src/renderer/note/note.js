@@ -4,11 +4,10 @@
  * Escreve topicos em arquivos .md de uma pasta escolhida. Quem mexe em
  * disco e o processo principal (src/main/notas.js); aqui e so a tela.
  *
- * Uma inversao importante: no arquivo os topicos ficam em ordem
- * cronologica, com o mais novo no fim, para o .md se ler como um diario.
- * Na tela o mais novo aparece em cima, que e onde o olho vai primeiro.
- * Entao as listas daqui sao sempre o inverso das do arquivo, e a conversao
- * acontece em dois lugares so: carregar() e gravar().
+ * A tela mostra os topicos NA MESMA ORDEM do arquivo: o mais antigo em cima e o
+ * mais novo embaixo, perto do campo de escrita (como um chat). Um topico novo
+ * entra no fim, e a lista rola ate ele. O botao C copia nessa mesma ordem.
+ * (Ate a versao 0.6 a tela mostrava o mais novo em cima.)
  *
  * O task.md e um arquivo especial: em vez de uma lista de topicos, tem duas
  * - tarefas a fazer e concluidas. Cada lista e um "grupo":
@@ -23,6 +22,13 @@
  * Um arquivo com o relogio ligado (historico diario) guarda um registro por
  * dia; o campo do calendario (calendario.js), ao lado do seletor, escolhe
  * qual dia esta na tela. Ver o formato em disco em src/main/notas.js.
+ *
+ * As ABAS (como o Bloco de Notas): cada arquivo aberto tem uma aba (abas.js desenha a barra); escolher um arquivo no
+ * seletor, "/nome" ou o atalho do Fast Note abre ou ativa a aba dele. O "+" abre uma ABA RAPIDA: so texto, para colar
+ * algo; ela tem nome fictico (as primeiras palavras), um botao de salvar (cria um .md em MODO TEXTO) e sobrevive a
+ * fechar a janela (o texto fica em abas-rapidas.json, em %APPDATA%\Blink, nunca na pasta de notas). Um arquivo em
+ * modo texto e o .md inteiro num editor de texto simples. Tudo isso e escolhido pelo valor de `arquivo`: um nome de
+ * arquivo, NOVO ("+ Criar nova nota") ou RAPIDA (uma aba rapida).
  *
  * Um arquivo em "folha livre" (a folha do seletor) nao tem lista de topicos: no
  * lugar dela e do rascunho fica um editor de pagina com caneta (folha.js), e a
@@ -50,6 +56,8 @@
     aoAlternarHistorico: (valor) => alternarHistorico(valor),
     aoAlternarPrivado: (valor) => alternarPrivado(valor),
     aoAlternarLivre: (valor) => alternarLivre(valor),
+    aoAlternarQuadro: (valor) => alternarQuadro(valor),
+    aoAlternarTexto: (valor) => alternarTexto(valor),
     // A lista, o calendario e as confirmacoes nunca ficam abertos juntos.
     aoAbrir: () => { fecharPopovers(); calendario.fechar(); },
   });
@@ -67,10 +75,16 @@
   });
   const lista = document.getElementById('lista');
   const folhaEl = document.getElementById('folha-livre');
+  const quadroEl = document.getElementById('quadro-livre');
   const areaRascunho = document.getElementById('area-rascunho');
   const rascunho = document.getElementById('rascunho');
   const dica = document.getElementById('dica');
   const botaoCopiar = document.getElementById('btn-copiar');
+  const botaoImagem = document.getElementById('btn-imagem');
+  const botaoNovaAba = document.getElementById('btn-nova-aba');
+  const botaoSalvarAba = document.getElementById('btn-salvar-aba');
+  const textoLivre = document.getElementById('texto-livre');
+  const barraAbas = document.getElementById('barra-abas');
   const botaoLimpar = document.getElementById('btn-limpar');
   const botaoExcluir = document.getElementById('btn-excluir');
   const popoverLimpar = document.getElementById('popover-limpar');
@@ -119,6 +133,7 @@
   const erroPrivado = document.getElementById('erro-privado');
   const botaoPrivadoOk = document.getElementById('btn-privado-ok');
   const botaoPrivadoCancelar = document.getElementById('btn-privado-cancelar');
+  const botaoPrivadoNao = document.getElementById('btn-privado-nao');
 
   /** Arquivos com cadeado (o processo principal reconhece pelo cabecalho do arquivo). */
   let privados = [];
@@ -146,7 +161,7 @@
   window.Blink.autocompletar.ligar(rascunho, document.getElementById('popup-notas'), {
     obterNomes: () => {
       // Arquivo com cadeado fora da lista do "/": nada se escreve nele sem a senha.
-      const nomes = arquivos.filter((a) => !ehPrivado(a)).map((a) => a.replace(/\.md$/i, ''));
+      const nomes = arquivos.filter((a) => !ehPrivado(a) && !ehQuadro(a)).map((a) => a.replace(/\.md$/i, ''));
       // O "task" aparece mesmo antes do task.md existir: o /task cria.
       if (!nomes.some((n) => n.toLowerCase() === 'task')) nomes.push('task');
       return nomes;
@@ -171,10 +186,32 @@
   /** Arquivos em folha livre. */
   let livres = [];
 
+  /** Arquivos em quadro branco (Excalidraw). */
+  let quadros = [];
+
   /** A folha (folha.js), criada na primeira vez que um arquivo em folha livre abre. */
   let folha = null;
 
-  /** O modo em que a janela foi posta pela ultima vez (true = folha livre); null = ainda nao disse. */
+  /** O quadro (quadro.js), criado na primeira vez que um arquivo em quadro branco abre. */
+  let quadro = null;
+
+  /** Arquivos em modo texto (o .md inteiro num editor de texto simples). */
+  let textos = [];
+
+  /**
+   * As abas abertas, na ordem da barra:
+   *   { id, tipo: 'arquivo', nome, rascunho, dia }   um arquivo (o rascunho e o dia do calendario ficam POR ABA)
+   *   { id, tipo: 'rapida', texto, numero }          uma aba rapida (so texto; "Sem titulo", "Sem titulo 2"...)
+   */
+  let abasAbertas = [];
+
+  /** O id da aba ativa ('' = nenhuma: "+ Criar nova nota"). */
+  let abaAtiva = '';
+
+  /** O valor de `arquivo` numa aba rapida (que nao e um arquivo). */
+  const RAPIDA = '__rapida__';
+
+  /** O modo em que a janela foi posta pela ultima vez ('nota', 'livre' ou 'quadro'); null = ainda nao disse. */
   let modoDaJanela = null;
 
   /** Arquivo escolhido agora, ou NOVO. */
@@ -243,16 +280,158 @@
     return folha;
   }
 
-  /** Grava o que mudou na folha aberta, se ha uma. Antes de sair dela. */
-  async function salvarFolha() {
-    if (folha && folha.aberta()) await folha.salvarAgora();
+  /** A aba ativa e uma aba rapida? */
+  function ehRapida() {
+    return arquivo === RAPIDA;
   }
 
-  /** Sai da folha: grava o que faltava e a esvazia da tela. */
+  /** O arquivo (por padrao, o aberto) esta em modo texto? Sem diferenciar maiuscula. */
+  function ehTexto(nome = arquivo) {
+    return nome !== NOVO && nome !== RAPIDA && textos.some((x) => x.toLowerCase() === nome.toLowerCase());
+  }
+
+  /** Uma aba rapida ou um arquivo em modo texto: o texto inteiro num editor simples. */
+  const comEditorDeTexto = () => ehRapida() || ehTexto();
+
+  const abaPorId = (id) => abasAbertas.find((a) => a.id === id);
+  const abaDeArquivo = (nome) => abasAbertas.find((a) => a.tipo === 'arquivo' && a.nome.toLowerCase() === nome.toLowerCase());
+  const abaAtual = () => abaPorId(abaAtiva);
+
+  /** Um id novo para uma aba (so letras de 0 a f e tracos: o processo principal confere o formato). */
+  function novoId() {
+    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  }
+
+  /** O menor numero ainda nao usado por uma aba rapida aberta ("Sem titulo", "Sem titulo 2"...). */
+  function proximoNumeroDeAba() {
+    const usados = new Set(abasAbertas.filter((a) => a.tipo === 'rapida').map((a) => a.numero));
+    let n = 1;
+    while (usados.has(n)) n += 1;
+    return n;
+  }
+
+  /**
+   * O nome fictico de uma aba rapida: as primeiras palavras da primeira linha com texto (ate 4 palavras e 28
+   * caracteres); sem texto, "Sem titulo".
+   */
+  function rotuloDaRapida(aba) {
+    const linha = (aba.texto || '').split('\n').map((l) => l.trim()).find((l) => l !== '') || '';
+    const palavras = linha.replace(/[^\p{L}\p{N}\s'-]/gu, ' ').split(/\s+/).filter(Boolean).slice(0, 4);
+    let rotulo = palavras.join(' ');
+    if (rotulo.length > 28) rotulo = rotulo.slice(0, 27).trimEnd() + '…';
+    return rotulo || (aba.numero > 1 ? `Sem título ${aba.numero}` : 'Sem título');
+  }
+
+  /** O nome de arquivo sugerido ao salvar uma aba rapida: as primeiras palavras, minusculas, com hifen. */
+  function sugestaoDeNome(texto) {
+    const linha = texto.split('\n').map((l) => l.trim()).find((l) => l !== '') || '';
+    const palavras = linha.replace(/[\\/:*?"<>|]/g, ' ').replace(/[^\p{L}\p{N}\s'-]/gu, ' ').split(/\s+/).filter(Boolean).slice(0, 4);
+    return palavras.join('-').toLowerCase().slice(0, 40) || 'sem-titulo';
+  }
+
+  /** O que cada aba mostra: o rotulo, o modo (um pontinho colorido) e se ainda nao foi salva. */
+  function abasParaDesenhar() {
+    return abasAbertas.map((aba) => {
+      if (aba.tipo === 'rapida') {
+        const rotulo = rotuloDaRapida(aba);
+        return { id: aba.id, tipo: 'rapida', rotulo, titulo: `${rotulo} — aba rápida, ainda não salva`, naoSalva: aba.texto.trim() !== '', modo: 'rapida' };
+      }
+      const modo = ehPrivado(aba.nome) ? 'privado' : ehLivre(aba.nome) ? 'livre' : ehQuadro(aba.nome) ? 'quadro' : ehTexto(aba.nome) ? 'texto' : historico.some((h) => h.toLowerCase() === aba.nome.toLowerCase()) ? 'historico' : '';
+      return { id: aba.id, tipo: 'arquivo', rotulo: aba.nome.replace(/\.md$/i, ''), titulo: aba.nome, modo };
+    });
+  }
+
+  const barraDeAbas = window.Blink.abas.criar(barraAbas, {
+    aoAtivar: (id) => ativarAba(id),
+    aoFechar: (id) => fecharAba(id),
+    aoReordenar: (ids) => {
+      abasAbertas = ids.map(abaPorId).filter(Boolean);
+      desenharAbas();
+      salvarAbas();
+    },
+  });
+
+  function desenharAbas() {
+    barraDeAbas.desenhar(abasParaDesenhar(), abaAtiva);
+  }
+
+  /** O que vai para o processo principal: so nomes e ids; o texto das abas rapidas vai a parte. */
+  function estadoDasAbas() {
+    const ativa = abaAtual();
+    return {
+      abertas: abasAbertas.map((a) => (a.tipo === 'rapida' ? { tipo: 'rapida', id: a.id } : { tipo: 'arquivo', nome: a.nome })),
+      ativa: ativa ? (ativa.tipo === 'rapida' ? ativa.id : ativa.nome) : '',
+      rapidas: Object.fromEntries(abasAbertas.filter((a) => a.tipo === 'rapida').map((a) => [a.id, a.texto])),
+    };
+  }
+
+  let ultimoEstadoDasAbas = '';
+  let relogioDasAbas = null;
+
+  /** Grava as abas (pouco depois da ultima mudanca, e so se algo mudou). */
+  function salvarAbas() {
+    const estado = estadoDasAbas();
+    const texto = JSON.stringify(estado);
+    if (texto === ultimoEstadoDasAbas) return;
+    ultimoEstadoDasAbas = texto;
+    clearTimeout(relogioDasAbas);
+    relogioDasAbas = setTimeout(() => window.blink.abas.salvar(estado), 300);
+  }
+
+  /** A tela mostra `arquivo`: garante a aba dele (cria se nao ha), marca como ativa, e redesenha e grava a barra. */
+  function sincronizarAbas() {
+    if (arquivo === RAPIDA) {
+      // abaAtiva ja e o id da aba rapida (ativarRapida)
+    } else if (arquivo === NOVO) {
+      abaAtiva = '';
+    } else {
+      let aba = abaDeArquivo(arquivo);
+      if (!aba) {
+        aba = { id: novoId(), tipo: 'arquivo', nome: arquivo, rascunho: '', dia: '' };
+        abasAbertas.push(aba);
+      } else {
+        aba.nome = arquivo;
+      }
+      abaAtiva = aba.id;
+    }
+    desenharAbas();
+    salvarAbas();
+  }
+
+  /** Antes de sair da aba: guarda nela o que e dela (o texto de uma aba rapida; o rascunho e o dia de um arquivo). */
+  function guardarEstadoDaAba() {
+    const aba = abaAtual();
+    if (!aba) return;
+    if (aba.tipo === 'rapida') aba.texto = textoLivre.value;
+    else {
+      aba.rascunho = rascunho.value;
+      aba.dia = dataSelecionada;
+    }
+  }
+
+  /** O arquivo (por padrao, o aberto) esta em quadro branco? Sem diferenciar maiuscula. */
+  function ehQuadro(nome = arquivo) {
+    return nome !== NOVO && quadros.some((q) => q.toLowerCase() === nome.toLowerCase());
+  }
+
+  /** O quadro, criado na hora do primeiro uso (o iframe do Excalidraw so carrega quando alguem liga um quadro). */
+  function obterQuadro() {
+    if (!quadro) quadro = window.Blink.quadro.criar(quadroEl, { aoAviso: (texto) => avisarNaDica(texto) });
+    return quadro;
+  }
+
+  /** Grava o que mudou na folha ou no quadro aberto, se ha um. Antes de sair dele. */
+  async function salvarFolha() {
+    if (folha && folha.aberta()) await folha.salvarAgora();
+    if (quadro && quadro.aberta()) await quadro.salvarAgora();
+  }
+
+  /** Sai da folha ou do quadro: grava o que faltava e esvazia da tela. */
   async function sairDaFolha() {
-    if (!folha) return;
     await salvarFolha();
-    folha.esvaziar();
+    if (folha) folha.esvaziar();
+    if (quadro) quadro.esvaziar();
   }
 
   /** Arquivo com cadeado que ainda nao foi aberto com a senha: a tela mostra a senha no lugar da lista. */
@@ -271,7 +450,7 @@
 
   /** Os itens que o processo principal devolve (na ordem do arquivo) para a lista da tela (invertida). */
   function aplicarItensPrivados(itens) {
-    topicos = itens.map((i) => (i.tipo === 'credencial' ? { credencial: true, id: i.id, titulo: i.titulo } : i.texto)).reverse();
+    topicos = itens.map((i) => (i.tipo === 'credencial' ? { credencial: true, id: i.id, titulo: i.titulo } : i.texto));
   }
 
   /**
@@ -351,10 +530,25 @@
     topicos = [];
     tarefas = { pendentes: [], concluidas: [] };
     diasHistorico = [];
-    if (arquivo === NOVO) return;
+    if (arquivo === NOVO || arquivo === RAPIDA) return;
 
     // Arquivo com cadeado: nada se le do disco aqui. Ele abre pela tela da senha (abrirPrivado).
     if (ehPrivado()) return;
+
+    // Modo texto: o .md inteiro vai para o editor de texto.
+    if (ehTexto()) {
+      const lido = await window.blink.texto.ler(arquivo);
+      textoLivre.value = lido && lido.ok ? lido.texto : '';
+      textoSujo = false;
+      return;
+    }
+
+    // Quadro branco: a cena vai para o Excalidraw; a lista de topicos fica vazia.
+    if (ehQuadro()) {
+      const lida = await window.blink.quadro.ler(arquivo);
+      obterQuadro().abrir(arquivo, lida);
+      return;
+    }
 
     // Folha livre: o texto e o desenho vao para o editor; a lista de topicos fica vazia.
     if (ehLivre()) {
@@ -365,46 +559,46 @@
 
     if (ehTarefas()) {
       const lido = await window.blink.notas.lerTarefas();
-      tarefas = { pendentes: lido.pendentes.reverse(), concluidas: lido.concluidas.reverse() };
+      tarefas = { pendentes: lido.pendentes, concluidas: lido.concluidas };
       return;
     }
 
     if (ehHistorico()) {
       const { dias } = await window.blink.notas.lerHistorico(arquivo);
-      diasHistorico = dias.map((d) => ({ data: d.data, topicos: [...d.topicos].reverse() }));
+      diasHistorico = dias.map((d) => ({ data: d.data, topicos: [...d.topicos] }));
       if (!dataSelecionada) dataSelecionada = dataDeHoje();
       return;
     }
 
     const { topicos: doArquivo } = await window.blink.notas.ler(arquivo);
-    topicos = doArquivo.reverse();
+    topicos = doArquivo;
   }
 
   /** Manda o que esta na tela para o disco, de volta na ordem do arquivo. */
   async function gravar() {
-    if (arquivo === NOVO) return;
+    if (arquivo === NOVO || arquivo === RAPIDA) return;
 
     // Arquivo privado: o processo principal cifra e grava (so com ele aberto). A credencial vai so pelo id.
     if (ehPrivado()) {
       if (!desbloqueado) return;
-      await window.blink.privado.salvar(arquivo, [...topicos].reverse().map(paraOProcessoPrincipal));
+      await window.blink.privado.salvar(arquivo, [...topicos].map(paraOProcessoPrincipal));
       return;
     }
 
     if (ehTarefas()) {
       await window.blink.notas.salvarTarefas({
-        pendentes: [...tarefas.pendentes].reverse(),
-        concluidas: [...tarefas.concluidas].reverse(),
+        pendentes: [...tarefas.pendentes],
+        concluidas: [...tarefas.concluidas],
       });
       return;
     }
 
     if (ehHistorico()) {
-      await window.blink.notas.salvarDiaHistorico(arquivo, dataSelecionada, [...historicoAtual()].reverse());
+      await window.blink.notas.salvarDiaHistorico(arquivo, dataSelecionada, [...historicoAtual()]);
       return;
     }
 
-    await window.blink.notas.salvar(arquivo, [...topicos].reverse());
+    await window.blink.notas.salvar(arquivo, [...topicos]);
   }
 
   /** Relê a lista de arquivos - pode ter nascido um - e redesenha o seletor. */
@@ -416,6 +610,8 @@
     historico = estado.historico;
     privados = estado.privados || [];
     livres = estado.livres || [];
+    quadros = estado.quadros || [];
+    textos = estado.textos || [];
     desenharSelect(estado.arquivos);
     return estado.arquivos;
   }
@@ -429,7 +625,11 @@
 
   /** Mostra no seletor o arquivo aberto, a estrela e o relogio, sem reler a pasta. */
   function atualizarSeletor() {
-    seletor.definir({ arquivos, atual: arquivo, principal, historico, privados, livres, arquivoTarefas });
+    seletor.definir({
+      arquivos, atual: arquivo, principal, historico, privados, livres, quadros, textos, arquivoTarefas,
+      // Numa aba rapida o botao do seletor mostra o nome da aba.
+      rotuloAtual: ehRapida() && abaAtual() ? rotuloDaRapida(abaAtual()) : '',
+    });
   }
 
   /**
@@ -472,6 +672,8 @@
       case 'tarefas': return 'O arquivo de tarefas não pode ser folha livre.';
       case 'historico': return 'Desligue o histórico diário deste arquivo antes de ligar a folha livre.';
       case 'privado': return 'Tire o cadeado deste arquivo antes de ligar a folha livre.';
+      case 'quadro': return 'Desligue o quadro branco deste arquivo antes de ligar a folha livre.';
+      case 'texto': return 'Desligue o modo texto ("T") deste arquivo antes de ligar a folha livre.';
       case 'inexistente': return 'O arquivo não existe mais.';
       case 'nao-livre': return 'Este arquivo não está em folha livre.';
       default: return 'Não foi possível concluir.';
@@ -509,6 +711,244 @@
     avisarNaDica(ligado ? 'Folha desligada: o arquivo voltou aos tópicos (a folha fica guardada).' : 'Folha livre ligada.');
   }
 
+  /** A mensagem de uma recusa ao ligar o quadro branco. */
+  function mensagemDoQuadro(r) {
+    switch (r && r.motivo) {
+      case 'tarefas': return 'O arquivo de tarefas não pode ser quadro branco.';
+      case 'historico': return 'Desligue o histórico diário deste arquivo antes de ligar o quadro branco.';
+      case 'privado': return 'Tire o cadeado deste arquivo antes de ligar o quadro branco.';
+      case 'livre': return 'Desligue a folha livre deste arquivo antes de ligar o quadro branco.';
+      case 'texto': return 'Desligue o modo texto ("T") deste arquivo antes de ligar o quadro branco.';
+      case 'inexistente': return 'O arquivo não existe mais.';
+      default: return 'Não foi possível concluir.';
+    }
+  }
+
+  /**
+   * Clicou no quadro: liga ou desliga o quadro branco do arquivo. Ligar cria um quadro vazio (ou volta o que ja existia);
+   * desligar volta aos topicos e o quadro fica guardado no disco. O .md nunca muda.
+   */
+  async function alternarQuadro(nome) {
+    seletor.fechar();
+    const eOAberto = () => nome.toLowerCase() === arquivo.toLowerCase();
+    const ligado = ehQuadro(nome);
+
+    if (ligado && eOAberto()) await salvarFolha();
+
+    const r = ligado ? await window.blink.quadro.desativar(nome) : await window.blink.quadro.ativar(nome);
+    if (!r.ok) {
+      avisarNaDica(mensagemDoQuadro(r));
+      return;
+    }
+
+    if (ligado && eOAberto() && quadro) quadro.esvaziar();
+    await recarregarSeletor();
+
+    if (eOAberto()) {
+      await carregar();
+      desenhar();
+      focarOndeSeEscreve();
+    }
+    avisarNaDica(ligado ? 'Quadro desligado: o arquivo voltou aos tópicos (o quadro fica guardado).' : 'Quadro branco ligado.');
+  }
+
+  // --- Modo texto e aba rapida ---------------------------------------------------------------------
+
+  /** A mensagem de uma recusa ao ligar o modo texto ou ao salvar uma aba rapida. */
+  function mensagemDoTexto(r) {
+    switch (r && r.motivo) {
+      case 'tarefas': return 'O nome task.md é reservado para as tarefas.';
+      case 'historico': return 'Desligue o histórico diário deste arquivo antes de editá-lo como texto.';
+      case 'privado': return 'Tire o cadeado deste arquivo antes de editá-lo como texto.';
+      case 'livre': return 'Desligue a folha livre deste arquivo antes de editá-lo como texto.';
+      case 'quadro': return 'Desligue o quadro branco deste arquivo antes de editá-lo como texto.';
+      case 'inexistente': return 'O arquivo não existe mais.';
+      case 'nome': return 'Esse nome não serve: não use \\ / : * ? " < > |.';
+      case 'existe': return 'Já existe um arquivo com esse nome.';
+      case 'sem-pasta': return 'Escolha a pasta das notas nas configurações do Blink primeiro.';
+      case 'entrada': return 'O texto é grande demais.';
+      default: return 'Não foi possível concluir.';
+    }
+  }
+
+  let textoSujo = false;
+  let relogioDoTexto = null;
+
+  /** O texto do editor mudou (digitou, colou ou limpou). */
+  function aoMudarOTextoLivre() {
+    if (ehRapida()) {
+      const aba = abaAtual();
+      if (aba) {
+        aba.texto = textoLivre.value;
+        desenharAbas();
+        salvarAbas();
+        atualizarSeletor();
+      }
+      return;
+    }
+    if (ehTexto()) {
+      textoSujo = true;
+      clearTimeout(relogioDoTexto);
+      relogioDoTexto = setTimeout(salvarTextoAgora, 600);
+    }
+  }
+
+  /** Grava o texto de um arquivo em modo texto, se mudou. (O de uma aba rapida ja foi para a aba.) */
+  async function salvarTextoAgora() {
+    clearTimeout(relogioDoTexto);
+    if (!textoSujo || !ehTexto()) return;
+    textoSujo = false;
+    const r = await window.blink.texto.salvar(arquivo, textoLivre.value);
+    if (!r || !r.ok) {
+      textoSujo = true;
+      avisarNaDica('Não consegui gravar o arquivo.');
+    }
+  }
+
+  textoLivre.addEventListener('input', aoMudarOTextoLivre);
+  textoLivre.addEventListener('keydown', (evento) => { if (evento.key === 'Tab') indentarComTab(textoLivre, evento); });
+  window.Blink.links.ligarCtrlClique(textoLivre);
+
+  /** Clicou no "T": liga ou desliga o modo texto do arquivo (o .md inteiro num editor de texto simples). */
+  async function alternarTexto(nome) {
+    seletor.fechar();
+    const eOAberto = () => nome.toLowerCase() === arquivo.toLowerCase();
+    const ligado = ehTexto(nome);
+
+    if (ligado && eOAberto()) await salvarTextoAgora();
+
+    const r = ligado ? await window.blink.texto.desativar(nome) : await window.blink.texto.ativar(nome);
+    if (!r.ok) {
+      avisarNaDica(mensagemDoTexto(r));
+      return;
+    }
+
+    await recarregarSeletor();
+    if (eOAberto()) {
+      await carregar();
+      desenhar();
+      focarOndeSeEscreve();
+    }
+    avisarNaDica(ligado ? 'Modo texto desligado: o arquivo voltou aos tópicos (o arquivo não mudou).' : 'Modo texto ligado: o arquivo inteiro como um editor de texto.');
+  }
+
+  /**
+   * O botao de salvar de uma aba rapida: pede o nome (com uma sugestao tirada das primeiras palavras) e cria o .md com o
+   * texto EXATO, em modo texto. A aba vira a aba desse arquivo, no mesmo lugar. Devolve true se salvou.
+   */
+  async function salvarAbaRapida(aba) {
+    const texto = aba.id === abaAtiva ? textoLivre.value : aba.texto;
+    if (texto.trim() === '') {
+      avisarNaDica('Escreva ou cole algo antes de salvar.');
+      return false;
+    }
+
+    let nomeSalvo = null;
+    const confirmou = await abrirModalPrivado({
+      titulo: 'Salvar como',
+      texto: 'Dê um nome ao arquivo: o .md é criado na pasta das notas com o texto exatamente como está.',
+      campos: [{ id: 'nome', rotulo: 'Nome do arquivo', valor: sugestaoDeNome(texto) }],
+      rotuloOk: 'Salvar',
+      aoConfirmar: async ({ nome }) => {
+        const r = await window.blink.texto.criar(nome, texto);
+        if (!r.ok) return { erro: mensagemDoTexto(r) };
+        nomeSalvo = r.nome;
+        return null;
+      },
+    });
+    if (confirmou !== true || !nomeSalvo) return false;
+
+    // A aba vira a de um arquivo, no mesmo lugar (e continua a ativa, se ja era).
+    const eraAtiva = aba.id === abaAtiva;
+    aba.tipo = 'arquivo';
+    aba.nome = nomeSalvo;
+    aba.rascunho = '';
+    aba.dia = '';
+    delete aba.texto;
+    delete aba.numero;
+    // O arquivo passa a ser o da aba ANTES de redesenhar o seletor (que, numa aba rapida, mostraria o texto dela).
+    if (eraAtiva) arquivo = nomeSalvo;
+    await recarregarSeletor();
+    if (eraAtiva) {
+      lembrarArquivo();
+      await carregar();
+      desenhar();
+      focarOndeSeEscreve();
+    } else {
+      desenharAbas();
+      salvarAbas();
+    }
+    avisarNaDica(`Salvo como ${nomeSalvo}.`);
+    return true;
+  }
+
+  /** Fecha uma aba. Uma aba rapida com texto pergunta se salva; fechar a ultima abre uma aba rapida vazia. */
+  async function fecharAba(id) {
+    const aba = abaPorId(id);
+    if (!aba) return;
+
+    if (aba.tipo === 'rapida') {
+      if (aba.id === abaAtiva) aba.texto = textoLivre.value;
+      if (aba.texto.trim() !== '') {
+        const resposta = await abrirModalPrivado({
+          titulo: 'Fechar a aba',
+          texto: `Salvar "${rotuloDaRapida(aba)}" como arquivo antes de fechar? Se você não salvar, o texto é descartado.`,
+          campos: [],
+          rotuloOk: 'Salvar',
+          rotuloNao: 'Não salvar',
+          aoConfirmar: async () => null,
+        });
+        if (resposta === false) return; // cancelou
+        if (resposta === true && !(await salvarAbaRapida(aba))) return; // quis salvar e nao salvou: a aba fica
+      }
+    }
+
+    const indice = abasAbertas.indexOf(aba);
+    const eraAtiva = aba.id === abaAtiva;
+    abasAbertas.splice(indice, 1);
+    if (!eraAtiva) {
+      desenharAbas();
+      salvarAbas();
+      return;
+    }
+
+    abaAtiva = '';
+    const vizinha = abasAbertas[indice] || abasAbertas[indice - 1];
+    if (!vizinha) {
+      await novaAbaRapida();
+      return;
+    }
+    await ativarAba(vizinha.id);
+  }
+
+  botaoNovaAba.addEventListener('click', () => novaAbaRapida());
+  botaoSalvarAba.addEventListener('click', () => { const aba = abaAtual(); if (aba && aba.tipo === 'rapida') salvarAbaRapida(aba); });
+  for (const botaoDaLinha of [botaoNovaAba, botaoSalvarAba]) botaoDaLinha.addEventListener('mousedown', (evento) => evento.preventDefault());
+
+  // Atalhos das abas: Ctrl+T (nova aba rapida), Ctrl+W (fecha), Ctrl+S (salva a aba rapida), Ctrl+Tab e Ctrl+Shift+Tab.
+  window.addEventListener('keydown', (evento) => {
+    if (!(evento.ctrlKey || evento.metaKey) || evento.altKey || modalAberto) return;
+    const tecla = evento.key.toLowerCase();
+
+    if (tecla === 't' && !evento.shiftKey) {
+      evento.preventDefault();
+      novaAbaRapida();
+    } else if (tecla === 'w' && !evento.shiftKey) {
+      evento.preventDefault();
+      if (abaAtiva) fecharAba(abaAtiva);
+    } else if (tecla === 's' && !evento.shiftKey) {
+      evento.preventDefault();
+      const aba = abaAtual();
+      if (aba && aba.tipo === 'rapida') salvarAbaRapida(aba);
+    } else if (evento.key === 'Tab' && abasAbertas.length > 1) {
+      evento.preventDefault();
+      const indice = abasAbertas.findIndex((a) => a.id === abaAtiva);
+      const passo = evento.shiftKey ? -1 : 1;
+      const proxima = abasAbertas[(indice + passo + abasAbertas.length) % abasAbertas.length];
+      if (proxima) ativarAba(proxima.id);
+    }
+  });
+
   function vazio(texto) {
     lista.appendChild(el('div', { class: 'vazio', texto }));
   }
@@ -538,7 +978,6 @@
 
     const spanTexto = el('span', {
       class: 'texto',
-      texto: mostrado,
       title: 'Clique para editar',
       onclick: (evento) =>
         editar(
@@ -563,6 +1002,9 @@
           onclick: () => alternarTarefa(grupo, indice),
         })
       : el('span', { class: 'traco', texto: '–' });
+
+    // Os links do texto viram <span class="link"> (clicar neles abre; clicar no resto edita).
+    window.Blink.links.preencher(spanTexto, mostrado);
 
     window.Blink.ui.anexar(item, [
       el('span', { class: 'alca', texto: '⋮⋮' }),
@@ -602,6 +1044,7 @@
       'aria-label': 'Anotações do tópico',
     });
     campoCorpo.value = corpo;
+    window.Blink.links.ligarCtrlClique(campoCorpo);
     campoCorpo.hidden = !recolhiveisAbertos.has(chave);
 
     const seta = el('button', { class: 'seta-recolher', type: 'button' });
@@ -671,7 +1114,6 @@
 
     const spanTitulo = el('span', {
       class: 'texto',
-      texto: titulo,
       title: 'Clique para editar o título',
       onclick: (evento) =>
         editar(
@@ -689,6 +1131,8 @@
           posicaoDoClique(evento)
         ),
     });
+
+    window.Blink.links.preencher(spanTitulo, titulo);
 
     window.Blink.ui.anexar(item, [
       el('span', { class: 'alca', texto: '⋮⋮' }),
@@ -764,7 +1208,22 @@
   function desenharLista(manter = false) {
     const rolagem = lista.scrollTop;
     montarLista();
-    lista.scrollTop = manter ? rolagem : 0;
+    if (manter) {
+      lista.scrollTop = rolagem;
+      return;
+    }
+    // O item novo aparece (e pisca); sem item novo, abrir um arquivo mostra o FIM - o mais recente, logo acima do
+    // campo de escrita. As tarefas abrem no topo (as a fazer vem primeiro).
+    const posicionar = () => {
+      const novo = lista.querySelector('.topico.novo');
+      if (novo) novo.scrollIntoView({ block: 'nearest' });
+      else lista.scrollTop = ehTarefas() ? 0 : lista.scrollHeight;
+    };
+    posicionar();
+    // A altura dos itens ainda muda um pouco depois do primeiro desenho (a fonte acaba de carregar): sem repetir, a
+    // lista ficava uns pixels antes do fim ao abrir a janela.
+    requestAnimationFrame(posicionar);
+    setTimeout(posicionar, 200);
   }
 
   function montarLista() {
@@ -789,7 +1248,7 @@
 
   function desenharDica() {
     const partes = [
-      ehLivre() ? 'Folha livre · / abre os blocos · Esc volta ao texto' : ehTarefas() ? 'Enter adiciona uma tarefa' : 'Enter adiciona · / manda para outra nota',
+      ehRapida() ? 'Aba rápida · só texto · Ctrl+S salva · Ctrl+T abre outra' : ehTexto() ? 'Arquivo de texto · grava sozinho' : ehQuadro() ? 'Quadro branco' : ehLivre() ? 'Folha livre · / abre os blocos · Esc volta ao texto' : ehTarefas() ? 'Enter adiciona uma tarefa' : 'Enter adiciona · / manda para outra nota',
     ];
     if (pasta) partes.push(`Pasta: ${pasta}`);
     dica.textContent = partes.join(' · ');
@@ -809,24 +1268,39 @@
     const trancado = privadoTrancado();
     // Folha livre: o editor de pagina no lugar da lista e do rascunho.
     const livre = ehLivre();
+    // Quadro branco: o Excalidraw no lugar da lista e do rascunho.
+    const comQuadro = ehQuadro();
     telaSenha.hidden = !trancado;
-    lista.hidden = trancado || livre;
+    // Aba rapida ou arquivo em modo texto: o texto inteiro num editor simples.
+    const editorDeTexto = comEditorDeTexto();
+    lista.hidden = trancado || livre || comQuadro || editorDeTexto;
     folhaEl.hidden = !livre;
-    areaRascunho.hidden = livre;
+    quadroEl.hidden = !comQuadro;
+    textoLivre.hidden = !editorDeTexto;
+    areaRascunho.hidden = livre || comQuadro || editorDeTexto;
     barraPrivado.hidden = !(ehPrivado() && desbloqueado);
     rascunho.disabled = trancado;
     if (trancado) nomePrivado.textContent = arquivo;
 
     // O copiar segue a vassoura: sem nada para copiar, fica apagado. Na folha ele fica sempre aceso (o texto muda
     // sem a tela ser redesenhada); sem texto, avisa.
-    botaoCopiar.disabled = arquivo === NOVO || (!livre && totalDeItens() === 0) || trancado;
+    botaoCopiar.disabled = arquivo === NOVO || (!livre && !editorDeTexto && totalDeItens() === 0) || trancado || comQuadro;
     botaoCopiar.title = ehHistorico()
       ? `Copiar as anotações do dia ${formatarDataBR(dataSelecionada)}`
-      : livre
+      : editorDeTexto
+        ? 'Copiar o texto'
+        : livre
         ? 'Copiar o texto da folha'
-        : 'Copiar todas as anotações';
-    botaoLimpar.disabled = arquivo === NOVO || (!livre && totalDeItens() === 0) || trancado;
-    botaoExcluir.disabled = arquivo === NOVO;
+        : comQuadro
+          ? 'O quadro não tem texto para copiar: use o botão de imagem'
+          : 'Copiar todas as anotações';
+    botaoLimpar.disabled = arquivo === NOVO || (!livre && !comQuadro && !editorDeTexto && totalDeItens() === 0) || trancado;
+    // Uma aba rapida nao e um arquivo: nao ha o que excluir (fecha-se a aba) - e so ela tem o botao de salvar.
+    botaoSalvarAba.hidden = !ehRapida();
+    botaoImagem.hidden = !livre && !comQuadro;
+    botaoImagem.title = comQuadro ? 'Copiar o quadro como imagem' : 'Copiar a folha como imagem';
+    botaoExcluir.disabled = arquivo === NOVO || ehRapida();
+    botaoExcluir.title = ehRapida() ? 'Uma aba rápida não é um arquivo: feche a aba para descartá-la' : 'Excluir arquivo';
     if (botaoLimpar.disabled) popoverLimpar.hidden = true;
     if (botaoExcluir.disabled) popoverExcluir.hidden = true;
 
@@ -840,11 +1314,13 @@
 
     desenharLista(manter);
     desenharDica();
+    sincronizarAbas();
 
     // A janela tem um tamanho para a nota comum e outro para a folha: avisa o processo principal quando muda.
-    if (livre !== modoDaJanela) {
-      modoDaJanela = livre;
-      window.blink.janela.modoNota(livre);
+    const modo = comQuadro ? 'quadro' : livre ? 'livre' : 'nota';
+    if (modo !== modoDaJanela) {
+      modoDaJanela = modo;
+      window.blink.janela.modoNota(modo);
     }
   }
 
@@ -866,7 +1342,10 @@
   /** Troca o arquivo mostrado e carrega o conteudo dele. */
   async function escolherArquivo(valor) {
     // Saindo de uma folha livre: grava o que faltava antes de trocar de arquivo.
-    if (folha && folha.aberta()) await sairDaFolha();
+    if ((folha && folha.aberta()) || (quadro && quadro.aberta())) await sairDaFolha();
+    // Saindo de um arquivo em modo texto: grava o texto. E guarda na aba o que e dela (o rascunho, o dia).
+    await salvarTextoAgora();
+    guardarEstadoDaAba();
     // Saindo de um arquivo com cadeado aberto: tranca e apaga o conteudo da memoria.
     trancarAoSair(valor);
     fecharModalPrivado();
@@ -888,12 +1367,52 @@
 
     lembrarArquivo();
 
-    // Trocar de arquivo sempre volta o calendario para hoje.
-    if (ehHistorico()) dataSelecionada = dataDeHoje();
+    // Cada aba lembra o dia que estava no calendario (a primeira vez, hoje) e o rascunho que estava sendo escrito.
+    const aba = abaDeArquivo(arquivo);
+    if (ehHistorico()) dataSelecionada = (aba && aba.dia) || dataDeHoje();
 
     await carregar();
+    rascunho.value = aba ? aba.rascunho || '' : '';
     desenhar();
     focarOndeSeEscreve();
+  }
+
+  /** Ativa uma aba rapida: o texto dela no editor. */
+  async function ativarRapida(id) {
+    const aba = abaPorId(id);
+    if (!aba || aba.tipo !== 'rapida') return;
+    if ((folha && folha.aberta()) || (quadro && quadro.aberta())) await sairDaFolha();
+    await salvarTextoAgora();
+    guardarEstadoDaAba();
+    trancarAoSair(RAPIDA);
+    fecharModalPrivado();
+    arquivo = RAPIDA;
+    abaAtiva = id;
+    fecharPopovers();
+    calendario.fechar();
+    recemCriado = null;
+    topicos = [];
+    tarefas = { pendentes: [], concluidas: [] };
+    diasHistorico = [];
+    textoLivre.value = aba.texto;
+    atualizarSeletor();
+    desenhar();
+    textoLivre.focus();
+  }
+
+  /** Clicou numa aba. */
+  async function ativarAba(id) {
+    const aba = abaPorId(id);
+    if (!aba || id === abaAtiva) return;
+    if (aba.tipo === 'rapida') await ativarRapida(id);
+    else await escolherArquivo(aba.nome);
+  }
+
+  /** O "+": uma aba rapida nova, vazia (ou com um texto). */
+  async function novaAbaRapida(texto = '') {
+    const aba = { id: novoId(), tipo: 'rapida', texto, numero: proximoNumeroDeAba() };
+    abasAbertas.push(aba);
+    await ativarRapida(aba.id);
   }
 
   /** O foco vai para onde o usuario escreve: a senha, num arquivo com cadeado fechado; senao o campo de escrita. */
@@ -902,6 +1421,10 @@
       senhaAbrir.value = '';
       erroAbrir.hidden = true;
       senhaAbrir.focus();
+    } else if (comEditorDeTexto()) {
+      textoLivre.focus();
+    } else if (ehQuadro()) {
+      obterQuadro().focar();
     } else if (ehLivre()) {
       obterFolha().focar();
     } else {
@@ -942,7 +1465,7 @@
     await recarregarSeletor();
     await carregar();
 
-    recemCriado = texto !== '' ? { grupo: 'pendentes', indice: 0 } : null;
+    recemCriado = texto !== '' ? { grupo: 'pendentes', indice: tarefas.pendentes.length - 1 } : null;
     desenhar();
     rascunho.focus();
     if (recemCriado) agendarFimDoPiscar();
@@ -969,7 +1492,7 @@
 
     // O "task" vale mesmo antes do task.md existir: o /task cria. Arquivo com cadeado nao entra: nada se escreve
     // nele sem a senha ("/privada texto" cai em "nenhuma nota chamada").
-    const candidatos = arquivos.filter((a) => !ehPrivado(a)).map((a) => ({ nome: a.replace(/\.md$/i, ''), arquivo: a }));
+    const candidatos = arquivos.filter((a) => !ehPrivado(a) && !ehQuadro(a)).map((a) => ({ nome: a.replace(/\.md$/i, ''), arquivo: a }));
     if (!candidatos.some((c) => c.arquivo.toLowerCase() === arquivoTarefas)) {
       candidatos.push({ nome: 'task', arquivo: arquivoTarefas });
     }
@@ -1037,8 +1560,9 @@
     if (destinoHistorico) dataSelecionada = data;
     await carregar();
 
-    // O mais novo e sempre o primeiro da tela.
-    recemCriado = { grupo: destinoHistorico ? 'historico' : 'topicos', indice: 0 };
+    // O mais novo e sempre o ultimo da tela.
+    const grupoNovo = destinoHistorico ? 'historico' : 'topicos';
+    recemCriado = { grupo: grupoNovo, indice: listaDo(grupoNovo).length - 1 };
     desenhar();
     focarOndeSeEscreve();
     agendarFimDoPiscar();
@@ -1094,7 +1618,7 @@
         return;
       }
       aplicarItensPrivados(r.itens);
-      recemCriado = { grupo: 'topicos', indice: 0 };
+      recemCriado = { grupo: 'topicos', indice: topicos.length - 1 };
       desenhar();
       rascunho.focus();
       agendarFimDoPiscar();
@@ -1131,8 +1655,8 @@
       const itens = tarefas[grupo];
       const bruto = itens[indice];
       // Quem decide e o processo principal: confere a tarefa, move, poe ou tira a data escondida e mexe na
-      // daily junto. O indice la e o da lista do arquivo, que e o inverso da tela.
-      const resposta = await window.blink.notas.alternarTarefa(grupo, itens.length - 1 - indice, bruto, confirmado);
+      // daily junto. O indice la e o da lista do arquivo, o mesmo da tela.
+      const resposta = await window.blink.notas.alternarTarefa(grupo, indice, bruto, confirmado);
 
       // Tirar um topico recolhivel da daily que tem anotacoes: nada mudou ainda, pergunta antes.
       if (resposta.precisaConfirmar) {
@@ -1143,7 +1667,7 @@
       }
 
       if (resposta.tarefas) {
-        tarefas = { pendentes: [...resposta.tarefas.pendentes].reverse(), concluidas: [...resposta.tarefas.concluidas].reverse() };
+        tarefas = { pendentes: [...resposta.tarefas.pendentes], concluidas: [...resposta.tarefas.concluidas] };
       }
       recemCriado = null;
       desenhar({ manter: true });
@@ -1165,9 +1689,9 @@
   }
 
   /**
-   * O texto do botao copiar: uma linha "- topico" por anotacao, NA ORDEM EM
-   * QUE FORAM ESCRITAS (a tela mostra a mais nova primeiro, entao a lista e
-   * invertida), com as quebras de linha de um topico indentadas por baixo.
+   * O texto do botao copiar: uma linha "- topico" por anotacao, NA ORDEM DA
+   * TELA (o de cima e o primeiro; e tambem a ordem em que foram escritas), com
+   * as quebras de linha de um topico indentadas por baixo.
    *
    *   - Com o relogio ligado, so o dia selecionado.
    *   - Nas tarefas, as pendentes e depois as concluidas, como caixinhas.
@@ -1180,7 +1704,7 @@
     // Sem a data escondida das tarefas feitas e sem o "▸ " dos topicos recolhiveis (o corpo vai indentado, como
     // as outras linhas de um topico).
     const limpo = (t) => semData(t.startsWith(PREFIXO_RECOLHIVEL) ? t.slice(PREFIXO_RECOLHIVEL.length) : t);
-    const linhas = (itens, marca) => itens.slice().reverse().map((t) => `- ${marca}${limpo(t).split('\n').join('\n  ')}`);
+    const linhas = (itens, marca) => itens.map((t) => `- ${marca}${limpo(t).split('\n').join('\n  ')}`);
 
     let partes;
     if (ehTarefas()) {
@@ -1197,6 +1721,17 @@
 
   async function copiarNotas() {
     if (botaoCopiar.disabled) return;
+
+    // Aba rapida ou arquivo em modo texto: o texto exatamente como esta.
+    if (comEditorDeTexto()) {
+      if (textoLivre.value.trim() === '') {
+        avisarNaDica('Não há texto para copiar.');
+        return;
+      }
+      const gravou = await window.blink.areaTransferencia.escrever(textoLivre.value);
+      avisarNaDica(gravou ? 'Texto copiado.' : 'Não foi possível copiar.');
+      return;
+    }
 
     // Folha livre: o texto da folha (a tinta e as imagens nao vao para um texto).
     if (ehLivre()) {
@@ -1220,6 +1755,24 @@
   async function limparTudo() {
     fecharPopovers();
     recemCriado = null;
+
+    // Aba rapida ou arquivo em modo texto: apaga o texto.
+    if (comEditorDeTexto()) {
+      textoLivre.value = '';
+      aoMudarOTextoLivre();
+      await salvarTextoAgora();
+      textoLivre.focus();
+      return;
+    }
+
+    // Quadro branco: apaga tudo (o Excalidraw avisa a mudanca e ela e gravada).
+    if (ehQuadro()) {
+      if (quadro && quadro.aberta()) {
+        quadro.limpar();
+        quadro.focar();
+      }
+      return;
+    }
 
     // Folha livre: apaga o texto e o desenho (as imagens guardadas ficam no disco).
     if (ehLivre()) {
@@ -1284,6 +1837,16 @@
 
     // Uma folha livre que vai para a Lixeira nao pode ser regravada por uma gravacao pendente: esvazia antes.
     if (folha && ehLivre()) folha.esvaziar();
+    if (quadro && ehQuadro()) quadro.esvaziar();
+    // O texto em modo texto tambem: uma gravacao pendente nao pode recriar o arquivo que foi para a Lixeira.
+    clearTimeout(relogioDoTexto);
+    textoSujo = false;
+
+    // A aba do arquivo some; a vizinha (a da direita, ou a da esquerda) passa a ser a ativa.
+    const abaExcluida = abaDeArquivo(arquivo);
+    const posicao = abaExcluida ? abasAbertas.indexOf(abaExcluida) : -1;
+    if (abaExcluida) abasAbertas.splice(posicao, 1);
+    abaAtiva = '';
 
     await window.blink.notas.excluir(arquivo);
 
@@ -1294,8 +1857,15 @@
     historico = estado.historico;
     privados = estado.privados || [];
     livres = estado.livres || [];
-    arquivo = primeiroArquivo(estado.arquivos);
+    quadros = estado.quadros || [];
+    textos = estado.textos || [];
+    const vizinha = posicao >= 0 ? abasAbertas[posicao] || abasAbertas[posicao - 1] : undefined;
     desenharSelect(estado.arquivos);
+    if (vizinha && vizinha.tipo === 'rapida') {
+      await ativarRapida(vizinha.id);
+      return;
+    }
+    arquivo = vizinha ? vizinha.nome : primeiroArquivo(estado.arquivos);
     await escolherArquivo(arquivo);
   }
 
@@ -1350,7 +1920,13 @@
       }
     }
 
-    return no && no.nodeType === Node.TEXT_NODE && alvo.contains(no) ? deslocamento : null;
+    if (!(no && no.nodeType === Node.TEXT_NODE && alvo.contains(no))) return null;
+
+    // O texto pode estar em varios nos (um por pedaco, com os links no meio): soma o que vem antes do no clicado.
+    let antes = 0;
+    const percorrer = document.createTreeWalker(alvo, NodeFilter.SHOW_TEXT);
+    for (let atual = percorrer.nextNode(); atual && atual !== no; atual = percorrer.nextNode()) antes += atual.nodeValue.length;
+    return antes + deslocamento;
   }
 
   /**
@@ -1430,6 +2006,7 @@
 
     const campo = el('textarea', { class: 'campo-edicao', rows: '1', spellcheck: 'false' });
     campo.value = original;
+    window.Blink.links.ligarCtrlClique(campo);
 
     // Sem isto, selecionar texto dentro do campo arrastaria a linha inteira.
     item.draggable = false;
@@ -1565,6 +2142,9 @@
   // --- Ligacoes ------------------------------------------------------------------
 
 
+  // Ctrl+clique numa URL do campo de escrita abre o link.
+  window.Blink.links.ligarCtrlClique(rascunho);
+
   rascunho.addEventListener('keydown', (evento) => {
     // Tab indenta (com a lista do "/" aberta, quem trata e o autocomplete, que
     // ja marcou o evento como tratado).
@@ -1591,17 +2171,57 @@
 
   botaoCopiar.addEventListener('click', copiarNotas);
 
+  /** O botao de imagem: grava a folha (o print sai do que esta no disco) e copia a folha inteira como imagem. */
+  botaoImagem.addEventListener('click', async () => {
+    if (botaoImagem.disabled) return;
+
+    // Quadro branco: o Excalidraw exporta o PNG e o processo principal poe na area de transferencia.
+    if (ehQuadro()) {
+      if (!quadro || !quadro.aberta()) return;
+      botaoImagem.disabled = true;
+      avisarNaDica('Copiando o quadro como imagem…');
+      try {
+        const r = await quadro.copiarImagem();
+        avisarNaDica(
+          r.ok ? `Quadro copiado como imagem (${r.largura} × ${r.altura} px).` : r.motivo === 'vazio' ? 'O quadro está vazio: não há o que copiar.' : 'Não consegui copiar o quadro como imagem.'
+        );
+      } finally {
+        botaoImagem.disabled = false;
+      }
+      return;
+    }
+
+    if (!ehLivre() || !folha || !folha.aberta()) return;
+    botaoImagem.disabled = true;
+    avisarNaDica('Copiando a folha como imagem…');
+    try {
+      await folha.salvarAgora();
+      const r = await window.blink.livre.copiarImagem(arquivo);
+      avisarNaDica(
+        r.ok
+          ? `Folha copiada como imagem (${r.largura} × ${r.altura} px)${r.cortada ? ' — só o começo: a folha é muito comprida' : ''}.`
+          : 'Não consegui copiar a folha como imagem.'
+      );
+    } finally {
+      botaoImagem.disabled = false;
+    }
+  });
+
   botaoLimpar.addEventListener('click', () => {
     if (botaoLimpar.disabled) return;
     limparModo = 'tudo';
     // No historico a pergunta cita o dia: "limpar tudo" ali limpa so ele.
     perguntaLimpar.textContent = ehHistorico()
       ? `Limpar as notas do dia ${formatarDataBR(dataSelecionada)}?`
-      : ehPrivado()
+      : comEditorDeTexto()
+        ? 'Limpar todo o texto?'
+        : ehPrivado()
         ? 'Limpar tudo deste arquivo, as credenciais também?'
-        : ehLivre()
-          ? 'Limpar o texto e o desenho desta folha?'
-          : 'Limpar todas as notas deste arquivo?';
+        : ehQuadro()
+          ? 'Limpar todo o quadro?'
+          : ehLivre()
+            ? 'Limpar o texto e o desenho desta folha?'
+            : 'Limpar todas as notas deste arquivo?';
     alternarPopover(popoverLimpar);
   });
 
@@ -1656,8 +2276,21 @@
 
   // Fechar ou recarregar com a folha aberta: o que faltava gravar vai agora, de forma sincrona (uma gravacao
   // assincrona nao teria tempo de terminar). Minimizar so grava.
-  window.addEventListener('beforeunload', () => { if (folha) folha.salvarSincrono(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && folha) folha.salvarAgora(); });
+  window.addEventListener('beforeunload', () => {
+    if (folha) folha.salvarSincrono();
+    if (quadro) quadro.salvarSincrono();
+    if (textoSujo && ehTexto()) window.blink.texto.salvarSincrono(arquivo, textoLivre.value);
+    guardarEstadoDaAba();
+    window.blink.abas.salvarSincrono(estadoDasAbas());
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) return;
+    if (folha) folha.salvarAgora();
+    if (quadro) quadro.salvarAgora();
+    salvarTextoAgora();
+    guardarEstadoDaAba();
+    salvarAbas();
+  });
 
   // Soltar um arquivo na janela (uma imagem fora da folha, por exemplo) nao pode abrir o arquivo no lugar do Fast
   // Note. Na folha, quem trata e o editor; reordenar topicos arrasta texto, nao arquivo, e segue como era.
@@ -1724,6 +2357,8 @@
       case 'historico': return 'Desligue o histórico diário deste arquivo antes de pôr o cadeado.';
       case 'tarefas': return 'O arquivo de tarefas não pode ter cadeado.';
       case 'livre': return 'Desligue a folha livre deste arquivo antes de pôr o cadeado.';
+      case 'quadro': return 'Desligue o quadro branco deste arquivo antes de pôr o cadeado.';
+      case 'texto': return 'Desligue o modo texto ("T") deste arquivo antes de pôr o cadeado.';
       case 'ja-privado': return 'Este arquivo já tem cadeado.';
       case 'nao-privado': return 'Este arquivo não tem cadeado.';
       case 'inexistente': return 'O arquivo não existe mais.';
@@ -1752,7 +2387,7 @@
    * Devolve uma Promise: true se confirmou, false se cancelou (Esc, Cancelar, clicar fora). Os campos sao
    * apagados do DOM ao fechar.
    */
-  function abrirModalPrivado({ titulo, texto, campos, rotuloOk, aoConfirmar }) {
+  function abrirModalPrivado({ titulo, texto, campos, rotuloOk, aoConfirmar, rotuloNao }) {
     fecharModalPrivado();
 
     return new Promise((resolve) => {
@@ -1774,6 +2409,7 @@
           spellcheck: 'false',
           maxlength: '200',
         });
+        if (c.valor) input.value = c.valor;
         window.Blink.ui.anexar(camposPrivado, [el('label', { class: 'rotulo-privado', for: input.id, texto: c.rotulo }), input]);
         return { id: c.id, input };
       });
@@ -1791,8 +2427,9 @@
         tituloPrivado.textContent = '';
         textoPrivado.textContent = '';
         erroPrivado.textContent = '';
+        botaoPrivadoNao.hidden = true;
         resolve(resposta);
-        if (!privadoTrancado()) rascunho.focus();
+        if (!privadoTrancado()) (comEditorDeTexto() ? textoLivre : rascunho).focus();
       };
 
       const confirmar = async () => {
@@ -1820,7 +2457,7 @@
         erroPrivado.textContent = resposta.erro;
         erroPrivado.hidden = false;
         for (const { input } of entradas) if (input.type === 'password') input.value = '';
-        entradas[0].input.focus();
+        if (entradas[0]) entradas[0].input.focus();
         ocupado = false;
         setTimeout(() => { if (!fechado) botaoPrivadoOk.disabled = false; }, resposta.espera || 0);
       };
@@ -1835,13 +2472,24 @@
       }
 
       botaoPrivadoOk.onclick = confirmar;
+      // O terceiro botao (so em "Fechar a aba"): fecha SEM salvar e responde 'nao'.
+      botaoPrivadoNao.hidden = !rotuloNao;
+      if (rotuloNao) {
+        botaoPrivadoNao.textContent = rotuloNao;
+        botaoPrivadoNao.onclick = () => fechar('nao');
+      }
       botaoPrivadoCancelar.onclick = () => fechar(false);
       // Clicar no fundo escuro, fora da caixa, cancela.
       modalPrivado.onmousedown = (evento) => { if (evento.target === modalPrivado) fechar(false); };
 
       modalAberto = { cancelar: () => fechar(false) };
       modalPrivado.hidden = false;
-      entradas[0].input.focus();
+      if (entradas[0]) {
+        entradas[0].input.focus();
+        entradas[0].input.select();
+      } else {
+        botaoPrivadoOk.focus();
+      }
     });
   }
 
@@ -2057,7 +2705,7 @@
     });
     if (!confirmou) return;
 
-    recemCriado = { grupo: 'topicos', indice: 0 };
+    recemCriado = { grupo: 'topicos', indice: topicos.length - 1 };
     desenhar();
     agendarFimDoPiscar();
   }
@@ -2090,10 +2738,31 @@
     historico = estado.historico;
     privados = estado.privados || [];
     livres = estado.livres || [];
+    quadros = estado.quadros || [];
+    textos = estado.textos || [];
 
-    // Abre no arquivo da estrela. Sem estrela, no ultimo que estava aberto.
-    // Sem nenhum dos dois, o de sempre.
-    arquivo = principal || estado.ultima || primeiroArquivo(estado.arquivos);
+    // As abas que ficaram abertas: as de arquivos que ainda existem e as abas rapidas (com o texto de volta).
+    const salvo = await window.blink.abas.ler();
+    abasAbertas = [];
+    for (const aba of salvo.abertas) {
+      if (aba.tipo === 'arquivo') {
+        const existente = estado.arquivos.find((a) => a.toLowerCase() === aba.nome.toLowerCase());
+        if (existente && !abaDeArquivo(existente)) abasAbertas.push({ id: novoId(), tipo: 'arquivo', nome: existente, rascunho: '', dia: '' });
+      } else {
+        abasAbertas.push({ id: aba.id, tipo: 'rapida', texto: (salvo.rapidas && salvo.rapidas[aba.id]) || '', numero: proximoNumeroDeAba() });
+      }
+    }
+
+    // Onde abre: no arquivo da estrela; sem estrela, numa aba rapida que estava ativa; senao no ULTIMO arquivo em que
+    // se esteve (o config.ultimaNota, que acompanha a aba ativa); e por fim no primeiro. As abas voltam todas, de qualquer jeito.
+    const rapidaAtiva = abasAbertas.find((a) => a.tipo === 'rapida' && a.id === salvo.ativa);
+    if (!principal && rapidaAtiva) {
+      arquivo = RAPIDA;
+      abaAtiva = rapidaAtiva.id;
+      textoLivre.value = rapidaAtiva.texto;
+    } else {
+      arquivo = principal || estado.ultima || primeiroArquivo(estado.arquivos);
+    }
     if (ehHistorico()) dataSelecionada = dataDeHoje();
     desenharSelect(estado.arquivos);
     await carregar();

@@ -43,6 +43,8 @@ const TAMANHOS = {
   nota: { largura: 320, altura: 380, minLargura: 300, minAltura: 320 },
   // A mesma janela com um arquivo em folha livre: maior (uma folha de papel e um desenho), lembrada a parte.
   notaLivre: { largura: 760, altura: 600, minLargura: 480, minAltura: 420 },
+  // Com um arquivo em quadro branco (Excalidraw): bem maior, o quadro precisa de espaco.
+  notaQuadro: { largura: 1000, altura: 680, minLargura: 600, minAltura: 440 },
 };
 
 /**
@@ -137,18 +139,22 @@ function lembrarTamanho(janela, nome) {
  * O Fast Note com um arquivo em folha livre aberto? Muda o tamanho que a janela lembra (notaLivre em vez de nota).
  * Volta a false quando a janela fecha.
  */
-let modoLivre = false;
+let modoNota = 'nota';
+
+/** O nome do tamanho lembrado de cada modo da janela do Fast Note. */
+const TAMANHO_DO_MODO = { nota: 'nota', livre: 'notaLivre', quadro: 'notaQuadro' };
 
 /**
  * Troca o tamanho da janela do Fast Note entre o da nota comum e o da folha livre, conforme o arquivo aberto.
  * Cada um e o que o usuario deixou da ultima vez (ou o padrao), nunca maior que a area util do monitor, e a janela
  * fica toda visivel (se crescer para fora da tela, anda para dentro).
  */
-function definirModoNota(janela, livre) {
+function definirModoNota(janela, modo) {
   if (!janela || janela.isDestroyed()) return;
-  modoLivre = livre === true;
+  // 'nota' | 'livre' | 'quadro' (true/false, de antes, valem como 'livre'/'nota')
+  modoNota = modo === true ? 'livre' : TAMANHO_DO_MODO[modo] ? modo : 'nota';
 
-  const nome = modoLivre ? 'notaLivre' : 'nota';
+  const nome = TAMANHO_DO_MODO[modoNota];
   const padrao = TAMANHOS[nome];
   const salvo = config.obterTamanho(nome);
   const area = screen.getDisplayMatching(janela.getBounds()).workArea;
@@ -262,9 +268,20 @@ function obterLinhasDiff() {
   return linhasDiff;
 }
 
-/** Abre a janela de comparacao com as linhas passadas. */
-function abrirDiff(linhas) {
+/** A linguagem do exemplo aberto (a demonstracao do Diff), ou null numa comparacao de verdade. */
+let exemploDiff = null;
+
+function obterExemploDiff() {
+  return exemploDiff;
+}
+
+/**
+ * Abre a janela de comparacao com as linhas passadas. `exemplo` (opcional) diz que e a demonstracao e de que
+ * linguagem: a janela mostra o seletor de exemplos.
+ */
+function abrirDiff(linhas, { exemplo = null } = {}) {
   linhasDiff = linhas;
+  exemploDiff = exemplo;
 
   // Ja tem uma comparacao aberta: recarrega com as linhas novas em vez de
   // empilhar uma segunda janela. Minimizada, volta da barra de tarefas antes.
@@ -355,8 +372,8 @@ function abrirNota() {
 
   acertarTamanho(nota, inicial);
   nota.loadFile(path.join(RENDERER, 'note', 'index.html'));
-  modoLivre = false;
-  lembrarTamanho(nota, () => (modoLivre ? 'notaLivre' : 'nota'));
+  modoNota = 'nota';
+  lembrarTamanho(nota, () => TAMANHO_DO_MODO[modoNota]);
 
   nota.once('ready-to-show', () => {
     nota.show();
@@ -378,7 +395,7 @@ function abrirNota() {
 
   nota.on('closed', () => {
     privadas.trancarTudo();
-    modoLivre = false;
+    modoNota = 'nota';
     nota = null;
   });
 
@@ -394,5 +411,6 @@ module.exports = {
   abrirNota,
   definirModoNota,
   obterLinhasDiff,
+  obterExemploDiff,
   permitirEncerrar,
 };

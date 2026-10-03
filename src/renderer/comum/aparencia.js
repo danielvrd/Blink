@@ -147,5 +147,5 @@ window.Blink = window.Blink || {};
     return el('div', { class: 'secao' }, [rotulo('Tema das cores do código'), select]);
   }
 
-  window.Blink.aparencia = { FONTES, TAMANHOS, TEMAS, iniciar, aoAplicar, montarCampos, montarTema };
+  window.Blink.aparencia = { FONTES, TAMANHOS, TEMAS, iniciar, aoAplicar, aplicar, montarCampos, montarTema };
 })();

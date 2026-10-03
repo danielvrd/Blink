@@ -417,6 +417,28 @@
     await window.Blink.aparencia.iniciar('diff');
     linhas = await window.blink.diff.linhas();
     desenhar();
+    montarExemplos(await window.blink.diff.exemplo());
+  }
+
+  const NOMES_DOS_EXEMPLOS = { javascript: 'JavaScript', sql: 'SQL', xml: 'XML' };
+
+  /** Na demonstracao, o seletor "Exemplo: JavaScript | SQL | XML" no rodape; numa comparacao de verdade, nada. */
+  function montarExemplos({ atual, opcoes }) {
+    const caixa = document.getElementById('exemplos');
+    if (!atual) return;
+    caixa.hidden = false;
+    window.Blink.ui.anexar(caixa, [el('span', { class: 'exemplos-rotulo', texto: 'Exemplo:' })]);
+    for (const opcao of opcoes) {
+      caixa.appendChild(el('button', {
+        class: `exemplo${opcao === atual ? ' ativo' : ''}`,
+        type: 'button',
+        'data-exemplo': opcao,
+        'aria-pressed': String(opcao === atual),
+        texto: NOMES_DOS_EXEMPLOS[opcao] || opcao,
+        // Recarrega a janela com o outro exemplo.
+        onclick: () => { if (opcao !== atual) window.blink.diff.abrirExemplo(opcao); },
+      }));
+    }
   }
 
   iniciar();

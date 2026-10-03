@@ -532,7 +532,8 @@ seletor, a senha, as credenciais, o olhinho, trancar ao trocar/minimizar/recarre
 ### Folha livre (`notas-livres.js`, `folha.js`, `tinta.js`)
 
 **Formato no disco.** O `.md` **nunca** muda neste modo. A folha mora em `<pasta de notas>/.blink/livre/<nome>.json`:
-`{ versao: 1, conteudo: <Delta do Quill>, tinta: [{ t: 'caneta'|'marca', c: '#rrggbb', w, p: [[x, y], ...] }], atualizado }`,
+`{ versao: 1, conteudo: <Delta do Quill>, tinta: [{ t: 'caneta'|'marca'|'retangulo'|'elipse'|'linha'|'seta', c: '#rrggbb', w, p: [[x, y], ...] }], atualizado }`
+(as quatro formas guardam **exatamente dois pontos**, início e fim; `tintaValida` recusa o resto; usam as espessuras da caneta),
 e as imagens em `<pasta>/.blink/anexos/<uuid>.<ext>`. Quem está em folha livre é a lista `notasLivres` do config (só o
 processo principal grava, como o relógio). `salvar` valida tudo antes de escrever (Delta só de `{ insert, attributes? }`;
 traço com tipo caneta/marca, cor `#rrggbb`, espessura ≤ 80, ≤ 20 mil traços e ≤ 400 mil pontos; JSON ≤ 25 MB) e grava
@@ -565,6 +566,11 @@ de fora (o matcher `IMG` descarta qualquer imagem que não seja `blink-anexo://`
   editor não tem nenhum `[style]`.
 - **Blots próprios.** `divider` (`BlockEmbed` com `<hr>`) e a imagem, cujo `sanitize` só aceita `blink-anexo://<uuid>.<ext>`
   (o padrão do Quill aceitaria http, https e data).
+- **Tópico expansível.** Não é um container: é um **atributo de linha** (`formats/toggle`, `ClassAttributor` de bloco
+  `ql-toggle-<aberto|fechado|corpo>`). A linha do título é `aberto`/`fechado`, as de dentro são `corpo`. Quem esconde o
+  corpo de um título fechado é `atualizarTopicos()` (a classe extra `ql-toggle-oculto` no nó, fora do modelo do Quill; o
+  CSS sozinho não sabe onde o corpo termina), chamada a cada mudança e ao abrir a folha. A seta é um `::before` do
+  título; o clique é um `mousedown` com `offsetX <= 22`. Teclado nas opções (`blink topico enter` / `backspace`).
 - **Atalhos de Markdown** entram pelas **opções** `modules.keyboard.bindings`, não por `addBinding()`: o Enter padrão do
   Quill é registrado logo depois das opções e, se os nossos viessem depois dele, nunca seriam chamados. O Quill 2 já faz
   `- `, `* `, `1. ` e `[] `. O formato de bloco de código volta como `'code-block': 'plain'`.
@@ -572,6 +578,16 @@ de fora (o matcher `IMG` descarta qualquer imagem que não seja `blink-anexo://`
   o menu é atualizado com `setTimeout(0)`. O teclado dele (setas, Enter, Tab, Esc) é um `keydown` em captura no
   `.ql-editor` com `stopImmediatePropagation`, e o Esc fechar só o menu depende disso (senão chega no `note.js` e minimiza).
 - **Posição da barra e do menu** usa `getBoundingClientRect` (que já vem com o zoom), não `quill.getBounds`.
+
+**Copiar como imagem (`imagem-folha.js`).** O botão `#btn-imagem` (só em folha livre) grava a folha e chama
+`livre:copiarImagem`: o principal abre uma `BrowserWindow` **escondida** com `renderer/note/impressao.html` (a mesma CSP
+e os mesmos CSS), entrega o Delta e a tinta lidos do disco (`folha.js` → `montarImpressao`: Quill só para leitura, 794 px
+sem zoom, a tinta por cima) e a página devolve a **altura usada** (o maior entre o fim do texto e o traço mais baixo,
+mais 56 px, mínimo 300). Depois `capturePage()` (com tentativas: uma janela escondida demora a pintar) e a imagem vai
+para a área de transferência como `image/png` por `clipboard.write([new ClipboardItem(...)])` — **nesta versão do Electron
+o `clipboard` só tem `read`, `write`, `readText`, `writeText`, `has` e `clear`, todos assíncronos** (não existe
+`writeImage`/`readImage`). Acima de 12 000 px copia só o começo (`cortada`). A largura da imagem é 794 vezes a escala do
+monitor em que a janela escondida nasce.
 
 **Zoom.** A folha tem 794 px de largura (um A4) e `min-height: 1123px`, fixos no CSS (`.folha-papel`);
 `transform: scale(zoom)` com `zoom = min(1, (largura da área − 24) / 794)`. A `.folha-caixa` tem o tamanho **já
@@ -649,6 +665,99 @@ conteúdo mais alto que a janela mínima (460×530) a área das abas **rola** (`
 Testes: `teste-tarefas-daily.js` (parte A: 42 casos no principal, numa pasta temporária; parte B: a tela, com a
 aba e o recolhível).
 
+### Diff: a demonstração com código
+
+`ferramenta-diff.abrirExemplo(linguagem)` tem três pares prontos (`EXEMPLOS`: javascript, sql, xml) e passa a linguagem
+conhecida para `realce.anexar(linhas, { linguagem })`, que então não detecta. `janelas.abrirDiff(linhas, { exemplo })`
+guarda qual exemplo está aberto (`obterExemploDiff`); a tela pergunta por `diff:exemplo` e, **só quando é a
+demonstração**, mostra o seletor "Exemplo" no rodapé, que chama `diff:abrirExemplo` (recusado fora da demonstração) e
+recarrega a mesma janela. Teste: `teste-diff-temas.js` (parte final).
+
+### Abas, aba rápida e modo texto (`abas.js`, `notas-texto.js`, `renderer/note/abas.js`)
+
+**Estado** (`note.js`): `abasAbertas` = `{ id, tipo: 'arquivo', nome, rascunho, dia }` ou `{ id, tipo: 'rapida', texto, numero }`, e `abaAtiva`.
+O valor de `arquivo` continua dizendo o que está na tela: um nome de arquivo, `NOVO` ("+ Criar nova nota") ou **`RAPIDA`** (uma aba rápida).
+`desenhar()` termina em `sincronizarAbas()`: garante a aba do `arquivo` mostrado (cria se não há), marca como ativa, redesenha a barra e
+grava o estado — por isso **qualquer** caminho que mude o arquivo (seletor, `/nome`, `/task`, a bind) abre ou ativa a aba, sem código
+especial. `escolherArquivo` guarda na aba que sai o rascunho e o dia (`guardarEstadoDaAba`) e restaura os da que entra; `ativarRapida` faz
+o mesmo para uma aba rápida. Fechar uma aba ativa ativa a vizinha da direita (ou da esquerda); fechar a **última** abre uma aba rápida
+vazia. O `×` e Ctrl+W numa aba rápida **com texto** pergunta (Salvar / Não salvar / Cancelar) pelo modal genérico `abrirModalPrivado`
+(ganhou o botão `rotuloNao`, campos sem lista e `valor` de preenchimento).
+
+**Persistência** (`main/abas.js`): `config.abasNota` = `{ abertas: [{ tipo, nome | id }], ativa }` (**só nomes e ids**) e, **à parte**,
+`%APPDATA%Blinkabas-rapidas.json` com o texto das abas rápidas (id → texto; o arquivo some quando não há nenhuma). O texto de uma aba
+rápida nunca vai para a pasta de notas, o `config.json` nem o log (o teste varre). `validar()` confere tudo que a tela manda (≤ 40 abas,
+tipo e id, ≤ 5 MB por texto e ≤ 20 MB no total). Ao abrir: abas de arquivos que sumiram caem fora; abre no arquivo da **estrela**; sem
+estrela, numa aba rápida que estava ativa; senão no `ultimaNota` (que acompanha a aba ativa) e por fim no primeiro. A tela grava com
+atraso de 300 ms, e de forma síncrona no `beforeunload` (`abas:salvarSincrono`).
+
+**Modo texto** (`main/notas-texto.js`, config `notasTexto`): `ler`/`salvar` trabalham com o `.md` **inteiro** e exatamente como está (sem acrescentar
+linha final); `criar(nome, texto)` (o salvar da aba rápida) usa `flag: 'wx'` — **nunca sobrescreve** — e recusa nome inválido, o `task.md`
+e nome existente. Travas dos dois lados com folha, quadro, cadeado e relógio (`ehArquivoEspecial` em `notas.js`; o seletor mostra o "T" e
+apaga o que não vale). O editor é um `<textarea id="texto-livre">` que serve à aba rápida e ao arquivo em modo texto (gravação com atraso de
+600 ms, e ao trocar de aba ou fechar); Ctrl+clique abre links; Tab indenta.
+
+**Layout:** o seletor mora no cabeçalho (`.cabecalho .seletor`, `no-drag`; a lista abre por cima do corpo com `z-index`); o calendário do
+histórico fica numa linha própria abaixo das abas. As abas **encolhem** (reticências) antes de a barra rolar; a ativa é a última a encolher.
+`.botao-acao[hidden]` precisa de `display: none` explícito (o `display` do botão vencia o atributo e o botão de imagem aparecia em
+todo arquivo — os testes olham o **estilo calculado**). Testes: `teste-abas.js`.
+
+### Quadro branco (Excalidraw)
+
+**Biblioteca.** `@excalidraw/excalidraw@0.17.6` + `react@18.3.1` + `react-dom@18.3.1` (versões **exatas**). A 0.17.6 é a última com
+build **UMD** (`dist/excalidraw.production.min.js`, que usa `React`/`ReactDOM` globais); a 0.18+ é só ESM com code-splitting e
+exigiria um bundler (o projeto não tem). Se um dia houver bundler, dá para subir a versão. O `npm audit` aponta só o
+`electron-builder` (dependência de desenvolvimento, não vai no app).
+
+**A página** (`renderer/quadro/`): `index.html` carrega `assets.js` (define `EXCALIDRAW_ASSET_PATH` para a pasta `dist/` do pacote;
+ele acrescenta `excalidraw-assets/` — apontar para dentro dessa pasta dá `ChunkLoadError` com o caminho duplicado), o React, o
+React DOM, o Excalidraw e `quadro.js` (sem JSX: `React.createElement`). **CSP própria e a única do Blink com
+`style-src 'unsafe-inline'`** (o Excalidraw injeta `<style>`); mesmo assim sem `unsafe-eval`, sem rede (`connect-src 'self' data:
+blob:`), fontes e idiomas do disco — o teste confere que a página carrega o idioma pt-BR e que o console não tem erro de CSP. A
+página roda num **`<iframe>`** do Fast Note (CSP do Fast Note ganha `frame-src 'self'`), criado só quando o primeiro quadro abre (são
+mais de 1 MB de JavaScript). `protegerNavegacao` (links.js) deixa um quadro de dentro do `renderer/` carregar (`will-frame-navigate`).
+
+**Conversa** (`postMessage`, mensagens `{ blink: 'quadro', tipo, ... }`, descritas em `renderer/quadro/quadro.js`): `abrir`, `pedirImagem`,
+`limpar`, `focar` (Fast Note → quadro) e `pronto`, `mudou`, `imagem` (quadro → Fast Note). O Fast Note só aceita mensagens do
+`contentWindow` do próprio iframe, e cada abertura tem um número de **sessão**: uma mudança atrasada do quadro anterior não é gravada
+no arquivo errado. O quadro avisa 400 ms depois da última mudança e só se o JSON mudou de verdade (rolar e dar zoom também
+disparam `onChange`). **O fundo da cena é `#ffffff` de propósito:** com `theme: 'dark'` o Excalidraw inverte as cores, então o
+branco aparece escuro (um `#161616` aparecia claro).
+
+**Disco** (`main/notas-quadro.js`, no molde de `notas-livres.js`): `<pasta>/.blink/quadro/<nome>.excalidraw` (o JSON do `serializeAsJSON`;
+as imagens coladas ficam em `files`, como data URL), lista `notasQuadro` no config, `cenaValida` (tipo `excalidraw`, `elements` com `id` e
+`type`, `appState`/`files` objetos, ≤ 50 mil elementos, ≤ 40 MB), gravação por arquivo temporário + `rename`. Travas nos dois lados com
+folha, cadeado, relógio e `task.md` (`ehArquivoSoDeDesenho` em `notas.js`); `/nome texto` e a lista do `/` ignoram o quadro. A janela tem o
+tamanho `notaQuadro` (padrão 1000×680, mínimo 600×440), lembrado à parte; `janela:modoNota` recebe `'nota' | 'livre' | 'quadro'`.
+
+**Copiar como imagem:** o quadro exporta o PNG (`exportToBlob`, `exportWithDarkMode`), os bytes vão por IPC e o principal os põe na
+área de transferência (`ClipboardItem`, ver a nota do clipboard assíncrono em "Copiar como imagem" da folha).
+
+**Empacotamento** (`build.files` no `package.json`): fora o `excalidraw-assets-dev`, o build `development`, o `with-preact`, os `types`, os
+`.map` e os builds de desenvolvimento do React (o instalador cresce ≈ 2,6 MB no `app.asar`). Testes: `teste-quadro.js` (A: armazenamento,
+validação, travas, Lixeira, imagem; B: seletor, iframe, desenhar pela API e pelo mouse, gravar, fechar e abrir, copiar imagem, vassoura, desligar,
+excluir, console sem erro).
+
+### Links clicáveis (`comum/links.js`, `main/links.js`)
+
+**Detecção** (`links.js`, compartilhado, sem Electron): `https?://…` e `www.…` (o `www.` só conta no começo ou depois de algo
+que não seja parte de palavra, e-mail ou domínio), `aparar()` tira a pontuação do fim e o `)`/`]`/`}`/`>` que fecha sem ter
+sido aberto dentro da URL (parênteses equilibrados, como na Wikipedia, ficam). Tudo montado por DOM, nunca `innerHTML`:
+`preencher(no, texto)` põe nós de texto e `<span class="link">`. Como o texto de um tópico passa a ter **vários nós**, a
+`posicaoDoClique()` do `note.js` soma o tamanho dos nós de texto anteriores para o cursor da edição cair no lugar certo.
+
+**Abrir** (`main/links.js`): IPC `link:abrir` → `validar()` (só `http:`, `https:`, `mailto:`; ≤ 2048 caracteres; `new URL`)
+→ `shell.openExternal` (chamado pelo objeto `shell` na hora, para o teste trocar por um falso). `protegerNavegacao(app)`
+(em `main.js`, para **todos** os `webContents`): `setWindowOpenHandler` nega e manda o endereço para o navegador;
+`will-navigate` e `will-frame-navigate` cancelam e idem. Uma tela do Blink nunca navega para fora (exceção: um quadro
+`<iframe>` carregando outra página de `renderer/`, para o quadro branco).
+
+**Onde clica o quê:** lista = clique (o `stopPropagation` do link impede a edição); `textarea` (rascunho, edição, corpo do
+recolhível) = Ctrl+clique (`ligarCtrlClique`, olha a posição do cursor); folha = formato `link` do Quill (o `sanitize`
+dele só aceita http, https, mailto, tel e sms), criado ao dar espaço depois de uma URL (binding `blink autolink`, nas
+opções do teclado) e aberto com Ctrl+clique (um clique sem Ctrl só põe o cursor; o `<a>` nunca navega). Teste:
+`teste-links.js` (detecção, o que o principal deixa abrir, trava de navegação, lista, edição, rascunho e folha).
+
 ### Fonte e tamanho do Fast Note e do Diff
 
 Config `aparencia: { note: { fonte, tamanho }, diff: { fonte, tamanho } }` (padrões JetBrains Mono 12 e 13).
@@ -710,7 +819,8 @@ abas não são redesenhadas no foco, porque uma gravação de atalho em andament
 Teste: `.verif/teste-pasta.js`.
 
 **Botão copiar (C)** (`#btn-copiar`, `textoParaCopiar()` em `note.js`): copia como `- tópico`, do mais
-antigo para o mais novo (a tela mostra o mais novo primeiro, então inverte uma cópia), continuação
+antigo para o mais novo, que é a ordem da tela (desde a 0.7 a tela não inverte mais as listas: mostra
+a ordem do arquivo, o item novo entra no fim e a lista rola até ele), continuação
 indentada com 2 espaços, CRLF, pelo IPC `areaTransferencia:escrever`. No histórico só o dia
 selecionado; no `task.md` as caixinhas `- [ ]`/`- [x]`. Fica desabilitado como a vassoura.
 
@@ -841,6 +951,13 @@ copiado, em SVG embutido, no cabeçalho das três janelas (`principal/index.html
 cabeçalho): mudou o desenho, mude os cinco lugares. O `.ico` guarda as imagens pequenas como BMP
 (DIB) e a de 256 px como PNG — para conferir o que foi empacotado, `.verif/olhos/extrair-ico.js` abre o
 arquivo e monta uma folha com cada tamanho.
+
+**O ícone na barra de tarefas.** O Windows junta o botão da barra de tarefas ao atalho que tem o mesmo
+AppUserModelID e mostra o ícone **do atalho**. Por isso o `main.js` usa `com.danielvrd.blink` só no app empacotado
+e `com.danielvrd.blink.dev` no `npm start` (senão o botão do `npm start` mostrava o ícone do Blink instalado). Depois de
+instalar/atualizar, o Windows ainda pode segurar o ícone antigo em cache: `build/instalador.nsh` (`nsis.include`,
+macro `customInstall`) avisa o Explorer (`SHChangeNotify`) e roda `ie4uinit.exe -show`. `.verif/olhos/icone-exe.js`
+lê o ícone que o Windows tira do `Blink.exe` empacotado.
 
 ## Referência de design
 

@@ -3,7 +3,8 @@
  * de caneta por cima (tinta.js).
  *
  *   texto        titulos, listas (comum, numerada, de tarefas), citacao, codigo, divisoria, imagem, negrito,
- *                italico, sublinhado, riscado, cor do texto e marca-texto
+ *                italico, sublinhado, riscado, cor do texto e marca-texto, e o topico expansivel (um titulo
+ *                com seta e, embaixo, o corpo num cartao; a seta esconde e mostra o corpo)
  *   barra        flutua sobre o texto selecionado (negrito, italico, sublinhado, riscado, cor, marca-texto)
  *   menu "/"     escolhe o bloco: digite / numa linha vazia
  *   atalhos      "# ", "## ", "### ", "- ", "1. ", "[] ", "> " e "---" + Enter, Ctrl+B / I / U e Ctrl+Z / Y
@@ -59,6 +60,9 @@ window.Blink = window.Blink || {};
   /** Sem acento nem maiuscula, para filtrar o menu "/". */
   const normalizar = (texto) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
+  /** Os formatos que a folha aceita (o resto, colado de fora, e descartado). */
+  const FORMATOS = ['bold', 'italic', 'underline', 'strike', 'color', 'background', 'header', 'list', 'indent', 'blockquote', 'code-block', 'image', 'divider', 'toggle', 'link'];
+
   // --- Os formatos do Quill (registrados uma vez) -----------------------------------------------
 
   let registrado = false;
@@ -72,6 +76,13 @@ window.Blink = window.Blink || {};
     const Cor = new ClassAttributor('color', 'ql-color', { scope: Scope.INLINE, whitelist: CORES_DO_TEXTO.map((c) => c.nome) });
     const Fundo = new ClassAttributor('background', 'ql-bg', { scope: Scope.INLINE, whitelist: CORES_DO_MARCA_TEXTO.map((c) => c.nome) });
     Quill.register({ 'formats/color': Cor, 'formats/background': Fundo }, true);
+
+    // O topico expansivel: uma ATRIBUTO de linha (classe ql-toggle-<valor>), nao um container: 'aberto' e 'fechado'
+    // marcam a linha do TITULO e 'corpo' as linhas de dentro. Quem esconde o corpo de um titulo fechado e
+    // atualizarTopicos() (uma classe a mais nas linhas, fora do modelo do Quill), porque o CSS sozinho nao sabe onde
+    // o corpo termina.
+    const Topico = new ClassAttributor('toggle', 'ql-toggle', { scope: Scope.BLOCK, whitelist: ['aberto', 'fechado', 'corpo'] });
+    Quill.register({ 'formats/toggle': Topico }, true);
 
     // A divisoria: uma linha horizontal (um bloco que nao tem texto).
     const BlocoSemTexto = Quill.import('blots/block/embed');
@@ -101,6 +112,7 @@ window.Blink = window.Blink || {};
     { id: 'tarefas', rotulo: 'Lista de tarefas', dica: '[]', aplicar: (q, i) => q.formatLine(i, 1, 'list', 'unchecked', 'user') },
     { id: 'citacao', rotulo: 'Citação', dica: '>', aplicar: (q, i) => q.formatLine(i, 1, 'blockquote', true, 'user') },
     { id: 'codigo', rotulo: 'Código', dica: '```', aplicar: (q, i) => q.formatLine(i, 1, 'code-block', true, 'user') },
+    { id: 'topico', rotulo: 'Tópico expansível', dica: '>>', aplicar: (q, i) => q.formatLine(i, 1, 'toggle', 'aberto', 'user') },
     {
       id: 'divisoria',
       rotulo: 'Divisória',
@@ -112,6 +124,53 @@ window.Blink = window.Blink || {};
     },
     { id: 'imagem', rotulo: 'Imagem', dica: '', aplicar: null },
   ];
+
+  /** Esconde o corpo de cada topico expansivel FECHADO de um Quill (ver "Topico expansivel" em criar()). */
+  function esconderCorposFechados(quill) {
+    let fechado = false;
+    for (const linha of quill.getLines()) {
+      const no = linha.domNode;
+      const valor = (no.className.match(/ql-toggle-(aberto|fechado|corpo)/) || [])[1];
+      if (valor === 'aberto' || valor === 'fechado') fechado = valor === 'fechado';
+      else if (valor !== 'corpo') fechado = false;
+      no.classList.toggle('ql-toggle-oculto', valor === 'corpo' && fechado);
+    }
+  }
+
+  /**
+   * Monta a folha SO PARA LEITURA, na largura real (794 px, sem zoom), para tirar o print dela
+   * (imagem-folha.js, na pagina impressao.html). Devolve (uma Promise) a altura usada, em px: o fim do texto ou do
+   * desenho mais baixo, o que for maior, mais a margem de baixo (e nunca menos que 300).
+   */
+  async function montarImpressao(raiz, folha) {
+    registrarFormatos();
+    raiz.replaceChildren();
+
+    const editor = el('div', { class: 'folha-editor' });
+    const tintaSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    tintaSvg.setAttribute('class', 'folha-tinta');
+    tintaSvg.setAttribute('width', String(LARGURA_DA_FOLHA));
+    raiz.appendChild(el('div', { class: 'folha-papel folha-impressa' }, [editor, tintaSvg]));
+
+    const quill = new Quill(editor, { readOnly: true, modules: { toolbar: false }, formats: FORMATOS });
+    quill.setContents(folha.conteudo, 'silent');
+    esconderCorposFechados(quill);
+
+    const tinta = window.Blink.tinta.criar(tintaSvg, { zoom: () => 1, aoMudar: () => {} });
+    tinta.definir(folha.tinta || []);
+
+    // As imagens carregam de forma assincrona: a altura so vale depois delas.
+    await Promise.all([...editor.querySelectorAll('img')].map((img) => (img.complete ? null : new Promise((resolver) => { img.onload = resolver; img.onerror = resolver; }))));
+
+    const margem = 56;
+    let baixoDaTinta = 0;
+    for (const traco of folha.tinta || []) for (const [, y] of traco.p) baixoDaTinta = Math.max(baixoDaTinta, y + traco.w / 2 + 12);
+    const altura = Math.ceil(Math.max(300, editor.querySelector('.ql-editor').scrollHeight, baixoDaTinta + margem));
+
+    tintaSvg.setAttribute('height', String(altura));
+    tintaSvg.setAttribute('viewBox', `0 0 ${LARGURA_DA_FOLHA} ${altura}`);
+    return altura;
+  }
 
   /**
    * Cria a folha dentro de `raiz` (um <div> vazio).
@@ -166,6 +225,53 @@ window.Blink = window.Blink || {};
       'blink titulo 2': atalhoDeEspaco(/^##$/, (i) => quill.formatLine(i, 1, 'header', 2, 'user')),
       'blink titulo 1': atalhoDeEspaco(/^#$/, (i) => quill.formatLine(i, 1, 'header', 1, 'user')),
       'blink citacao': atalhoDeEspaco(/^>$/, (i) => quill.formatLine(i, 1, 'blockquote', true, 'user')),
+      // Uma URL digitada vira link ao dar espaco ("https://..." ou "www...."): o espaco entra FORA do link.
+      'blink autolink': {
+        key: ' ',
+        collapsed: true,
+        format: { 'code-block': false },
+        prefix: /(?:https?:\/\/|www\.)\S+$/i,
+        handler: (trecho, contexto) => {
+          const achados = window.Blink.links.achar(contexto.prefix);
+          const ultimo = achados[achados.length - 1];
+          if (!ultimo || ultimo.fim !== contexto.prefix.length) return true;
+          quill.formatText(trecho.index - ultimo.achado.length, ultimo.achado.length, 'link', ultimo.url, 'user');
+          quill.insertText(trecho.index, ' ', { link: false }, 'user');
+          quill.setSelection(trecho.index + 1, 0, 'user');
+          return false;
+        },
+      },
+      // ">> " numa linha vazia vira um topico expansivel.
+      'blink topico': atalhoDeEspaco(/^>>$/, (i) => quill.formatLine(i, 1, 'toggle', 'aberto', 'user')),
+      // Enter no TITULO: abre o topico e passa para a primeira linha do corpo. Enter numa linha VAZIA do corpo sai do
+      // topico; numa linha com texto, o Enter padrao continua no corpo.
+      'blink topico enter': {
+        key: 'Enter',
+        collapsed: true,
+        format: { toggle: true },
+        handler: (trecho, contexto) => {
+          if (contexto.format.toggle === 'corpo') {
+            if (!contexto.empty) return true;
+            quill.formatLine(trecho.index, 1, 'toggle', false, 'user');
+            return false;
+          }
+          quill.insertText(trecho.index, '\n', { toggle: 'aberto' }, 'user');
+          quill.formatLine(trecho.index + 1, 1, 'toggle', 'corpo', 'user');
+          quill.setSelection(trecho.index + 1, 0, 'user');
+          return false;
+        },
+      },
+      // Backspace no comeco de uma linha do topico: tira a linha do topico (vira paragrafo comum).
+      'blink topico backspace': {
+        key: 'Backspace',
+        collapsed: true,
+        offset: 0,
+        format: { toggle: true },
+        handler: (trecho) => {
+          quill.formatLine(trecho.index, 1, 'toggle', false, 'user');
+          return false;
+        },
+      },
       // "---" e Enter vira a divisoria; "```" e Enter vira bloco de codigo.
       'blink divisoria': {
         key: 'Enter',
@@ -187,7 +293,7 @@ window.Blink = window.Blink || {};
 
     const quill = new Quill(editor, {
       modules: { toolbar: false, history: { delay: 700, maxStack: 300, userOnly: true }, keyboard: { bindings: atalhos } },
-      formats: ['bold', 'italic', 'underline', 'strike', 'color', 'background', 'header', 'list', 'indent', 'blockquote', 'code-block', 'image', 'divider'],
+      formats: FORMATOS,
       placeholder: 'Escreva aqui — digite / para ver os blocos',
     });
     quill.root.setAttribute('spellcheck', 'false');
@@ -461,7 +567,31 @@ window.Blink = window.Blink || {};
     );
 
     /** Depois de qualquer mudanca do texto ou do cursor: o menu e a barra se acertam. */
+    /**
+     * Esconde as linhas de corpo de um topico FECHADO (uma classe a mais no no da linha, que o Quill nao conhece e
+     * nao mexe). Refeito a cada mudanca do texto e ao abrir uma folha: desfazer, refazer e setContents trocam os nos.
+     */
+    const atualizarTopicos = () => esconderCorposFechados(quill);
+
+    // A seta do titulo e um ::before na margem esquerda dele; um clique ali abre ou fecha o topico.
+    quill.root.addEventListener('mousedown', (evento) => {
+      const alvo = evento.target;
+      if (!(alvo instanceof Element) || !/ql-toggle-(aberto|fechado)/.test(alvo.className) || evento.offsetX > 22) return;
+      evento.preventDefault();
+      const indice = quill.getIndex(Quill.find(alvo));
+      quill.formatLine(indice, 1, 'toggle', /ql-toggle-aberto/.test(alvo.className) ? 'fechado' : 'aberto', 'user');
+    });
+
+    // Links da folha: um clique so poe o cursor; Ctrl+clique abre no navegador. Nunca navega dentro da janela.
+    quill.root.addEventListener('click', (evento) => {
+      const link = evento.target instanceof Element ? evento.target.closest('a[href]') : null;
+      if (!link) return;
+      evento.preventDefault();
+      if (evento.ctrlKey || evento.metaKey) window.Blink.links.abrir(link.getAttribute('href'));
+    });
+
     function aoMudarOTexto() {
+      atualizarTopicos();
       // O cursor so e lido direito depois de o Quill acabar de atualizar a selecao: dentro do proprio evento
       // de mudanca ele ainda aponta para antes do que acabou de ser digitado (o "/" nao contaria).
       setTimeout(atualizarMenu, 0);
@@ -561,6 +691,10 @@ window.Blink = window.Blink || {};
       caneta: '<path d="M4 20l1-5L16.5 3.5a2.1 2.1 0 013 3L8 18z"/><path d="M14 6l4 4"/>',
       marca: '<path d="M9 3l6 6-8 8H3v-4z"/><path d="M13 7l4 4M3 21h10"/>',
       borracha: '<path d="M16 3l5 5-9 9H7L3 13z"/><path d="M9 20h12"/><path d="M8 8l8 8"/>',
+      retangulo: '<rect x="4" y="6" width="16" height="12" rx="1"/>',
+      elipse: '<ellipse cx="12" cy="12" rx="8.5" ry="6"/>',
+      linha: '<path d="M5 19L19 5"/>',
+      seta: '<path d="M5 19L19 5"/><path d="M10 5h9v9"/>',
     };
 
     function botaoDeFerramenta(nome, titulo) {
@@ -607,6 +741,11 @@ window.Blink = window.Blink || {};
       botaoDeFerramenta('caneta', 'Caneta'),
       botaoDeFerramenta('marca', 'Marca-texto (também serve para pintar)'),
       botaoDeFerramenta('borracha', 'Borracha: apaga o traço tocado'),
+      el('span', { class: 'folha-separador', 'aria-hidden': 'true' }),
+      botaoDeFerramenta('retangulo', 'Retângulo (Shift: quadrado)'),
+      botaoDeFerramenta('elipse', 'Elipse (Shift: círculo)'),
+      botaoDeFerramenta('linha', 'Linha (Shift: ângulos de 45°)'),
+      botaoDeFerramenta('seta', 'Seta (Shift: ângulos de 45°)'),
       grupoDaTinta,
     ]);
 
@@ -626,7 +765,7 @@ window.Blink = window.Blink || {};
         botao.setAttribute('aria-pressed', String(ligada));
       }
       // Espessura e cor so fazem sentido para a caneta e o marca-texto.
-      const desenha = tinta.ferramenta === 'caneta' || tinta.ferramenta === 'marca';
+      const desenha = tinta.ferramenta !== 'texto' && tinta.ferramenta !== 'borracha';
       grupoDaTinta.hidden = tinta.ferramenta === 'texto';
       for (const b of botoesDeEspessura) {
         b.hidden = !desenha;
@@ -664,6 +803,7 @@ window.Blink = window.Blink || {};
       clearTimeout(relogio);
       arquivoAtual = arquivo;
       quill.setContents(folha.conteudo, 'silent');
+      atualizarTopicos();
       tinta.definir(folha.tinta || []);
       quill.history.clear();
       sujo = false;
@@ -708,8 +848,12 @@ window.Blink = window.Blink || {};
         sujo = false;
         window.blink.livre.salvarSincrono(arquivoAtual, conteudoAtual());
       },
-      /** O texto da folha (o botao C copia isto). */
-      texto: () => quill.getText().replace(/\n+$/, ''),
+      /** O texto da folha (o botao C copia isto); as linhas de corpo de um topico expansivel saem recuadas. */
+      texto: () => quill.getLines().map((linha) => {
+        const indice = quill.getIndex(linha);
+        const texto = quill.getText(indice, linha.length()).replace(/\n$/, '');
+        return quill.getFormat(indice, 0).toggle === 'corpo' ? '  ' + texto : texto;
+      }).join('\n').replace(/\n+$/, ''),
       /** A vassoura: apaga o texto e o desenho. */
       limpar() {
         quill.setContents([{ insert: '\n' }], 'user');
@@ -734,5 +878,5 @@ window.Blink = window.Blink || {};
     };
   }
 
-  window.Blink.folha = { criar, LARGURA_DA_FOLHA, CORES_DO_TEXTO, CORES_DO_MARCA_TEXTO, CORES_DA_TINTA };
+  window.Blink.folha = { criar, montarImpressao, LARGURA_DA_FOLHA, CORES_DO_TEXTO, CORES_DO_MARCA_TEXTO, CORES_DA_TINTA };
 })();

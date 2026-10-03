@@ -37,6 +37,9 @@ body {
 /* --- Cabecalho ------------------------------------------------------------ */
 
 .cabecalho {
+  /* Acima do corpo: a lista do seletor, que mora aqui, abre por cima dele. */
+  position: relative;
+  z-index: 20;
   flex: none;
   display: flex;
   align-items: center;
@@ -115,7 +118,7 @@ body {
 
 .linha-arquivo {
   display: flex;
-  gap: 16px;
+  gap: 10px;
   position: relative;
 }
 
@@ -468,6 +471,12 @@ body {
 }
 
 /* Sem topicos nao ha o que limpar; em "+ Criar nova nota" nao ha o que excluir. */
+/* O display do .botao-acao vence o atributo hidden: sem isto o botao de imagem (so da folha e do quadro) e o de salvar
+   (so da aba rapida) apareciam em todo arquivo. */
+.botao-acao[hidden] {
+  display: none;
+}
+
 .botao-acao[disabled] {
   opacity: 0.35;
   cursor: default;
@@ -861,7 +870,22 @@ body {
 
 .corpo-topico.caixa-recolhivel {
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+}
+
+/* O titulo de um topico recolhivel tem cara de TITULO: um pouco maior e em negrito. O corpo, no cartao embaixo, fica
+   um pouco menor mas ainda legivel. A altura da linha do titulo e outra, entao a alca, a seta e o X (que se alinham
+   por --linha-conteudo / --linha-primeira) usam as contas do titulo dentro do topico. */
+.topico.recolhivel {
+  --tamanho-titulo: calc(var(--tamanho-conteudo) + 2px);
+  --linha-conteudo: calc(var(--tamanho-titulo) * 1.3333);
+  --linha-primeira: max(22px, var(--linha-conteudo));
+}
+
+.topico.recolhivel .linha-titulo .texto {
+  font-size: var(--tamanho-titulo);
+  font-weight: 600;
+  color: var(--texto-forte);
 }
 
 .linha-titulo {
@@ -899,9 +923,10 @@ body {
   overflow: hidden;
   padding: 4px 8px;
   border: 1px solid var(--borda-campo);
+  border-left: 2px solid rgba(168, 57, 58, 0.55);
   border-radius: var(--raio-item);
-  background: var(--superficie);
-  font: var(--tamanho-conteudo)/1.5 var(--fonte-conteudo);
+  background: rgba(255, 255, 255, 0.035);
+  font: calc(var(--tamanho-conteudo) - 0.5px)/1.5 var(--fonte-conteudo);
   color: var(--texto-forte);
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1318,6 +1343,13 @@ body {
   color: var(--texto-forte);
 }
 
+.folha-separador {
+  width: 1px;
+  height: 16px;
+  margin: 0 3px;
+  background: var(--divisoria);
+}
+
 .folha-acao:disabled {
   opacity: 0.3;
   cursor: default;
@@ -1446,6 +1478,63 @@ body {
   border-radius: 4px;
 }
 
+/* O topico expansivel: o titulo (maior, em negrito, com a seta na margem) e o corpo num cartao logo abaixo, em letra um
+   pouco menor. A classe .ql-toggle-oculto (posta por folha.js) esconde o corpo de um topico fechado. */
+.folha-editor .ql-editor .ql-toggle-aberto,
+.folha-editor .ql-editor .ql-toggle-fechado {
+  position: relative;
+  padding-left: 22px;
+  font-size: 1.15em;
+  font-weight: 600;
+  color: var(--texto-forte);
+}
+
+.folha-editor .ql-editor .ql-toggle-aberto::before,
+.folha-editor .ql-editor .ql-toggle-fechado::before {
+  position: absolute;
+  left: 2px;
+  top: 0;
+  width: 18px;
+  color: var(--destaque-estado);
+  font-weight: 400;
+  cursor: pointer;
+  user-select: none;
+}
+
+.folha-editor .ql-editor .ql-toggle-fechado::before {
+  content: "\25B8";
+}
+
+.folha-editor .ql-editor .ql-toggle-aberto::before {
+  content: "\25BE";
+}
+
+.folha-editor .ql-editor .ql-toggle-corpo {
+  margin-left: 22px;
+  padding: 3px 12px;
+  border-left: 2px solid rgba(168, 57, 58, 0.55);
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 0.92em;
+}
+
+.folha-editor .ql-editor .ql-toggle-oculto {
+  display: none;
+}
+
+/* Links: na lista de topicos (um <span class="link">), na folha (<a>) e nos campos (Ctrl+clique). */
+.texto .link,
+.folha-editor .ql-editor a {
+  color: var(--folha-azul);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.texto .link:hover,
+.folha-editor .ql-editor a:hover {
+  filter: brightness(1.2);
+}
+
 /* Cores do texto e do marca-texto (classes, nunca style=""). */
 .folha-editor .ql-color-branco { color: #ffffff; }
 .folha-editor .ql-color-vermelho { color: #ff6b6b; }
@@ -1475,6 +1564,26 @@ body {
 /* Com uma ferramenta de desenho ligada, arrastar nao seleciona texto. */
 .folha-livre.desenhando .folha-editor {
   user-select: none;
+}
+
+/* A pagina do "copiar como imagem" (impressao.html): a folha inteira, na largura real, sem zoom e sem sombra. */
+body.impressao {
+  height: auto;
+  margin: 0;
+  overflow: hidden;
+  background: var(--folha-papel);
+}
+
+.folha-papel.folha-impressa {
+  position: relative;
+  min-height: 0;
+  transform: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.folha-impressa .folha-editor .ql-editor {
+  min-height: 0;
 }
 
 /* A barra que flutua sobre o texto selecionado, e o menu "/": dentro da area que rola, na posicao da selecao. */
@@ -1579,6 +1688,310 @@ body {
 .folha-menu-dica {
   font: 11px var(--fonte-mono);
   color: var(--rotulo);
+}
+
+/* O quadro branco: o iframe do Excalidraw ocupa o lugar da lista. */
+.quadro-livre {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.quadro-livre[hidden] {
+  display: none;
+}
+
+.quadro-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+  background: #161616;
+}
+
+/* O seletor no cabecalho: ocupa o lugar do titulo e nao arrasta a janela. */
+.cabecalho .titulo {
+  flex: 1;
+  min-width: 0;
+  margin-right: 10px;
+}
+
+.cabecalho .seletor {
+  flex: 1;
+  max-width: 320px;
+  -webkit-app-region: no-drag;
+}
+
+/* A lista abre mais larga que o botao (nome + as seis marcas) e nunca passa da janela. */
+.cabecalho .seletor-lista {
+  width: max(100%, 330px);
+  max-width: calc(100vw - 36px);
+}
+
+/* --- Abas (abas.js) ------------------------------------------------------------------ */
+
+.barra-abas {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  /* As abas encolhem (o nome vira reticencias) antes de a barra rolar; a roda do mouse rola o que sobrar. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.barra-abas::-webkit-scrollbar {
+  display: none;
+}
+
+.aba-nota {
+  flex: 0 1 150px;
+  min-width: 34px;
+  height: 26px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 5px 4px 9px;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-item);
+  background: var(--superficie);
+  color: var(--texto-secundario);
+  font-size: 11.5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.aba-nota:hover {
+  color: var(--texto-2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.aba-nota.ativa {
+  /* A ativa e a ultima a encolher: o nome dela continua legivel. */
+  min-width: 96px;
+  color: var(--texto-forte);
+  background: rgba(168, 57, 58, 0.2);
+  border-color: var(--borda-modal-nota);
+}
+
+.aba-nota:focus-visible {
+  outline: 2px solid rgba(168, 57, 58, 0.7);
+  outline-offset: 1px;
+}
+
+.aba-nome {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A aba rapida (nunca salva) fica em italico, com um pontinho de "nao salva". */
+.aba-nota.rapida .aba-nome {
+  font-style: italic;
+}
+
+.aba-nota.nao-salva .aba-nome::after {
+  content: " \2022";
+  color: var(--destaque-estado);
+}
+
+/* Fora da aba ativa o X so aparece com o mouse em cima (e o botao do meio fecha de qualquer jeito). */
+.aba-nota:not(.ativa):not(:hover) .aba-fechar {
+  display: none;
+}
+
+.aba-fechar {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  opacity: 0;
+}
+
+.aba-nota:hover .aba-fechar,
+.aba-nota.ativa .aba-fechar {
+  opacity: 0.8;
+}
+
+.aba-fechar:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.aba-nota.arrastando {
+  opacity: 0.45;
+}
+
+.aba-nota.solta-antes {
+  box-shadow: -2px 0 0 var(--destaque-estado);
+}
+
+.aba-nota.solta-depois {
+  box-shadow: 2px 0 0 var(--destaque-estado);
+}
+
+.aba-nota svg {
+  flex: none;
+}
+
+/* Um pontinho colorido diz o modo do arquivo da aba (folha, quadro, texto, cadeado, historico). */
+.aba-nota[class*="modo-"]::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rotulo);
+}
+
+.aba-nota.modo-livre::before { background: var(--folha-azul); }
+.aba-nota.modo-quadro::before { background: var(--historico); }
+.aba-nota.modo-texto::before { background: var(--estrela); }
+.aba-nota.modo-privado::before { background: var(--destaque-estado); }
+.aba-nota.modo-historico::before { background: var(--historico); }
+.aba-nota.modo-rapida::before { background: transparent; border: 1px dashed var(--rotulo); }
+
+/* O calendario do historico passa a morar numa faixa propria, logo abaixo das abas. */
+.corpo > .calendario {
+  align-self: flex-end;
+}
+
+/* A aba rapida e o arquivo em modo texto: o texto inteiro num editor simples. */
+.texto-livre {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  padding: 10px 12px;
+  background: var(--superficie);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo);
+  font-family: var(--fonte-conteudo);
+  font-size: var(--tamanho-conteudo);
+  line-height: 1.5;
+  color: var(--texto-forte);
+  tab-size: 4;
+  overflow-wrap: anywhere;
+}
+
+.texto-livre[hidden] {
+  display: none;
+}
+
+.texto-livre:focus {
+  border-color: rgba(168, 57, 58, 0.55);
+  outline: none;
+}
+
+/* O "T" (modo texto) no seletor, como os outros: o mesmo desenho, em dourado quando ligado. */
+.seletor-texto {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--rotulo);
+}
+
+.seletor-texto path {
+  fill: none;
+  stroke: currentColor;
+}
+
+.seletor-texto:hover {
+  color: var(--texto-2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.seletor-texto.marcado {
+  color: var(--estrela);
+}
+
+.seletor-texto.bloqueado {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.seletor-texto.bloqueado:hover {
+  background: transparent;
+  color: var(--rotulo);
+}
+
+.seletor-texto-fixo {
+  flex: none;
+  color: var(--estrela);
+}
+
+.seletor-texto-fixo path {
+  fill: none;
+  stroke: currentColor;
+}
+
+/* O quadro no seletor, como a folha: o mesmo desenho, em verde quando ligado. */
+.seletor-quadro {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--rotulo);
+}
+
+.seletor-quadro rect,
+.seletor-quadro path {
+  fill: none;
+  stroke: currentColor;
+}
+
+.seletor-quadro:hover {
+  color: var(--texto-2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.seletor-quadro.marcado {
+  color: var(--historico);
+}
+
+.seletor-quadro.bloqueado {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.seletor-quadro.bloqueado:hover {
+  background: transparent;
+  color: var(--rotulo);
+}
+
+.seletor-quadro-fixo {
+  flex: none;
+  color: var(--historico);
+}
+
+.seletor-quadro-fixo rect,
+.seletor-quadro-fixo path {
+  fill: none;
+  stroke: currentColor;
 }
 
 /* A folha no seletor: o mesmo desenho do cadeado e do relogio, em azul quando ligada. */

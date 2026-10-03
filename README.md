@@ -182,14 +182,49 @@ iguais. Clicar no **✓** de uma linha aplicada **desfaz**: ela volta a ser uma 
 aplicadas. `Esc` **minimiza** a janela (a comparação continua lá); para fechar e descartar, use o
 `×`.
 
+O botão **Abrir demonstração** da aba do Diff Checker abre uma comparação de **código de verdade** (JavaScript,
+SQL ou XML — um seletor **Exemplo** no rodapé troca entre eles), para você ver como o tema escolhido pinta cada
+linguagem: trocar o tema na aba recolore a demonstração aberta.
+
 O primeiro texto guardado vale por **2 minutos**. Depois disso o próximo atalho volta a ser o
 primeiro, para você não comparar com algo que capturou e esqueceu.
 
 ### Fast Note — `Ctrl + Alt + N`
 
 1. Pressione `Ctrl + Alt + N`. Na primeira vez o Windows pergunta em que pasta guardar as notas.
-2. Escreva e pressione `Enter`. `Shift + Enter` quebra a linha dentro do mesmo tópico.
+2. Escreva e pressione `Enter`. `Shift + Enter` quebra a linha dentro do mesmo tópico. A nota nova entra
+   **no fim da lista** (a mais antiga fica em cima, como num chat) e a lista rola até ela.
 3. Escolha outro arquivo no seletor, ou **"+ Criar nova nota"** para começar um.
+
+#### Abas
+
+O Fast Note tem **abas**, como o Bloco de Notas do Windows 11. O seletor de arquivos fica no **cabeçalho**, com todas as
+marcas de sempre (estrela, relógio, cadeado, folha, quadro e o "T"); escolher um arquivo nele, escrever `/nome` ou o
+atalho do Fast Note **abre a aba** desse arquivo (se já estava aberto, só a ativa). Clique na aba para trocar; o **×** (ou o
+botão do meio do mouse) fecha; arraste uma aba para mudar a ordem. Cada aba lembra o **rascunho** que você estava escrevendo e
+o **dia** do calendário. Um pontinho colorido na aba diz o modo do arquivo (folha, quadro, texto, cadeado, histórico).
+
+Atalhos: `Ctrl + T` nova aba rápida, `Ctrl + W` fecha a aba, `Ctrl + S` salva a aba rápida, `Ctrl + Tab` e
+`Ctrl + Shift + Tab` andam entre as abas.
+
+**Ao fechar e abrir de novo o Fast Note, tudo volta:** as abas abertas, a ordem delas e as abas rápidas com o texto que
+estava nelas. Com uma estrela marcada, o Fast Note abre nela; sem estrela, no último arquivo em que você esteve.
+
+#### Aba rápida
+
+O botão **+** (ao lado do **C**) abre uma **aba rápida**: um editor de **só texto**, para colar algo sem criar arquivo
+(imagens não entram). O nome dela é "Sem título" até você escrever; com texto, vira as **primeiras palavras** ("Lista de
+compras leite"), em itálico e com um pontinho de "não salva". O botão de **disquete** (ou `Ctrl + S`) **salva como arquivo**:
+ele pede o nome (com uma sugestão), cria o `.md` na pasta das notas com o texto **exatamente como está** e a aba passa a ser a
+desse arquivo, em **modo texto**. Fechar uma aba rápida com texto pergunta se você quer salvar. O texto de uma aba rápida
+não salva fica numa pasta de dados do Blink (`%APPDATA%Blink`), nunca na pasta das suas notas.
+
+#### Modo texto (o "T")
+
+O **T** de cada arquivo, no seletor, abre o `.md` **inteiro** num editor de texto simples (como o Bloco de Notas), sem a lista de
+tópicos: o texto é gravado sozinho, exatamente como você escreve (inclusive tabulações e a falta de quebra no fim). Desligar o
+"T" volta o arquivo aos tópicos; o arquivo não muda. Um arquivo em modo texto não combina com a folha, o quadro, o cadeado nem o
+histórico diário. Um `/nome texto` escrito em outra aba acrescenta uma linha no fim dele.
 
 A **fonte e o tamanho** do texto (tópicos, edição e campo de escrita) são escolhidos na aba Fast Note
 das configurações: JetBrains Mono, Cascadia Mono, Consolas, Courier New, Lucida Console, Segoe UI,
@@ -208,7 +243,7 @@ indenta todas; `Shift + Tab` desfaz. `Esc` **minimiza** a janela para a barra de
 fechar de verdade, use o `×`.
 
 O botão **C**, à esquerda da vassoura, **copia as anotações** de uma vez: uma linha `- tópico` para
-cada uma, na ordem em que foram escritas (a mais antiga primeiro), com as quebras de linha do
+cada uma, **na ordem em que aparecem na tela** (a de cima é a primeira), com as quebras de linha do
 Windows. Com o histórico diário ligado, copia só as anotações do dia que está na tela; no `task.md`,
 copia as tarefas como caixinhas (`- [ ]` e `- [x]`). Uma mensagem no rodapé diz quantas foram
 copiadas, e o botão fica apagado quando não há nada para copiar.
@@ -217,6 +252,19 @@ O botão **—**, ao lado do `×` (no Fast Note e também na janela do Diff Chec
 janela para a barra de tarefas, como o `Esc`. Ao apertar o atalho de novo, ela volta como estava — o
 que você estava escrevendo continua no campo, e o cursor já está nele para você digitar, igual a
 quando a janela abre do zero.
+
+#### Links
+
+Links nas suas anotações (`https://…`, `http://…` e `www.…`) são **clicáveis** e abrem no navegador padrão:
+
+- **Na lista de tópicos** (notas, daily e tarefas), o link aparece sublinhado e **um clique** o abre; clicar no resto do
+  texto continua editando o tópico.
+- **Nos campos de texto** (o campo de escrita, a edição de um tópico e as anotações de um tópico recolhível),
+  **Ctrl + clique** numa URL abre o link; um clique simples só põe o cursor.
+- **Na folha livre**, uma URL digitada vira link quando você dá espaço, e **Ctrl + clique** abre.
+
+O ponto, a vírgula ou o parêntese que fecha a frase não entram no link. Por segurança só abrem endereços `http`, `https` e
+`mailto`: nada que abriria um arquivo ou um programa do computador.
 
 #### Arquivo principal
 
@@ -255,7 +303,8 @@ ao concluir uma tarefa — **Não registrar**, **Na daily** (padrão) ou **Daily
 arquivo é a sua daily (só aparecem os arquivos com o relógio ligado; sem escolher nenhum, nada é
 registrado). Ao concluir, a tarefa vira um tópico no **dia de hoje** da daily: dez tarefas
 concluídas são dez tópicos. No modo **Daily com tópico** cada tarefa vira um tópico **recolhível**:
-uma seta ▸ ao lado do título abre e fecha uma caixa de anotações, que grava sozinha (fechado por
+uma seta ▸ ao lado do título abre e fecha uma caixa de anotações, que grava sozinha. O título
+aparece **um pouco maior e em negrito**, e as anotações num cartão logo abaixo, em letra um pouco menor (fechado por
 padrão; a seta fica em destaque quando há anotações). Desmarcar a tarefa tira o tópico da daily — do
 **dia em que ela foi concluída**, não do de hoje (o Blink guarda esse dia, escondido, no `task.md`).
 Se o texto foi mudado na daily, o Blink não acha, nada é removido de lá e um aviso diz isso; se o
@@ -334,7 +383,9 @@ nota comum; você pode redimensioná-la, e cada modo lembra o tamanho que você 
 - **Escrever.** Títulos, listas (comum, numerada e de tarefas, com caixinhas), citação, bloco de
   código, divisória, imagem, negrito, itálico, sublinhado, riscado, cor do texto e marca-texto.
   Selecione um trecho e uma **barra** aparece em cima dele (N, I, S, T, A para a cor e M para o
-  marca-texto). Digite `/` numa linha para escolher um bloco (setas e `Enter`; `Esc` fecha). Atalhos
+  marca-texto) e o **tópico expansível** (`/` ou `>> `: um título com uma seta ▸ e, embaixo, o corpo num cartão; `Enter`
+  no título passa para o corpo, `Enter` numa linha vazia do corpo sai do tópico e um clique na seta esconde ou mostra o
+  corpo). Digite `/` numa linha para escolher um bloco (setas e `Enter`; `Esc` fecha). Atalhos
   de Markdown também valem: `# `, `## `, `### `, `- `, `1. `, `[] `, `> `, `---` e `Enter`, e três
   crases e `Enter` para código. `Ctrl + B`, `Ctrl + I`, `Ctrl + U` e `Ctrl + Z` / `Ctrl + Y` funcionam
   como de costume.
@@ -342,13 +393,18 @@ nota comum; você pode redimensioná-la, e cada modo lembra o tamanho que você 
   ficam guardadas numa pasta escondida `.blink`, dentro da sua pasta de notas.
 - **Caneta.** Na barra acima da folha: **Texto**, **Caneta**, **Marca-texto** (largo e translúcido —
   também serve para pintar) e **Borracha** (apaga o traço inteiro que ela tocar). Há três espessuras e
-  oito cores, e as setas ↶ ↷ desfazem e refazem o desenho. Com uma ferramenta de desenho ligada, o
+  oito cores, e as setas ↶ ↷ desfazem e refazem o desenho. Ao lado da borracha ficam as **formas**: **retângulo**,
+  **elipse**, **linha** e **seta** (arraste do início ao fim; com o `Shift`, o retângulo vira quadrado, a elipse vira
+  círculo e a linha e a seta travam em ângulos de 45°). Elas usam a cor e a espessura escolhidas, e a borracha apaga
+  uma forma pela borda. Com uma ferramenta de desenho ligada, o
   `Esc` volta para o texto (outro `Esc` minimiza). O desenho fica preso à folha, como caneta no papel,
   e continua no mesmo ponto quando você muda o tamanho da janela.
 - **Ligar e desligar.** Ao ligar, a folha começa com os tópicos do arquivo como uma lista. O arquivo
   `.md` **não é alterado** enquanto a folha está ligada. Desligar volta para os tópicos, e a folha
   fica guardada: ligar de novo traz tudo de volta, texto, imagens e desenho.
-- **O resto da janela.** O botão **C** copia o texto da folha; a **vassoura** limpa texto e desenho
+- **O resto da janela.** O botão **C** copia o texto da folha (o corpo de um tópico expansível sai recuado); o botão de
+  **imagem**, ao lado dele, **copia a folha inteira como imagem** — um print do texto, das imagens e do desenho, na
+  largura real da folha e só até onde há conteúdo, pronto para colar no Teams, no Word ou no e-mail; a **vassoura** limpa texto e desenho
   (com confirmação); a **lixeira** manda para a Lixeira do Windows o arquivo, a folha e as imagens que
   só ela usa; e um `/nome texto` escrito em outra nota acrescenta um parágrafo no fim da folha. A
   folha grava sozinha, pouco depois de você parar, e também ao trocar de arquivo, minimizar ou fechar.
@@ -356,6 +412,22 @@ nota comum; você pode redimensioná-la, e cada modo lembra o tamanho que você 
 A folha não combina com o **cadeado** nem com o **histórico diário** (o ícone fica apagado e a dica
 diz o que desligar antes), e o `task.md` não tem folha. A folha **não é criptografada**: se o conteúdo
 é sigiloso, use o cadeado.
+
+#### Quadro branco
+
+Ao lado da folha, cada arquivo tem um ícone de **quadro** (uma lousa): ele liga o **quadro branco**, um quadro de verdade
+como o do **Excalidraw** — retângulos, losangos, elipses, setas que grudam nas formas, linhas, traço à mão, texto,
+imagens, seleção de vários elementos, zoom, desfazer e refazer, tudo em português e no tema escuro. A janela do Fast Note
+ganha um tamanho próprio, bem maior (lembrado à parte).
+
+- O quadro é guardado em `.blink` (dentro da sua pasta de notas) num arquivo `.excalidraw`, o formato do próprio
+  Excalidraw: dá para abri-lo em excalidraw.com. Grava sozinho, logo depois de cada mudança.
+- O arquivo `.md` **não é alterado**. **Desligar** o quadro volta aos tópicos e o desenho fica guardado; ligar de novo traz
+  tudo de volta.
+- O botão de **imagem** ao lado do **C** copia o quadro inteiro como imagem (para colar no Teams, no Word ou no e-mail);
+  a **vassoura** limpa o quadro (com confirmação); a **lixeira** manda o arquivo e o quadro para a Lixeira.
+- Um arquivo em quadro não combina com a folha livre, o cadeado nem o histórico diário (o ícone fica apagado e a dica diz o
+  que desligar antes), não aparece na lista do `/` e o `task.md` não tem quadro.
 
 #### Seus arquivos
 
@@ -369,7 +441,7 @@ que você já tem.
 Anotações da sprint.    <- o Blink não toca
 
 - Rever PR #142         <- mais antigo
-- Call com cliente      <- mais novo (aparece em cima na janela)
+- Call com cliente      <- mais novo (aparece embaixo na janela, perto do campo de escrita)
 ```
 
 ## Tamanho das janelas

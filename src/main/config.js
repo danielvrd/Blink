@@ -61,6 +61,9 @@ const PADROES = {
   // Arquivos do Fast Note no modo "folha livre" (um editor tipo Notion com desenho
   // por cima; veja notas-livres.js). Como o relogio, so o processo principal grava.
   notasLivres: [],
+  notasQuadro: [],
+  notasTexto: [],
+  abasNota: { abertas: [], ativa: '' },
   sql: {
     dialeto: 'transactsql',
     palavrasChave: 'upper',
@@ -138,6 +141,17 @@ const ESQUEMA = {
   ultimaNota: { type: 'string' },
   notasHistorico: { type: 'array', items: { type: 'string' } },
   notasLivres: { type: 'array', items: { type: 'string' } },
+  notasQuadro: { type: 'array', items: { type: 'string' } },
+  notasTexto: { type: 'array', items: { type: 'string' } },
+  // As abas do Fast Note: so nomes de arquivo e ids (o texto das abas rapidas fica em abas-rapidas.json, fora daqui).
+  abasNota: {
+    type: 'object',
+    properties: {
+      abertas: { type: 'array', maxItems: 40, items: { type: 'object' } },
+      ativa: { type: 'string', maxLength: 255 },
+    },
+    additionalProperties: false,
+  },
   sql: {
     type: 'object',
     properties: {
@@ -198,13 +212,14 @@ const ESQUEMA = {
       nota: TAMANHO,
       // A janela do Fast Note com um arquivo em folha livre: tamanho proprio, lembrado a parte.
       notaLivre: TAMANHO,
+      notaQuadro: TAMANHO,
     },
     additionalProperties: false,
   },
 };
 
 /** As janelas que tem tamanho salvo. */
-const JANELAS = new Set(['principal', 'diff', 'nota', 'notaLivre']);
+const JANELAS = new Set(['principal', 'diff', 'nota', 'notaLivre', 'notaQuadro']);
 
 /**
  * Unicos caminhos que as telas podem gravar.
@@ -415,6 +430,22 @@ module.exports = {
    * Fora dos CAMINHOS_GRAVAVEIS pelo mesmo motivo do relogio: quem chama e o
    * processo principal, depois de validar cada nome contra a pasta de notas.
    */
+  definirNotasTexto(lista) {
+    if (!Array.isArray(lista) || !lista.every((v) => typeof v === 'string')) return;
+    store.set('notasTexto', lista);
+  },
+
+  /** As abas abertas do Fast Note ({ abertas, ativa }); quem valida o conteudo e o abas.js. */
+  definirAbasNota(estado) {
+    if (!estado || typeof estado !== 'object' || !Array.isArray(estado.abertas)) return;
+    store.set('abasNota', { abertas: estado.abertas, ativa: typeof estado.ativa === 'string' ? estado.ativa : '' });
+  },
+
+  definirNotasQuadro(lista) {
+    if (!Array.isArray(lista)) return;
+    store.set('notasQuadro', lista);
+  },
+
   definirNotasLivres(lista) {
     if (!Array.isArray(lista) || !lista.every((v) => typeof v === 'string')) return false;
     store.set('notasLivres', lista);

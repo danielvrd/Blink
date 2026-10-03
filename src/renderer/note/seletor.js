@@ -46,6 +46,20 @@ window.Blink = window.Blink || {};
     '<circle cx="12" cy="15.4" r="1.3" class="furo"></circle>' +
     '</svg>';
 
+  /** O modo texto: um "T" (o .md aberto como um editor de texto simples). */
+  const TEXTO =
+    '<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M5 6.5V5h14v1.5M12 5v14M9 19h6" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+    '</svg>';
+
+  /** O quadro branco: um retangulo deitado (a lousa) com um rabisco. */
+  const QUADRO =
+    '<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<rect x="2.5" y="4.5" width="19" height="14" rx="2" fill="none" stroke-width="1.8"></rect>' +
+    '<path d="M6.5 14.5l3-4 2.5 3 2-2.5 3.5 4" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>' +
+    '<path d="M8 21.5h8" fill="none" stroke-width="1.6" stroke-linecap="round"></path>' +
+    '</svg>';
+
   /** A folha: um retangulo em pe, tipo A4, com tres riscos ondulados de texto. */
   const FOLHA =
     '<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">' +
@@ -66,17 +80,22 @@ window.Blink = window.Blink || {};
    *   aoAlternarHistorico(valor) o usuario clicou no relogio de um arquivo
    *   aoAlternarPrivado(valor)   o usuario clicou no cadeado de um arquivo
    *   aoAlternarLivre(valor)     o usuario clicou na folha de um arquivo
+   *   aoAlternarQuadro(valor)    o usuario clicou no quadro de um arquivo
+   *   aoAlternarTexto(valor)     o usuario clicou no "T" (modo texto) de um arquivo
    *   aoAbrir()                  a lista vai abrir - para fechar o que estiver aberto
    *
    * Devolve { definir, fechar, estaAberto, focar }.
    */
-  function criar(raiz, { aoEscolher, aoMarcar, aoAlternarHistorico, aoAlternarPrivado, aoAlternarLivre, aoAbrir, rotuloNovo, valorNovo }) {
+  function criar(raiz, { aoEscolher, aoMarcar, aoAlternarHistorico, aoAlternarPrivado, aoAlternarLivre, aoAlternarQuadro, aoAlternarTexto, aoAbrir, rotuloNovo, valorNovo }) {
     let itens = [];
     let atual = '';
     let principal = '';
     let historico = [];
     let privados = [];
     let livres = [];
+    let quadros = [];
+    let textos = [];
+    let rotuloAtual = '';
     let arquivoTarefas = '';
     let aberto = false;
     let destaque = 0;
@@ -90,6 +109,10 @@ window.Blink = window.Blink || {};
     cadeadoFixo.classList.add('seletor-cadeado-fixo');
     const folhaFixa = svg(FOLHA);
     folhaFixa.classList.add('seletor-folha-fixa');
+    const quadroFixo = svg(QUADRO);
+    quadroFixo.classList.add('seletor-quadro-fixo');
+    const textoFixo = svg(TEXTO);
+    textoFixo.classList.add('seletor-texto-fixo');
 
     const botao = el('button', {
       class: 'seletor-botao',
@@ -97,7 +120,7 @@ window.Blink = window.Blink || {};
       'aria-haspopup': 'listbox',
       'aria-expanded': 'false',
     });
-    window.Blink.ui.anexar(botao, [nome, estrelaFixa, relogioFixo, cadeadoFixo, folhaFixa, svg(SETA)]);
+    window.Blink.ui.anexar(botao, [nome, estrelaFixa, relogioFixo, cadeadoFixo, folhaFixa, quadroFixo, textoFixo, svg(SETA)]);
 
     const lista = el('div', { class: 'seletor-lista', role: 'listbox', hidden: true });
     window.Blink.ui.anexar(raiz, [botao, lista]);
@@ -114,6 +137,14 @@ window.Blink = window.Blink || {};
       return privados.some((p) => p.toLowerCase() === valor.toLowerCase());
     }
 
+    function ehTexto(valor) {
+      return textos.some((t) => t.toLowerCase() === valor.toLowerCase());
+    }
+
+    function ehQuadro(valor) {
+      return quadros.some((q) => q.toLowerCase() === valor.toLowerCase());
+    }
+
     function ehLivre(valor) {
       return livres.some((l) => l.toLowerCase() === valor.toLowerCase());
     }
@@ -126,17 +157,22 @@ window.Blink = window.Blink || {};
     /** O botao fechado: nome atual, estrela e relogio so se o atual tiver a marca. */
     function desenharBotao() {
       const item = itens.find((i) => i.valor === atual);
-      nome.textContent = item ? item.rotulo : '';
+      // Numa aba rapida o "arquivo" nao existe: o botao mostra o rotulo da aba.
+      nome.textContent = rotuloAtual || (item ? item.rotulo : '');
       estrelaFixa.style.display = ehPrincipal(atual) ? '' : 'none';
       relogioFixo.style.display = temHistorico(atual) ? '' : 'none';
       cadeadoFixo.style.display = ehPrivado(atual) ? '' : 'none';
       folhaFixa.style.display = ehLivre(atual) ? '' : 'none';
+      quadroFixo.style.display = ehQuadro(atual) ? '' : 'none';
+      textoFixo.style.display = ehTexto(atual) ? '' : 'none';
 
       const marcas = [];
       if (ehPrincipal(atual)) marcas.push('arquivo principal');
       if (temHistorico(atual)) marcas.push('histórico diário');
       if (ehPrivado(atual)) marcas.push('com cadeado');
       if (ehLivre(atual)) marcas.push('folha livre');
+      if (ehQuadro(atual)) marcas.push('quadro branco');
+      if (ehTexto(atual)) marcas.push('modo texto');
       botao.title = marcas.length > 0 ? `${nome.textContent} — ${marcas.join(', ')}` : nome.textContent;
     }
 
@@ -168,10 +204,12 @@ window.Blink = window.Blink || {};
           const ligado = temHistorico(item.valor);
           const privado = ehPrivado(item.valor);
           const livre = ehLivre(item.valor);
+          const quadro = ehQuadro(item.valor);
+          const texto = ehTexto(item.valor);
 
           // A folha vem primeiro. Folha, cadeado e relogio nao andam juntos: o que nao vale no arquivo fica apagado.
           const folha = el('button', {
-            class: livre ? 'seletor-folha marcado' : privado || ligado ? 'seletor-folha bloqueado' : 'seletor-folha',
+            class: livre ? 'seletor-folha marcado' : privado || ligado || quadro || texto ? 'seletor-folha bloqueado' : 'seletor-folha',
             type: 'button',
             title: livre
               ? 'Voltar para os tópicos (a folha fica guardada)'
@@ -179,24 +217,84 @@ window.Blink = window.Blink || {};
                 ? 'Arquivos com cadeado não podem ser folha livre: tire o cadeado antes'
                 : ligado
                   ? 'Arquivos com histórico diário não podem ser folha livre: desligue o relógio antes'
-                  : 'Folha livre: um editor de página, com texto formatado, imagens e caneta',
+                  : quadro
+                    ? 'Arquivos em quadro branco não podem ser folha livre: desligue o quadro antes'
+                    : texto
+                      ? 'Arquivos em modo texto não podem ser folha livre: desligue o "T" antes'
+                      : 'Folha livre: um editor de página, com texto formatado, imagens e caneta',
             'aria-pressed': String(livre),
-            'aria-disabled': String(!livre && (privado || ligado)),
+            'aria-disabled': String(!livre && (privado || ligado || quadro || texto)),
             'aria-label': livre ? `Desligar a folha livre de ${item.rotulo}` : `Ligar a folha livre de ${item.rotulo}`,
             onmousedown: (evento) => evento.preventDefault(),
             onclick: (evento) => {
               evento.stopPropagation();
-              if (!livre && (privado || ligado)) return;
+              if (!livre && (privado || ligado || quadro || texto)) return;
               aoAlternarLivre(item.valor);
             },
           });
           folha.appendChild(svg(FOLHA));
           linha.appendChild(folha);
 
+          // O quadro branco vem logo depois da folha, com os mesmos bloqueios cruzados.
+          const botaoQuadro = el('button', {
+            class: quadro ? 'seletor-quadro marcado' : privado || ligado || livre || texto ? 'seletor-quadro bloqueado' : 'seletor-quadro',
+            type: 'button',
+            title: quadro
+              ? 'Voltar para os tópicos (o quadro fica guardado)'
+              : privado
+                ? 'Arquivos com cadeado não podem ser quadro branco: tire o cadeado antes'
+                : ligado
+                  ? 'Arquivos com histórico diário não podem ser quadro branco: desligue o relógio antes'
+                  : livre
+                    ? 'Arquivos em folha livre não podem ser quadro branco: desligue a folha antes'
+                    : texto
+                      ? 'Arquivos em modo texto não podem ser quadro branco: desligue o "T" antes'
+                      : 'Quadro branco: desenhe com formas, setas e texto (Excalidraw)',
+            'aria-pressed': String(quadro),
+            'aria-disabled': String(!quadro && (privado || ligado || livre || texto)),
+            'aria-label': quadro ? `Desligar o quadro branco de ${item.rotulo}` : `Ligar o quadro branco de ${item.rotulo}`,
+            onmousedown: (evento) => evento.preventDefault(),
+            onclick: (evento) => {
+              evento.stopPropagation();
+              if (!quadro && (privado || ligado || livre || texto)) return;
+              aoAlternarQuadro(item.valor);
+            },
+          });
+          botaoQuadro.appendChild(svg(QUADRO));
+          linha.appendChild(botaoQuadro);
+
+          // O "T": o .md inteiro como um editor de texto simples (como o Bloco de Notas).
+          const botaoTexto = el('button', {
+            class: texto ? 'seletor-texto marcado' : privado || ligado || livre || quadro ? 'seletor-texto bloqueado' : 'seletor-texto',
+            type: 'button',
+            title: texto
+              ? 'Voltar para os tópicos (o arquivo não muda)'
+              : privado
+                ? 'Arquivos com cadeado não podem ser editados como texto: tire o cadeado antes'
+                : ligado
+                  ? 'Arquivos com histórico diário não podem ser editados como texto: desligue o relógio antes'
+                  : livre
+                    ? 'Arquivos em folha livre não podem ser editados como texto: desligue a folha antes'
+                    : quadro
+                      ? 'Arquivos em quadro branco não podem ser editados como texto: desligue o quadro antes'
+                      : 'Editar como texto: o arquivo inteiro num editor simples, como o Bloco de Notas',
+            'aria-pressed': String(texto),
+            'aria-disabled': String(!texto && (privado || ligado || livre || quadro)),
+            'aria-label': texto ? `Voltar ${item.rotulo} aos tópicos` : `Editar ${item.rotulo} como texto`,
+            onmousedown: (evento) => evento.preventDefault(),
+            onclick: (evento) => {
+              evento.stopPropagation();
+              if (!texto && (privado || ligado || livre || quadro)) return;
+              aoAlternarTexto(item.valor);
+            },
+          });
+          botaoTexto.appendChild(svg(TEXTO));
+          linha.appendChild(botaoTexto);
+
           // O cadeado vem antes do relogio. Um arquivo com o relogio ligado nao pode ter cadeado (e o contrario):
           // o botao fica apagado e o title explica.
           const cadeado = el('button', {
-            class: privado ? 'seletor-cadeado marcado' : ligado || livre ? 'seletor-cadeado bloqueado' : 'seletor-cadeado',
+            class: privado ? 'seletor-cadeado marcado' : ligado || livre || quadro || texto ? 'seletor-cadeado bloqueado' : 'seletor-cadeado',
             type: 'button',
             title: privado
               ? 'Tirar o cadeado (pede a senha)'
@@ -204,14 +302,18 @@ window.Blink = window.Blink || {};
                 ? 'Arquivos com histórico diário não podem ter cadeado: desligue o relógio antes'
                 : livre
                   ? 'Arquivos em folha livre não podem ter cadeado: desligue a folha antes'
-                  : 'Pôr um cadeado: o arquivo vira privado e criptografado',
+                  : quadro
+                    ? 'Arquivos em quadro branco não podem ter cadeado: desligue o quadro antes'
+                    : texto
+                      ? 'Arquivos em modo texto não podem ter cadeado: desligue o "T" antes'
+                      : 'Pôr um cadeado: o arquivo vira privado e criptografado',
             'aria-pressed': String(privado),
-            'aria-disabled': String(!privado && (ligado || livre)),
+            'aria-disabled': String(!privado && (ligado || livre || quadro || texto)),
             'aria-label': privado ? `Tirar o cadeado de ${item.rotulo}` : `Pôr um cadeado em ${item.rotulo}`,
             onmousedown: (evento) => evento.preventDefault(),
             onclick: (evento) => {
               evento.stopPropagation();
-              if (!privado && (ligado || livre)) return;
+              if (!privado && (ligado || livre || quadro || texto)) return;
               aoAlternarPrivado(item.valor);
             },
           });
@@ -219,17 +321,17 @@ window.Blink = window.Blink || {};
           linha.appendChild(cadeado);
 
           const relogio = el('button', {
-            class: ligado ? 'seletor-relogio marcado' : privado || livre ? 'seletor-relogio bloqueado' : 'seletor-relogio',
+            class: ligado ? 'seletor-relogio marcado' : privado || livre || quadro || texto ? 'seletor-relogio bloqueado' : 'seletor-relogio',
             type: 'button',
-            title: ligado ? 'Desligar o histórico diário' : privado ? 'Arquivos com cadeado não podem ter histórico diário' : livre ? 'Arquivos em folha livre não podem ter histórico diário' : 'Ligar o histórico diário',
+            title: ligado ? 'Desligar o histórico diário' : privado ? 'Arquivos com cadeado não podem ter histórico diário' : livre ? 'Arquivos em folha livre não podem ter histórico diário' : quadro ? 'Arquivos em quadro branco não podem ter histórico diário' : texto ? 'Arquivos em modo texto não podem ter histórico diário' : 'Ligar o histórico diário',
             'aria-pressed': String(ligado),
-            'aria-disabled': String(!ligado && (privado || livre)),
+            'aria-disabled': String(!ligado && (privado || livre || quadro || texto)),
             'aria-label': ligado ? `Desligar o histórico diário de ${item.rotulo}` : `Ligar o histórico diário de ${item.rotulo}`,
             onmousedown: (evento) => evento.preventDefault(),
             onclick: (evento) => {
               // Nao escolhe o arquivo nem fecha a lista: so alterna.
               evento.stopPropagation();
-              if (!ligado && (privado || livre)) return;
+              if (!ligado && (privado || livre || quadro || texto)) return;
               aoAlternarHistorico(item.valor);
             },
           });
@@ -353,6 +455,9 @@ window.Blink = window.Blink || {};
       historico = dados.historico || [];
       privados = dados.privados || [];
       livres = dados.livres || [];
+      quadros = dados.quadros || [];
+      textos = dados.textos || [];
+      rotuloAtual = dados.rotuloAtual || '';
       arquivoTarefas = dados.arquivoTarefas || '';
       if (destaque >= itens.length) destaque = itens.length - 1;
       desenharBotao();

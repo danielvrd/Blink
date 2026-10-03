@@ -397,6 +397,40 @@ body {
   margin-left: auto;
 }
 
+/* A demonstracao: o seletor de exemplos, no meio do rodape. */
+.exemplos {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.exemplos[hidden] {
+  display: none;
+}
+
+.exemplos-rotulo {
+  margin-right: 4px;
+}
+
+.exemplo {
+  padding: 3px 9px;
+  border: 1px solid var(--borda-fantasma);
+  border-radius: var(--raio-item);
+  background: transparent;
+  color: var(--texto-2);
+  font-size: 11px;
+}
+
+.exemplo:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.exemplo.ativo {
+  background: var(--segmentado-ativo);
+  border-color: var(--borda-modal-nota);
+  color: var(--texto-forte);
+}
+
 /* --- Cores do codigo (realce de sintaxe) -----------------------------------------
   O processo principal manda, para cada linha, pedacos com o escopo do highlight.js
   (realce.js); diff.js poe um <span class="hl-<escopo>"> em cada um. Aqui cada escopo

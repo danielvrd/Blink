@@ -23,9 +23,9 @@
       <stop offset="100%" stop-color="#111217"/>
     </linearGradient>
     <radialGradient id="iris" cx="42%" cy="38%" r="65%">
-      <stop offset="0%" stop-color="#ff5a6b"/>
-      <stop offset="45%" stop-color="#e0263b"/>
-      <stop offset="100%" stop-color="#7a0f1e"/>
+      <stop offset="0%" stop-color="#e46a6a"/>
+      <stop offset="45%" stop-color="#cb3e3e"/>
+      <stop offset="100%" stop-color="#6b1717"/>
     </radialGradient>
     <radialGradient id="pupila" cx="38%" cy="35%" r="70%">
       <stop offset="0%" stop-color="#4a1218"/>
@@ -39,15 +39,15 @@
   <rect x="1.4" y="1.4" width="21.2" height="21.2" rx="6.1" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="0.6"/>
 
   <!-- anel claro do olho: identico ao do olho-simples.svg -->
-  <circle cx="12" cy="12" r="6.7" fill="none" stroke="#d6d9e0" stroke-width="1.7"/>
+  <circle cx="12" cy="12" r="6" fill="none" stroke="#d6d9e0" stroke-width="1.7"/>
 
   <!-- iris -->
-  <circle cx="12" cy="12" r="4" fill="url(#iris)"/>
-  <circle cx="12" cy="12" r="4" fill="none" stroke="#3a0810" stroke-width="0.4"/>
+  <circle cx="12" cy="12" r="3.5" fill="url(#iris)"/>
+  <circle cx="12" cy="12" r="3.5" fill="none" stroke="#3a0810" stroke-width="0.4"/>
 
   <!-- pupila -->
-  <circle cx="12" cy="12" r="1.85" fill="url(#pupila)"/>
+  <circle cx="12" cy="12" r="1.8" fill="url(#pupila)"/>
 
   <!-- brilho -->
-  <circle cx="13.2" cy="10.8" r="0.95" fill="#ffffff" opacity="0.92"/>
+  <circle cx="13.2" cy="10.8" r="0.9" fill="#ffffff" opacity="0.92"/>
 </svg>

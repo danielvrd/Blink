@@ -282,7 +282,7 @@ function pedacosPorLinha(texto, linguagem) {
  * cada linha que tem aquele lado. Devolve a linguagem usada, ou null se nada foi
  * anexado (texto sem cara de codigo, grande demais, ou falha do realce).
  */
-function anexar(linhas) {
+function anexar(linhas, { linguagem: conhecida } = {}) {
   const doEsquerdo = linhas.filter((l) => l.esquerda !== null);
   const doDireito = linhas.filter((l) => l.direita !== null);
   const esquerda = doEsquerdo.map((l) => l.esquerda).join('\n');
@@ -290,7 +290,8 @@ function anexar(linhas) {
 
   if (esquerda.length + direita.length > TEXTO_MAXIMO) return null;
 
-  const linguagem = detectar(esquerda, direita);
+  // Com a linguagem conhecida (a demonstracao do Diff) nao ha o que detectar.
+  const linguagem = conhecida && LINGUAGENS.includes(conhecida) ? conhecida : detectar(esquerda, direita);
   if (!linguagem) return null;
 
   const pedacosEsquerda = pedacosPorLinha(esquerda, linguagem);
