@@ -10,7 +10,10 @@
  *
  * A instalacao acontece quando o Blink fecha, para nao derrubar a janela
  * que estiver aberta no meio do trabalho - ou quando o usuario clica em
- * "Atualizacao disponivel" (no botao das janelas ou no menu da bandeja).
+ * "Atualizacao disponivel" (no botao das janelas) ou em "Atualizar o Blink"
+ * (no menu da bandeja). Esse segundo e UM clique so (atualizarJa): procura,
+ * baixa e reinicia ja na versao mais nova - sem passar por "pronta" e um
+ * segundo clique.
  *
  * Sempre a versao MAIS NOVA, nao a primeira que apareceu:
  *   - com uma versao ja baixada, o Blink continua procurando (a cada 6 horas
@@ -62,9 +65,8 @@ let versaoBaixada = null;
 let instalando = false;
 
 /**
- * Quando ha uma versao mais nova sendo baixada por causa do clique em
- * reiniciar: o que fazer ao terminar. Guarda o permitirEncerrar para instalar
- * no update-downloaded. null = nenhum reinicio pendente.
+ * Quando o usuario pediu para atualizar e a versao ainda esta sendo procurada ou baixada: o que fazer ao terminar.
+ * Guarda o permitirEncerrar para instalar no update-downloaded. null = nenhum reinicio pendente.
  */
 let instalarAoBaixar = null;
 
@@ -158,8 +160,12 @@ function ligarEventos() {
     if (versaoBaixada && info.version === versaoBaixada) return;
 
     mudarPara('baixando', info.version);
-    // Com o reinicio pendente, quem avisa e o instalarAgora ("Saiu a versao X...").
-    if (!instalarAoBaixar) aviso.mostrar(`Versão ${info.version} disponível. Baixando em segundo plano…`);
+    // Com o reinicio pendente (clique em "Atualizar"), o aviso diz que o Blink reinicia sozinho.
+    aviso.mostrar(
+      instalarAoBaixar
+        ? `Baixando a versão ${info.version}; o Blink reinicia sozinho quando terminar.`
+        : `Versão ${info.version} disponível. Baixando em segundo plano…`
+    );
   });
 
   autoUpdater.on('update-not-available', () => {
@@ -169,6 +175,13 @@ function ligarEventos() {
       mudarPara('ocioso', null);
       if (pedidoPeloUsuario) {
         aviso.mostrar(`O Blink já está na versão mais recente (${app.getVersion()}).`);
+      }
+      // O clique em "Atualizar" nao tem o que instalar: libera o botao e o menu.
+      if (instalarAoBaixar) {
+        instalarAoBaixar = null;
+        instalando = false;
+        avisarJanelas();
+        aoMudar();
       }
     }
     pedidoPeloUsuario = false;
@@ -204,6 +217,18 @@ function ligarEventos() {
     const estavaBaixando = estado === 'baixando';
     if (versaoBaixada) voltarParaPronta();
     else mudarPara('ocioso');
+
+    // O clique em "Atualizar" sem nada baixado: nao ha o que instalar. Libera o botao e o menu, e nunca chama o
+    // quitAndInstall (que fecharia o Blink sem instalar nada).
+    if (instalarAoBaixar && !versaoBaixada) {
+      instalarAoBaixar = null;
+      instalando = false;
+      pedidoPeloUsuario = false;
+      aviso.mostrar('Não foi possível atualizar agora. Tente de novo em instantes.');
+      avisarJanelas();
+      aoMudar();
+      return;
+    }
 
     if (pedidoPeloUsuario) {
       aviso.mostrar('Não foi possível procurar atualizações agora.');
@@ -298,9 +323,8 @@ async function instalarAgora(permitirEncerrar, { limiteMs = LIMITE_ULTIMA_OLHADA
   const achada = await olharSeSaiuMaisNova(limiteMs);
 
   if (achada) {
-    // O electron-updater ja comecou a baixar (autoDownload). Quem termina o
-    // servico e o update-downloaded.
-    aviso.mostrar(`Saiu a versão ${achada}; o Blink reinicia quando terminar de baixar.`);
+    // O electron-updater ja comecou a baixar (autoDownload). Quem termina o servico e o update-downloaded, e quem avisa
+    // ("Baixando a versao X; o Blink reinicia sozinho...") e o update-available (que vem antes de a checagem terminar).
     return;
   }
 
@@ -308,6 +332,47 @@ async function instalarAgora(permitirEncerrar, { limiteMs = LIMITE_ULTIMA_OLHADA
   instalarAoBaixar = null;
   instalando = false;
   reiniciar(permitirEncerrar);
+}
+
+/**
+ * "Atualizar o Blink" (menu da bandeja): UM clique que leva o Blink a versao mais nova que existir.
+ *
+ *   'pronta'   ja ha uma baixada: reinicia (instalarAgora ainda da a ultima olhada por algo mais novo)
+ *   'baixando' esta baixando: reinicia sozinho quando terminar
+ *   'ocioso'   procura; se houver, baixa e reinicia sozinho; se nao houver, avisa e nada acontece
+ *   'checando' ja esta procurando: so marca que e para reiniciar
+ *
+ * Rodando pelo npm start nao ha instalador: avisa e nao faz nada.
+ */
+function atualizarJa(permitirEncerrar) {
+  if (!app.isPackaged) {
+    aviso.mostrar('As atualizações só funcionam no Blink instalado.');
+    return;
+  }
+  if (instalando || reiniciando) return;
+
+  if (estado === 'pronta') {
+    instalarAgora(permitirEncerrar);
+    return;
+  }
+
+  instalando = true;
+  instalarAoBaixar = permitirEncerrar;
+  pedidoPeloUsuario = true;
+  avisarJanelas();
+  aoMudar();
+
+  if (estado === 'baixando') {
+    aviso.mostrar(`Baixando a versão ${versaoNova}; o Blink reinicia sozinho quando terminar.`);
+    return;
+  }
+
+  if (estado === 'ocioso') {
+    autoUpdater.checkForUpdates().catch((erro) => {
+      // O evento 'error' ja trata (e libera o clique); este catch evita uma promessa sem dono.
+      console.warn('[atualizacao] checkForUpdates:', erro.message);
+    });
+  }
 }
 
 /** Liga a checagem periodica. Chamado uma vez, na abertura do app. */
@@ -322,4 +387,4 @@ function iniciar() {
   setInterval(() => procurar(), INTERVALO);
 }
 
-module.exports = { iniciar, procurar, instalarAgora, situacao, definirAoMudar, maisNova };
+module.exports = { iniciar, procurar, instalarAgora, atualizarJa, situacao, definirAoMudar, maisNova };

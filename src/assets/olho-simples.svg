@@ -3,8 +3,8 @@
   Olho do Blink - versao simplificada, para os tamanhos pequenos do .ico
   (16, 20, 24 e 32 px).
 
-  O icone e uma CAIXA de aplicativo (quadrado arredondado escuro) com o olho
-  dentro: um anel claro, a iris escarlate, a pupila e o brilho. A caixa e o que
+  O icone e uma CAIXA de aplicativo (quadrado arredondado vinho) com o olho
+  dentro: um anel claro, a iris rosada, a pupila e o brilho. A caixa e o que
   faz o icone parecer um app, e as formas grandes e chapadas e o que sobrevive
   a 16 px - sem gradiente e sem tracos finos, que virariam borrao.
 
@@ -15,13 +15,13 @@
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24">
   <!-- a caixa -->
-  <rect x="1" y="1" width="22" height="22" rx="6.5" fill="#1b1c23"/>
+  <rect x="1" y="1" width="22" height="22" rx="6.5" fill="#810c3d"/>
 
   <!-- anel claro do olho -->
-  <circle cx="12" cy="12" r="6" fill="none" stroke="#d6d9e0" stroke-width="1.7"/>
+  <circle cx="12" cy="12" r="6.7" fill="none" stroke="#d6d9e0" stroke-width="1.7"/>
 
   <!-- iris chapada -->
-  <circle cx="12" cy="12" r="3.5" fill="#cb3e3e"/>
+  <circle cx="12" cy="12" r="4" fill="#a56464"/>
 
   <!-- pupila -->
   <circle cx="12" cy="12" r="1.8" fill="#14050a"/>

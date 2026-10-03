@@ -95,9 +95,17 @@ A Release sai publicada, não como rascunho — o app não enxerga rascunho.
 
 - Procura ao iniciar e a cada 6 horas.
 - Achou: baixa em segundo plano e avisa por notificação.
-- Baixou: avisa de novo, o menu da bandeja passa a mostrar **"Reiniciar para atualizar"** e todas as
+- Baixou: avisa de novo, o menu da bandeja passa a mostrar **"Atualizar para a X agora"** e todas as
   janelas (principal, Fast Note e Diff) mostram o botão **"Atualização disponível"**.
 - Se o usuário não clicar, a atualização se aplica sozinha na próxima vez que o Blink fechar.
+
+**O clique único da bandeja (0.7.1).** O item do menu é **um só**, "Atualizar o Blink" (`bandeja.itemDeAtualizacao`), e chama
+`atualizacao.atualizarJa(permitirEncerrar)`: com a versão **pronta** reinicia (`instalarAgora`, que ainda dá a última olhada por algo mais novo);
+**baixando** marca `instalarAoBaixar` e reinicia no `update-downloaded`; **ocioso** procura (`checkForUpdates`) e, se achar, baixa e reinicia sozinho
+("Baixando a versão X; o Blink reinicia sozinho quando terminar"); sem nada novo (`update-not-available`) ou com erro (`error`) **libera o clique e não
+reinicia** — o `quitAndInstall` nunca roda sem uma versão baixada. Antes eram dois cliques: "Procurar atualizações" só procurava e baixava, e só então
+aparecia "Reiniciar para atualizar" (com uma já baixada, procurar apenas avisava "esperando o Blink fechar"). O `procurar()` ficou só para o relógio de 6 h.
+Quem tem uma versão **anterior** à que trouxe isso ainda usa o fluxo de dois cliques: o clique único só vale a partir da versão que o contém.
 
 Nada disso funciona pelo `npm start`: sem instalador não há o que trocar, o menu mostra o item
 desabilitado e o botão das janelas fica escondido.
@@ -112,8 +120,8 @@ por vez). O `electron-updater` sempre pega a última Release; o bloqueio era nos
   já está no disco; sem isso o botão sumiria a cada checagem de 6 horas). A mesma versão achada de
   novo não muda nada nem avisa de novo.
 - `instalarAgora()` (botão ou menu) faz uma última olhada (`checkForUpdates()`, limite de 10 s).
-  Saiu algo mais novo que o baixado → baixa e só instala no `update-downloaded` ("Saiu a versão X; o
-  Blink reinicia quando terminar de baixar"). Sem internet, travado ou erro → instala o que já está
+  Saiu algo mais novo que o baixado → baixa e só instala no `update-downloaded` (o `update-available`
+  avisa "Baixando a versão X; o Blink reinicia sozinho quando terminar"). Sem internet, travado ou erro → instala o que já está
   baixado. O `quitAndInstall` nunca roda duas vezes (`reiniciando`).
 - Cada mudança de estado vai para todas as janelas (`atualizacao:situacao`, `BrowserWindow
   .getAllWindows()`) e o clique volta por `atualizacao:instalar`. O botão é um componente comum,
@@ -697,10 +705,27 @@ e nome existente. Travas dos dois lados com folha, quadro, cadeado e relógio (`
 apaga o que não vale). O editor é um `<textarea id="texto-livre">` que serve à aba rápida e ao arquivo em modo texto (gravação com atraso de
 600 ms, e ao trocar de aba ou fechar); Ctrl+clique abre links; Tab indenta.
 
-**Layout:** o seletor mora no cabeçalho (`.cabecalho .seletor`, `no-drag`; a lista abre por cima do corpo com `z-index`); o calendário do
-histórico fica numa linha própria abaixo das abas. As abas **encolhem** (reticências) antes de a barra rolar; a ativa é a última a encolher.
+**Layout (0.7.1):** o cabeçalho é, da esquerda para a direita, olho → "Fast Note" (`.nome-janela`, some abaixo de 440 px) → seletor
+(`flex: 0 1 220px`, `no-drag`, encolhe com reticências; a lista abre por cima do corpo com `z-index`) → `.acoes-arquivo` (salvar da aba
+rápida e imagem, só quando valem, mais C / vassoura / lixeira, e os três popovers de confirmação ancorados nele: `top: calc(100% + 24px)`,
+porque o `.acoes-arquivo` tem a altura toda do conteúdo do cabeçalho e o resto é o padding) → `.botoes-janela` (o botão de atualização
+entra no começo dele, `comum/atualizacao.js`). A `.linha-arquivo` do corpo é **só** `#barra-abas` + o `+` (`.botao-aba-nova`, no fim das abas,
+como no Bloco de Notas). A 300 px (mínimo) o cabeçalho aperta padding e gaps (`@media (max-width: 379px)` no `note.css`) e o seletor chega a
+40 px; com atualização **e** salvar visíveis, o seletor fica só com a seta (aceito; alargar a janela resolve). O X de cada aba fica na
+borda direita (`.aba-nome { flex: 1 }`). Dentro da lista do seletor os ícones ficam a 2 px um do outro; como o seletor agora fica depois do
+nome da janela, `manterDentroDaJanela()` (`seletor.js`) desloca a lista por CSSOM (`lista.style.left`) quando ela passaria da borda direita.
 `.botao-acao[hidden]` precisa de `display: none` explícito (o `display` do botão vencia o atributo e o botão de imagem aparecia em
-todo arquivo — os testes olham o **estilo calculado**). Testes: `teste-abas.js`.
+todo arquivo — os testes olham o **estilo calculado**). Testes: `teste-abas.js`, `teste-cabecalho.js`.
+
+**"+ Criar nova nota" (0.7.1).** É o **primeiro** item do seletor (`seletor.js` `definir()`). Escolhê-lo foca o nome; o rascunho some (`areaRascunho.hidden`
+com `arquivo === NOVO`) e à direita do nome ficam os mesmos ícones do seletor (`#tipos-nota`, montados por `desenharTipos()` com os SVGs exportados
+em `window.Blink.seletor.ICONES` e as **mesmas classes** `seletor-folha`/`-quadro`/`-texto`/`-cadeado`/`-relogio`/`-estrela`, para ficarem iguais; por isso
+os testes que contam ícones do seletor usam `.seletor-lista .seletor-…`). Clicar num ícone só **marca** o tipo (`tipoNovo`, um por vez; `estrelaNova` vai
+junto). O **Enter** (`criarNotaNova()`) chama `notas:criar` (`notas.criar(nome, conteudo = '')` em `main/notas.js`: `flag: 'wx'`, nunca sobrescreve; recusa
+nome inválido, `task.md` e nome existente; `notas-texto.criar` é esse mesmo núcleo + a marca de texto) e então liga o modo **antes** de abrir a nota
+(`livre.ativar`/`quadro.ativar`/`texto.ativar`/`definirHistorico`, para a janela mudar de tamanho uma vez só), marca a estrela e abre a aba
+(`recarregarSeletor` + `escolherArquivo`). O cadeado abre o "Definir senha" (`alternarPrivado` devolve `true`/`false`); cancelando, a nota fica
+comum e a dica avisa. O caminho antigo (nota nascia ao gravar o primeiro tópico) foi removido de `adicionar()`. Teste: `teste-nova-nota.js`.
 
 ### Quadro branco (Excalidraw)
 
@@ -943,8 +968,8 @@ npm run gerar-icone
 ```
 
 Os dois SVGs têm a mesma geometria de propósito: a bandeja usa os tamanhos pequenos do `.ico` e a
-barra de tarefas os grandes. O desenho é uma **caixa de aplicativo** (quadrado arredondado escuro) com
-o olho dentro — anel claro, íris escarlate, pupila e brilho. `olho-simples.svg` é chapado (16, 20, 24 e
+barra de tarefas os grandes. O desenho é uma **caixa de aplicativo** (quadrado arredondado vinho, `#810c3d`) com
+o olho dentro — anel claro, íris rosada (`#a56464`, r=4; o anel tem r=6.7), pupila e brilho. `olho-simples.svg` é chapado (16, 20, 24 e
 32 px) e `olho.svg` tem degradê e um filete claro na caixa (48 e 256 px). O mesmo desenho está
 copiado, em SVG embutido, no cabeçalho das três janelas (`principal/index.html`, `note/index.html` e
 `diff/index.html`, a 16 px, com um filete claro na caixa para ela não sumir no fundo escuro do

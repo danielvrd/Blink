@@ -46,12 +46,17 @@
   const TEMPO_PISCANDO = 1600;
 
   const campoNome = document.getElementById('campo-nome');
+  const linhaNome = document.getElementById('linha-nome');
+  const tiposNota = document.getElementById('tipos-nota');
 
   /** O seletor de arquivos com as estrelas e os relogios (seletor.js). */
   const seletor = window.Blink.seletor.criar(document.getElementById('seletor-arquivo'), {
     valorNovo: NOVO,
     rotuloNovo: '+ Criar nova nota',
-    aoEscolher: (valor) => escolherArquivo(valor),
+    aoEscolher: (valor) => {
+      if (valor === NOVO && arquivo === NOVO) campoNome.focus();
+      else escolherArquivo(valor);
+    },
     aoMarcar: (valor) => alternarPrincipal(valor),
     aoAlternarHistorico: (valor) => alternarHistorico(valor),
     aoAlternarPrivado: (valor) => alternarPrivado(valor),
@@ -752,6 +757,128 @@
     avisarNaDica(ligado ? 'Quadro desligado: o arquivo voltou aos tópicos (o quadro fica guardado).' : 'Quadro branco ligado.');
   }
 
+  // --- "+ Criar nova nota": nome + tipo, e o Enter cria ------------------------------------------------
+
+  /** O tipo marcado ao lado do nome ('' = nota comum). So um por vez; a estrela vai junto com qualquer um. */
+  let tipoNovo = '';
+  let estrelaNova = false;
+  let criandoNota = false;
+
+  const { ICONES } = window.Blink.seletor;
+  /** Os tipos, na ordem do seletor. A classe e a do seletor (o CSS e o mesmo); o texto e o do title. */
+  const TIPOS_DA_NOTA_NOVA = [
+    { id: 'livre', classe: 'seletor-folha', icone: ICONES.FOLHA, rotulo: 'Folha livre', dica: 'Folha livre: um editor de página, com texto formatado, imagens e caneta' },
+    { id: 'quadro', classe: 'seletor-quadro', icone: ICONES.QUADRO, rotulo: 'Quadro branco', dica: 'Quadro branco: desenhe com formas, setas e texto (Excalidraw)' },
+    { id: 'texto', classe: 'seletor-texto', icone: ICONES.TEXTO, rotulo: 'Modo texto', dica: 'Editar como texto: o arquivo inteiro num editor simples, como o Bloco de Notas' },
+    { id: 'privado', classe: 'seletor-cadeado', icone: ICONES.CADEADO, rotulo: 'Cadeado', dica: 'Cadeado: o arquivo vira privado e criptografado (pede a senha ao criar)' },
+    { id: 'historico', classe: 'seletor-relogio', icone: ICONES.RELOGIO, rotulo: 'Histórico diário', dica: 'Histórico diário: um registro por dia, com calendário' },
+  ];
+
+  /** Desenha os icones de tipo ao lado do nome: marca o escolhido (clicar de novo desmarca) e a estrela. */
+  function desenharTipos() {
+    limpar(tiposNota);
+
+    for (const tipo of TIPOS_DA_NOTA_NOVA) {
+      const marcado = tipoNovo === tipo.id;
+      const botao = el('button', {
+        class: marcado ? tipo.classe + ' marcado' : tipo.classe,
+        type: 'button',
+        title: marcado ? tipo.rotulo + ' marcado (clique para tirar)' : tipo.dica,
+        'aria-pressed': String(marcado),
+        'aria-label': tipo.rotulo + ' na nota nova',
+        dataset: { tipo: tipo.id },
+        onmousedown: (evento) => evento.preventDefault(), // o foco fica no nome
+        onclick: () => {
+          tipoNovo = marcado ? '' : tipo.id;
+          desenharTipos();
+          campoNome.focus();
+        },
+      });
+      botao.appendChild(svg(tipo.icone));
+      tiposNota.appendChild(botao);
+    }
+
+    const estrela = el('button', {
+      class: estrelaNova ? 'seletor-estrela marcada' : 'seletor-estrela',
+      type: 'button',
+      title: estrelaNova ? 'Estrela marcada: a nota vira a principal (clique para tirar)' : 'Estrela: a nota vira a principal (abre com Ctrl+Alt+N)',
+      'aria-pressed': String(estrelaNova),
+      'aria-label': 'Tornar a nota nova a principal',
+      dataset: { tipo: 'estrela' },
+      onmousedown: (evento) => evento.preventDefault(),
+      onclick: () => {
+        estrelaNova = !estrelaNova;
+        desenharTipos();
+        campoNome.focus();
+      },
+    });
+    estrela.appendChild(svg(ICONES.ESTRELA));
+    tiposNota.appendChild(estrela);
+  }
+
+  const SUFIXOS_DA_NOTA_NOVA = { livre: ' em folha livre', quadro: ' em quadro branco', texto: ' em modo texto', historico: ' com histórico diário' };
+
+  /**
+   * O Enter no nome: cria o .md (vazio) na hora, liga o tipo marcado e a estrela, e abre a nota numa aba. Com nome
+   * repetido, invalido ou o do task.md, nada e criado e o foco fica no nome. Um tipo que o arquivo recusar (improvavel,
+   * num arquivo recem-criado) vira um aviso e a nota fica comum.
+   */
+  async function criarNotaNova() {
+    if (criandoNota || arquivo !== NOVO) return;
+
+    const digitado = campoNome.value.trim();
+    if (digitado === '') {
+      avisarNaDica('Digite o nome da nota.');
+      campoNome.focus();
+      return;
+    }
+
+    criandoNota = true;
+    try {
+      const criada = await window.blink.notas.criar(digitado);
+      if (!criada.ok) {
+        avisarNaDica(mensagemDoTexto(criada));
+        campoNome.focus();
+        return;
+      }
+      const nome = criada.nome;
+      const tipo = tipoNovo;
+      const comEstrela = estrelaNova;
+
+      // O modo e ligado ANTES de abrir a nota: a janela carrega e troca de tamanho uma vez so.
+      let aplicado = '';
+      let recusa = '';
+      if (tipo === 'livre' || tipo === 'quadro' || tipo === 'texto') {
+        const modulo = { livre: window.blink.livre, quadro: window.blink.quadro, texto: window.blink.texto }[tipo];
+        const r = await modulo.ativar(nome);
+        if (r && r.ok) aplicado = tipo;
+        else recusa = { livre: mensagemDaFolha, quadro: mensagemDoQuadro, texto: mensagemDoTexto }[tipo](r);
+      } else if (tipo === 'historico') {
+        if (await window.blink.notas.definirHistorico(nome, true)) aplicado = 'historico';
+        else recusa = 'Não consegui ligar o histórico diário.';
+      }
+      let principalMarcada = false;
+      if (comEstrela) {
+        principalMarcada = await window.blink.notas.definirPrincipal(nome);
+        if (!principalMarcada) recusa = recusa || 'Não consegui marcar a estrela.';
+      }
+
+      await recarregarSeletor();
+      await escolherArquivo(nome);
+
+      // O cadeado precisa da senha: abre o "Definir senha" com a nota ja aberta.
+      let comCadeado = false;
+      if (tipo === 'privado') comCadeado = await alternarPrivado(nome);
+
+      let mensagem = 'Nota criada: ' + nome + (SUFIXOS_DA_NOTA_NOVA[aplicado] || (comCadeado ? ' com cadeado' : '')) + (principalMarcada ? ' (principal)' : '');
+      if (tipo === 'privado' && !comCadeado) mensagem = 'Nota criada sem cadeado: ' + nome + ' (dá para pôr depois, no seletor).';
+      if (recusa) mensagem = 'Nota criada: ' + nome + '. ' + recusa;
+      avisarNaDica(mensagem);
+    } finally {
+      criandoNota = false;
+    }
+  }
+
   // --- Modo texto e aba rapida ---------------------------------------------------------------------
 
   /** A mensagem de uma recusa ao ligar o modo texto ou ao salvar uma aba rapida. */
@@ -1237,7 +1364,12 @@
     const grupo = ehHistorico() ? 'historico' : 'topicos';
     const itens = listaDo(grupo);
 
-    if (arquivo === NOVO || itens.length === 0) {
+    if (arquivo === NOVO) {
+      vazio('Digite o nome, escolha o tipo à direita (opcional) e aperte Enter.');
+      return;
+    }
+
+    if (itens.length === 0) {
       vazio(ehHistorico() ? 'Nenhum tópico neste dia — escreva abaixo.' : 'Nenhum tópico ainda — escreva abaixo.');
       return;
     }
@@ -1248,7 +1380,7 @@
 
   function desenharDica() {
     const partes = [
-      ehRapida() ? 'Aba rápida · só texto · Ctrl+S salva · Ctrl+T abre outra' : ehTexto() ? 'Arquivo de texto · grava sozinho' : ehQuadro() ? 'Quadro branco' : ehLivre() ? 'Folha livre · / abre os blocos · Esc volta ao texto' : ehTarefas() ? 'Enter adiciona uma tarefa' : 'Enter adiciona · / manda para outra nota',
+      arquivo === NOVO ? 'Nova nota · Enter cria · os ícones à direita escolhem o tipo' : ehRapida() ? 'Aba rápida · só texto · Ctrl+S salva · Ctrl+T abre outra' : ehTexto() ? 'Arquivo de texto · grava sozinho' : ehQuadro() ? 'Quadro branco' : ehLivre() ? 'Folha livre · / abre os blocos · Esc volta ao texto' : ehTarefas() ? 'Enter adiciona uma tarefa' : 'Enter adiciona · / manda para outra nota',
     ];
     if (pasta) partes.push(`Pasta: ${pasta}`);
     dica.textContent = partes.join(' · ');
@@ -1262,7 +1394,7 @@
   }
 
   function desenhar({ manter = false } = {}) {
-    campoNome.hidden = arquivo !== NOVO;
+    linhaNome.hidden = arquivo !== NOVO;
 
     // Arquivo privado ainda fechado: a senha no lugar da lista, e nada de escrever.
     const trancado = privadoTrancado();
@@ -1277,7 +1409,8 @@
     folhaEl.hidden = !livre;
     quadroEl.hidden = !comQuadro;
     textoLivre.hidden = !editorDeTexto;
-    areaRascunho.hidden = livre || comQuadro || editorDeTexto;
+    // Em "+ Criar nova nota" nao ha onde escrever ainda: o Enter no nome cria a nota.
+    areaRascunho.hidden = livre || comQuadro || editorDeTexto || arquivo === NOVO;
     barraPrivado.hidden = !(ehPrivado() && desbloqueado);
     rascunho.disabled = trancado;
     if (trancado) nomePrivado.textContent = arquivo;
@@ -1360,6 +1493,9 @@
       tarefas = { pendentes: [], concluidas: [] };
       diasHistorico = [];
       campoNome.value = '';
+      tipoNovo = '';
+      estrelaNova = false;
+      desenharTipos();
       desenhar();
       campoNome.focus();
       return;
@@ -1625,12 +1761,7 @@
       return;
     }
 
-    const destino = arquivo === NOVO ? campoNome.value : arquivo;
-    if (await gravarTopico(destino, bruto)) {
-      rascunho.value = '';
-    } else {
-      campoNome.focus();
-    }
+    if (await gravarTopico(arquivo, bruto)) rascunho.value = '';
   }
 
   async function apagar(grupo, indice) {
@@ -2160,12 +2291,11 @@
     }
   });
 
-  // Enter no nome do arquivo novo pula para o rascunho, em vez de nao fazer
-  // nada - o proximo passo e sempre escrever o primeiro topico.
+  // Enter no nome da nota nova cria a nota na hora (vazia, no tipo marcado), sem esperar o primeiro topico.
   campoNome.addEventListener('keydown', (evento) => {
     if (evento.key === 'Enter') {
       evento.preventDefault();
-      rascunho.focus();
+      criarNotaNova();
     }
   });
 
@@ -2572,7 +2702,7 @@
         return null;
       },
     });
-    if (!confirmou) return;
+    if (!confirmou) return false;
 
     // O arquivo recem-protegido fica aberto para quem acabou de digitar a senha - se e o que esta na tela. Se
     // nao e, tranca ja: nao deixa uma sessao aberta num arquivo que ninguem esta vendo.
@@ -2587,6 +2717,7 @@
       rascunho.focus();
     }
     avisarNaDica('Cadeado posto: o arquivo está criptografado.');
+    return true;
   }
 
   const OLHINHO =
@@ -2767,6 +2898,7 @@
     desenharSelect(estado.arquivos);
     await carregar();
 
+    desenharTipos();
     desenhar();
     if (arquivo === NOVO) campoNome.focus();
     else focarOndeSeEscreve();

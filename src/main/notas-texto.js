@@ -133,24 +133,12 @@ function esquecer(arquivo) {
  */
 async function criar(nomeDigitado, texto) {
   if (typeof texto !== 'string' || Buffer.byteLength(texto, 'utf8') > LIMITE_DO_TEXTO) return { ok: false, motivo: 'entrada' };
-  const pasta = notas.pasta();
-  if (!pasta) return { ok: false, motivo: 'sem-pasta' };
-  const nome = notas.nomeDeArquivo(nomeDigitado);
-  if (!nome) return { ok: false, motivo: 'nome' };
-  if (notas.mesmoArquivo(nome, notas.ARQUIVO_TAREFAS)) return { ok: false, motivo: 'tarefas' };
-  if ((await notas.listar()).some((a) => notas.mesmoArquivo(a, nome))) return { ok: false, motivo: 'existe' };
+  const r = await notas.criar(nomeDigitado, texto);
+  if (!r.ok) return r;
 
-  const completo = notas.caminhoDe(nome);
-  if (!completo) return { ok: false, motivo: 'nome' };
-  try {
-    await fs.mkdir(path.dirname(completo), { recursive: true });
-    await fs.writeFile(completo, texto, { encoding: 'utf8', flag: 'wx' });
-  } catch (erro) {
-    return { ok: false, motivo: erro.code === 'EEXIST' ? 'existe' : 'erro' };
-  }
   const atuais = config.obter('notasTexto') || [];
-  config.definirNotasTexto([...atuais.filter((a) => !notas.mesmoArquivo(a, nome)), nome]);
-  return { ok: true, nome };
+  config.definirNotasTexto([...atuais.filter((a) => !notas.mesmoArquivo(a, r.nome)), r.nome]);
+  return { ok: true, nome: r.nome };
 }
 
 module.exports = { ehTexto, arquivosTexto, ler, salvar, salvarSincrono, adicionarTexto, ativar, desativar, esquecer, criar, LIMITE_DO_TEXTO };

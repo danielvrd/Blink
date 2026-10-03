@@ -980,9 +980,37 @@ async function definirHistorico(arquivo, ligado) {
   return true;
 }
 
+/**
+ * Cria um .md novo (vazio, ou com o conteudo dado) sem sobrescrever nada: recusa nome invalido, o nome do task.md e um
+ * nome que ja existe (sem diferenciar maiuscula). Devolve { ok, nome } com o nome como ficou na pasta, ou
+ * { ok: false, motivo: 'sem-pasta' | 'nome' | 'tarefas' | 'existe' | 'erro' }.
+ *
+ * E o que "+ Criar nova nota" usa (o arquivo nasce no Enter, antes de ter qualquer topico) e o que salvar uma aba rapida
+ * usa por baixo (notas-texto.criar), que depois marca o arquivo como texto.
+ */
+async function criar(nomeDigitado, conteudo = '') {
+  if (!pasta()) return { ok: false, motivo: 'sem-pasta' };
+  const nome = nomeDeArquivo(nomeDigitado);
+  if (!nome) return { ok: false, motivo: 'nome' };
+  if (mesmoArquivo(nome, ARQUIVO_TAREFAS)) return { ok: false, motivo: 'tarefas' };
+  if ((await listar()).some((a) => mesmoArquivo(a, nome))) return { ok: false, motivo: 'existe' };
+
+  const completo = caminhoDe(nome);
+  if (!completo) return { ok: false, motivo: 'nome' };
+  try {
+    await fs.mkdir(path.dirname(completo), { recursive: true });
+    // O "wx" falha se o arquivo apareceu entre a conferencia e agora: nunca sobrescreve.
+    await fs.writeFile(completo, conteudo, { encoding: 'utf8', flag: 'wx' });
+  } catch (erro) {
+    return { ok: false, motivo: erro.code === 'EEXIST' ? 'existe' : 'erro' };
+  }
+  return { ok: true, nome };
+}
+
 module.exports = {
   pasta,
   listar,
+  criar,
   ler,
   adicionar,
   salvarTopicos,

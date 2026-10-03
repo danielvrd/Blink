@@ -118,7 +118,7 @@ body {
 
 .linha-arquivo {
   display: flex;
-  gap: 10px;
+  gap: 4px;
   position: relative;
 }
 
@@ -203,7 +203,7 @@ body {
 .seletor-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
   padding: 6px 8px;
   border-radius: var(--raio-item);
   font-size: 12.5px;
@@ -223,6 +223,7 @@ body {
 .seletor-item-nome {
   flex: 1;
   min-width: 0;
+  margin-right: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -448,12 +449,17 @@ body {
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* Vassoura e lixeira, lado a lado a direita do seletor. */
+/* Os botoes do arquivo aberto (salvar, imagem, C, vassoura, lixeira), no cabecalho, a direita do seletor. Os popovers de
+   confirmacao moram aqui dentro e se ancoram nele. */
 .acoes-arquivo {
   flex: none;
+  position: relative;
   display: flex;
   gap: 8px;
-  align-self: center;
+  align-self: stretch;
+  align-items: center;
+  margin-right: 10px;
+  -webkit-app-region: no-drag;
 }
 
 .botao-acao {
@@ -482,8 +488,28 @@ body {
   cursor: default;
 }
 
+/* "+ Criar nova nota": o nome e, a direita, os icones de tipo (as classes sao as do seletor, para ficarem iguais). */
+.linha-nome {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.linha-nome[hidden] {
+  display: none;
+}
+
+.tipos-nota {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .campo-nome {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   background: var(--superficie);
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio-campo);
@@ -497,8 +523,10 @@ body {
 
 .popover {
   position: absolute;
-  top: 42px;
+  /* Logo abaixo do cabecalho: o .acoes-arquivo ocupa a altura toda do conteudo dele, e o resto e o padding (18px) + a borda. */
+  top: calc(100% + 24px);
   right: 0;
+  -webkit-app-region: no-drag;
   z-index: 5;
   width: 150px;
   padding: 10px;
@@ -1717,22 +1745,61 @@ body.impressao {
   margin-right: 10px;
 }
 
+/* O nome da janela, antes do seletor: some nas janelas estreitas para o seletor ter espaco. */
+.nome-janela {
+  flex: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 439px) {
+  .nome-janela {
+    display: none;
+  }
+}
+
+/* O seletor e menor que antes (a area livre ao redor dele arrasta a janela); encolhe com reticencias. */
 .cabecalho .seletor {
-  flex: 1;
-  max-width: 320px;
+  flex: 0 1 220px;
+  min-width: 64px;
   -webkit-app-region: no-drag;
 }
 
-/* A lista abre mais larga que o botao (nome + as seis marcas) e nunca passa da janela. */
+/* A lista abre mais larga que o botao (nome + as seis marcas) e nunca passa da janela (o seletor.js a desloca). */
 .cabecalho .seletor-lista {
-  width: max(100%, 330px);
-  max-width: calc(100vw - 36px);
+  width: max(100%, 300px);
+  max-width: calc(100vw - 16px);
+}
+
+/* Janela estreita: o cabecalho aperta o padding e os botoes para nada estourar. */
+@media (max-width: 379px) {
+  .cabecalho {
+    padding: 14px 12px;
+  }
+
+  .cabecalho .titulo {
+    gap: 5px;
+    margin-right: 6px;
+  }
+
+  .cabecalho .seletor {
+    min-width: 40px;
+  }
+
+  .acoes-arquivo {
+    gap: 5px;
+    margin-right: 6px;
+  }
+
+  .acoes-arquivo .popover {
+    top: calc(100% + 20px);
+  }
 }
 
 /* --- Abas (abas.js) ------------------------------------------------------------------ */
 
 .barra-abas {
-  flex: 1;
+  /* So o que as abas ocupam: o + vem logo depois da ultima aba. Sem espaco, a barra encolhe e rola. */
+  flex: 0 1 auto;
   min-width: 0;
   display: flex;
   align-items: flex-end;
@@ -1784,6 +1851,8 @@ body.impressao {
 }
 
 .aba-nome {
+  /* Ocupa o resto da aba: o X (flex: none) fica encostado na borda direita. */
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1828,6 +1897,32 @@ body.impressao {
 .aba-fechar:hover {
   opacity: 1;
   background: rgba(255, 255, 255, 0.12);
+}
+
+/* O + de nova aba, no fim das abas (como no Bloco de Notas). */
+.botao-aba-nova {
+  flex: none;
+  align-self: flex-end;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--raio-item);
+  background: transparent;
+  color: var(--texto-secundario);
+}
+
+.botao-aba-nova:hover {
+  color: var(--texto-forte);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.botao-aba-nova:focus-visible {
+  outline: 2px solid rgba(168, 57, 58, 0.7);
+  outline-offset: 1px;
 }
 
 .aba-nota.arrastando {

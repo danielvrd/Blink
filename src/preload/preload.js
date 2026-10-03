@@ -73,6 +73,8 @@ contextBridge.exposeInMainWorld('blink', {
     ler: (arquivo) => ipcRenderer.invoke('notas:ler', arquivo),
     /** Acrescenta um topico no fim. Devolve o nome do arquivo gravado. */
     adicionar: (arquivo, texto) => ipcRenderer.invoke('notas:adicionar', arquivo, texto),
+    /** Cria um .md vazio (nome digitado): { ok, nome } ou { ok: false, motivo }. */
+    criar: (nome) => ipcRenderer.invoke('notas:criar', nome),
     /** Regrava a lista inteira: usado por apagar e reordenar. */
     salvar: (arquivo, topicos) => ipcRenderer.invoke('notas:salvar', arquivo, topicos),
     limpar: (arquivo) => ipcRenderer.invoke('notas:limpar', arquivo),

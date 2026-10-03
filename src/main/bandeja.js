@@ -34,7 +34,8 @@ function definirAcao(callback) {
 }
 
 /**
- * O item de atualizacao, que muda conforme o que esta acontecendo.
+ * O item de atualizacao: UM clique que leva o Blink a versao mais nova (atualizacao.atualizarJa) - procura, baixa e
+ * reinicia sozinho. O rotulo muda conforme o que esta acontecendo.
  *
  * Rodando pelo npm start ele aparece desabilitado: nao ha instalador para
  * trocar, e um item que nao faz nada sem explicacao confunde mais do que
@@ -47,29 +48,16 @@ function itemDeAtualizacao() {
     return { label: 'Atualizações (só no Blink instalado)', enabled: false };
   }
 
+  // Ja clicou: o Blink esta procurando/baixando e reinicia sozinho quando terminar.
   if (instalando) {
-    return { label: 'Verificando a versão mais nova…', enabled: false };
+    return { label: 'Atualizando… (o Blink reinicia sozinho)', enabled: false };
   }
 
-  if (estado === 'pronta') {
-    return {
-      label: `Reiniciar para atualizar (${versao})`,
-      click: () => atualizacao.instalarAgora(janelas.permitirEncerrar),
-    };
-  }
+  let label = 'Atualizar o Blink';
+  if (estado === 'pronta') label = `Atualizar para a ${versao} agora`;
+  else if (estado === 'baixando') label = `Atualizar para a ${versao} (baixando…)`;
 
-  if (estado === 'baixando') {
-    return { label: `Baixando a versão ${versao}…`, enabled: false };
-  }
-
-  if (estado === 'checando') {
-    return { label: 'Procurando atualizações…', enabled: false };
-  }
-
-  return {
-    label: 'Procurar atualizações',
-    click: () => atualizacao.procurar({ manual: true }),
-  };
+  return { label, click: () => atualizacao.atualizarJa(janelas.permitirEncerrar) };
 }
 
 /**
@@ -148,4 +136,4 @@ function criar() {
   return bandeja;
 }
 
-module.exports = { criar, definirAcao, atualizarMenu };
+module.exports = { criar, definirAcao, atualizarMenu, itemDeAtualizacao };

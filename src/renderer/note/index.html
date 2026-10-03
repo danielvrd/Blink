@@ -21,89 +21,68 @@
         <!-- O olho abre as configuracoes do Blink, na aba do Fast Note -->
         <button class="botao-olho" id="btn-olho" title="Abrir as configurações do Blink" aria-label="Abrir as configurações do Blink">
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="1" y="1" width="22" height="22" rx="6.5" fill="#1b1c23" stroke="#ffffff" stroke-opacity="0.14" stroke-width="0.8"></rect>
-            <circle cx="12" cy="12" r="6" fill="none" stroke="#d6d9e0" stroke-width="1.7"></circle>
-            <circle cx="12" cy="12" r="3.5" fill="#cb3e3e"></circle>
+            <rect x="1" y="1" width="22" height="22" rx="6.5" fill="#810c3d" stroke="#ffffff" stroke-opacity="0.14" stroke-width="0.8"></rect>
+            <circle cx="12" cy="12" r="6.7" fill="none" stroke="#d6d9e0" stroke-width="1.7"></circle>
+            <circle cx="12" cy="12" r="4" fill="#a56464"></circle>
             <circle cx="12" cy="12" r="1.8" fill="#14050a"></circle>
             <circle cx="13.2" cy="10.8" r="0.9" fill="#ffffff" opacity="0.92"></circle>
           </svg>
         </button>
+        <span class="nome-janela">Fast Note</span>
         <!-- O seletor de arquivos (com todas as marcas: estrela, relogio, cadeado, folha, quadro, texto) fica no
              cabecalho; abrir um arquivo por ele (ou por "/nome") abre ou ativa a aba dele (seletor.js, abas.js) -->
         <div class="seletor" id="seletor-arquivo"></div>
       </div>
-      <div class="botoes-janela">
-        <button class="botao-x" id="btn-minimizar" title="Minimizar" aria-label="Minimizar">
-          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-            <line x1="0" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1.2"></line>
+      <!-- Salvar (aba rapida), imagem (folha e quadro), copiar, limpar e excluir: os botoes do arquivo aberto -->
+      <div class="acoes-arquivo">
+        <!-- So na aba rapida: salva o texto como um arquivo (pede o nome) -->
+        <button class="botao-acao" id="btn-salvar-aba" title="Salvar como arquivo (Ctrl+S)" aria-label="Salvar a aba como arquivo" hidden>
+          <!-- disquete -->
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4.5 4.5h12l3 3v12h-15z" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linejoin="round"></path>
+            <path d="M8 4.5v5h7v-5M8 19.5v-6h8v6" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linejoin="round"></path>
           </svg>
         </button>
-        <button class="botao-x" id="btn-fechar" title="Fechar" aria-label="Fechar">×</button>
-      </div>
-    </header>
 
-    <div class="corpo">
+        <!-- So em folha livre: copia o print da folha inteira -->
+        <button class="botao-acao" id="btn-imagem" title="Copiar a folha como imagem" aria-label="Copiar a folha como imagem" hidden>
+          <!-- moldura com montanha e sol -->
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3.5" y="5" width="17" height="14" rx="2.2" fill="none" stroke="#ffffff" stroke-width="1.8"></rect>
+            <circle cx="9" cy="10" r="1.6" fill="#ffffff"></circle>
+            <path d="M4.5 17.5 L10 13 L13.5 16 L16 14 L19.5 17.5" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"></path>
+          </svg>
+        </button>
 
-      <!-- As abas abertas, e os botoes: nova aba, salvar (aba rapida), imagem, copiar, limpar tudo e excluir -->
-      <div class="linha-arquivo">
-        <div class="barra-abas" id="barra-abas"></div>
+        <button class="botao-acao" id="btn-copiar" title="Copiar todas as anotações" aria-label="Copiar as anotações">
+          <!-- letra C, desenhada por traço para não depender de fonte -->
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16.75 8 A6.2 6.2 0 1 0 16.75 16" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"></path>
+          </svg>
+        </button>
 
-        <div class="acoes-arquivo">
-          <button class="botao-acao botao-nova-aba" id="btn-nova-aba" title="Nova aba rápida: só texto, para colar algo (Ctrl+T)" aria-label="Nova aba rápida">
-            <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"></path>
-            </svg>
-          </button>
+        <button class="botao-acao" id="btn-limpar" title="Limpar tudo" aria-label="Limpar todas as notas">
+          <!-- vassoura -->
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+            <line x1="18" y1="2" x2="12.2" y2="12" stroke="#f5eceb" stroke-width="2" stroke-linecap="round"></line>
+            <path d="M9 11 L15.5 11 L18.5 21 L5.5 21 Z" fill="#f5eceb"></path>
+            <rect x="9" y="10.2" width="6.5" height="2" rx="0.6" fill="#5a1a1b"></rect>
+            <line x1="9.7" y1="13.2" x2="8" y2="21" stroke="#a8393a" stroke-width="1"></line>
+            <line x1="12.3" y1="13.2" x2="12" y2="21" stroke="#a8393a" stroke-width="1"></line>
+            <line x1="14.9" y1="13.2" x2="16.3" y2="21" stroke="#a8393a" stroke-width="1"></line>
+          </svg>
+        </button>
 
-          <!-- So na aba rapida: salva o texto como um arquivo (pede o nome) -->
-          <button class="botao-acao" id="btn-salvar-aba" title="Salvar como arquivo (Ctrl+S)" aria-label="Salvar a aba como arquivo" hidden>
-            <!-- disquete -->
-            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4.5 4.5h12l3 3v12h-15z" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linejoin="round"></path>
-              <path d="M8 4.5v5h7v-5M8 19.5v-6h8v6" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linejoin="round"></path>
-            </svg>
-          </button>
-
-          <!-- So em folha livre: copia o print da folha inteira -->
-          <button class="botao-acao" id="btn-imagem" title="Copiar a folha como imagem" aria-label="Copiar a folha como imagem" hidden>
-            <!-- moldura com montanha e sol -->
-            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="3.5" y="5" width="17" height="14" rx="2.2" fill="none" stroke="#ffffff" stroke-width="1.8"></rect>
-              <circle cx="9" cy="10" r="1.6" fill="#ffffff"></circle>
-              <path d="M4.5 17.5 L10 13 L13.5 16 L16 14 L19.5 17.5" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"></path>
-            </svg>
-          </button>
-
-          <button class="botao-acao" id="btn-copiar" title="Copiar todas as anotações" aria-label="Copiar as anotações">
-            <!-- letra C, desenhada por traço para não depender de fonte -->
-            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M16.75 8 A6.2 6.2 0 1 0 16.75 16" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"></path>
-            </svg>
-          </button>
-
-          <button class="botao-acao" id="btn-limpar" title="Limpar tudo" aria-label="Limpar todas as notas">
-            <!-- vassoura -->
-            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-              <line x1="18" y1="2" x2="12.2" y2="12" stroke="#f5eceb" stroke-width="2" stroke-linecap="round"></line>
-              <path d="M9 11 L15.5 11 L18.5 21 L5.5 21 Z" fill="#f5eceb"></path>
-              <rect x="9" y="10.2" width="6.5" height="2" rx="0.6" fill="#5a1a1b"></rect>
-              <line x1="9.7" y1="13.2" x2="8" y2="21" stroke="#a8393a" stroke-width="1"></line>
-              <line x1="12.3" y1="13.2" x2="12" y2="21" stroke="#a8393a" stroke-width="1"></line>
-              <line x1="14.9" y1="13.2" x2="16.3" y2="21" stroke="#a8393a" stroke-width="1"></line>
-            </svg>
-          </button>
-
-          <button class="botao-acao" id="btn-excluir" title="Excluir arquivo" aria-label="Excluir este arquivo">
-            <!-- lixeira -->
-            <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 6.5 H20" stroke="#f5eceb" stroke-width="2.2" stroke-linecap="round"></path>
-              <path d="M9.5 6 V4.2 Q9.5 3 10.7 3 H13.3 Q14.5 3 14.5 4.2 V6" stroke="#f5eceb" stroke-width="2" fill="none"></path>
-              <path d="M6 8.5 L7.2 20 Q7.4 21.5 9 21.5 H15 Q16.6 21.5 16.8 20 L18 8.5 Z" fill="#f5eceb"></path>
-              <line x1="10" y1="11.5" x2="10.4" y2="18.5" stroke="#a8393a" stroke-width="1.3"></line>
-              <line x1="14" y1="11.5" x2="13.6" y2="18.5" stroke="#a8393a" stroke-width="1.3"></line>
-            </svg>
-          </button>
-        </div>
+        <button class="botao-acao" id="btn-excluir" title="Excluir arquivo" aria-label="Excluir este arquivo">
+          <!-- lixeira -->
+          <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6.5 H20" stroke="#f5eceb" stroke-width="2.2" stroke-linecap="round"></path>
+            <path d="M9.5 6 V4.2 Q9.5 3 10.7 3 H13.3 Q14.5 3 14.5 4.2 V6" stroke="#f5eceb" stroke-width="2" fill="none"></path>
+            <path d="M6 8.5 L7.2 20 Q7.4 21.5 9 21.5 H15 Q16.6 21.5 16.8 20 L18 8.5 Z" fill="#f5eceb"></path>
+            <line x1="10" y1="11.5" x2="10.4" y2="18.5" stroke="#a8393a" stroke-width="1.3"></line>
+            <line x1="14" y1="11.5" x2="13.6" y2="18.5" stroke="#a8393a" stroke-width="1.3"></line>
+          </svg>
+        </button>
 
         <!-- Confirmacao do limpar tudo, ancorada ao botao -->
         <div class="popover" id="popover-limpar" hidden>
@@ -132,12 +111,37 @@
           </div>
         </div>
       </div>
+      <div class="botoes-janela">
+        <button class="botao-x" id="btn-minimizar" title="Minimizar" aria-label="Minimizar">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <line x1="0" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1.2"></line>
+          </svg>
+        </button>
+        <button class="botao-x" id="btn-fechar" title="Fechar" aria-label="Fechar">×</button>
+      </div>
+    </header>
+
+    <div class="corpo">
+
+      <!-- So as abas abertas e o botao de nova aba (+); os botoes do arquivo ficam no cabecalho -->
+      <div class="linha-arquivo">
+        <div class="barra-abas" id="barra-abas"></div>
+        <button class="botao-aba-nova" id="btn-nova-aba" title="Nova aba rápida: só texto, para colar algo (Ctrl+T)" aria-label="Nova aba rápida">
+          <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>
+          </svg>
+        </button>
+      </div>
 
       <!-- So aparece com o relogio ligado no arquivo aberto (calendario.js) -->
       <div class="calendario" id="calendario-historico" hidden></div>
 
-      <!-- Só aparece quando "+ Criar nova nota" está escolhido -->
-      <input class="campo-nome" id="campo-nome" placeholder="nome-da-nota.md" hidden>
+      <!-- Só aparece quando "+ Criar nova nota" está escolhido: o nome (Enter cria a nota na hora) e, à direita, os mesmos
+           ícones do seletor para escolher o tipo (montados pelo note.js) -->
+      <div class="linha-nome" id="linha-nome" hidden>
+        <input class="campo-nome" id="campo-nome" placeholder="nome-da-nota.md" aria-label="Nome da nota nova" autocomplete="off" spellcheck="false">
+        <div class="tipos-nota" id="tipos-nota" role="group" aria-label="Tipo da nota nova"></div>
+      </div>
 
       <div class="lista" id="lista"></div>
 

@@ -338,6 +338,9 @@ function registrar() {
     evento.returnValue = ehString(arquivo) ? textos.salvarSincrono(arquivo, texto) : false;
   });
   // Salvar uma aba rapida: cria o .md com o texto exato e o poe em modo texto.
+  // "+ Criar nova nota": cria o .md vazio na hora (o tipo -- folha, quadro, texto, cadeado, relogio -- e aplicado depois
+  // pelo proprio Fast Note, pelos IPCs de cada modo).
+  ipcMain.handle('notas:criar', async (_evento, nome) => (ehString(nome) ? notas.criar(nome) : { ok: false, motivo: 'entrada' }));
   ipcMain.handle('texto:criar', async (_evento, nome, texto) => (ehString(nome) ? textos.criar(nome, texto) : { ok: false, motivo: 'entrada' }));
 
   ipcMain.handle('abas:ler', () => abas.lerEstado());

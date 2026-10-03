@@ -44,6 +44,9 @@ Quando há uma atualização, aparece um botão no canto de cada janela (ao lado
 janelas estreitas ele vira "Atualizar". Clicar nele pergunta se pode reiniciar o Blink agora; se
 você confirmar, ele confere uma última vez se saiu algo ainda mais novo antes de instalar.
 
+Também dá para atualizar pelo ícone da bandeja, num clique só: **Atualizar o Blink** procura a versão mais nova, baixa e
+reinicia o Blink já nela. Se já estiver na mais recente, ele só avisa.
+
 Dentro do Fast Note e do Diff Checker, o **olho** do cabeçalho é um botão: clicar nele abre as
 configurações do Blink já na aba daquela ferramenta e fecha a janela dela.
 
@@ -194,7 +197,22 @@ primeiro, para você não comparar com algo que capturou e esqueceu.
 1. Pressione `Ctrl + Alt + N`. Na primeira vez o Windows pergunta em que pasta guardar as notas.
 2. Escreva e pressione `Enter`. `Shift + Enter` quebra a linha dentro do mesmo tópico. A nota nova entra
    **no fim da lista** (a mais antiga fica em cima, como num chat) e a lista rola até ela.
-3. Escolha outro arquivo no seletor, ou **"+ Criar nova nota"** para começar um.
+3. Escolha outro arquivo no seletor, ou **"+ Criar nova nota"** (sempre o primeiro item da lista) para começar um.
+
+#### Criar uma nota nova
+
+Ao escolher **"+ Criar nova nota"** o cursor já vai para o campo do nome. Digite o nome e aperte `Enter`: **a nota é criada na
+hora**, vazia, sem precisar escrever nada nela. À direita do nome ficam os mesmos ícones do seletor (folha, quadro, **T**,
+cadeado, relógio e estrela): clique num deles para já criar a nota **naquele tipo** (só um tipo por vez; a estrela pode ir junto)
+e clique de novo para desmarcar. Sem nenhum ícone marcado, a nota é comum. Com o cadeado marcado, o Blink pede a senha logo
+depois de criar. Um nome que já existe (ou o `task`) não cria nada e avisa.
+
+#### O cabeçalho
+
+Da esquerda para a direita: o olho do Blink (abre as configurações), **Fast Note**, o seletor de arquivos, os botões do arquivo
+aberto (**C** copia, a vassoura limpa, a lixeira exclui — e, quando valem, o disquete que salva a aba rápida e o botão de
+imagem da folha e do quadro) e minimizar e fechar. Em janela estreita o nome "Fast Note" some para o seletor ter espaço. A linha
+de baixo é só das abas, e o **+** de nova aba fica no fim delas.
 
 #### Abas
 
@@ -212,7 +230,7 @@ estava nelas. Com uma estrela marcada, o Fast Note abre nela; sem estrela, no ú
 
 #### Aba rápida
 
-O botão **+** (ao lado do **C**) abre uma **aba rápida**: um editor de **só texto**, para colar algo sem criar arquivo
+O botão **+** (no fim das abas) abre uma **aba rápida**: um editor de **só texto**, para colar algo sem criar arquivo
 (imagens não entram). O nome dela é "Sem título" até você escrever; com texto, vira as **primeiras palavras** ("Lista de
 compras leite"), em itálico e com um pontinho de "não salva". O botão de **disquete** (ou `Ctrl + S`) **salva como arquivo**:
 ele pede o nome (com uma sugestão), cria o `.md` na pasta das notas com o texto **exatamente como está** e a aba passa a ser a
@@ -463,7 +481,7 @@ Clique com o botão direito no olho, ao lado do relógio:
 | Fast Note | abre o bloco de notas |
 | Formatter | lembra qual é o atalho |
 | I18n | lembra qual é o atalho |
-| Procurar atualizações | consulta na hora se há versão nova (com uma já baixada vira "Reiniciar para atualizar") |
+| Atualizar o Blink | **um clique** procura a versão mais nova, baixa e reinicia o Blink já nela (se não houver nada novo, só avisa) |
 | Iniciar com o Windows | liga ou desliga a inicialização automática |
 | Sair | encerra o Blink |
 

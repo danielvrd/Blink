@@ -12,7 +12,7 @@
  *            cadeado se for privado + folha se for folha livre + seta
  *   Aberto   lista com todos os arquivos, cada um com sua folha, seu
  *            cadeado, seu relogio e sua estrela (o task.md nao tem folha,
- *            cadeado nem relogio), e "+ Criar nova nota" no fim. Folha,
+ *            cadeado nem relogio), e "+ Criar nova nota" no topo. Folha,
  *            cadeado e relogio nao andam juntos: um arquivo com um deles
  *            nao pode ter outro
  *
@@ -368,6 +368,19 @@ window.Blink = window.Blink || {};
       lista.children[destaque]?.scrollIntoView({ block: 'nearest' });
     }
 
+    /**
+     * A lista pode ser mais larga que o seletor (que no cabecalho e pequeno e fica depois do nome da janela): se passar da
+     * borda direita da janela, desloca para a esquerda o quanto precisa, sem passar da borda esquerda.
+     */
+    function manterDentroDaJanela() {
+      lista.style.left = '';
+      const margem = 8;
+      const sobra = lista.getBoundingClientRect().right - (window.innerWidth - margem);
+      if (sobra <= 0) return;
+      const esquerdaDoSeletor = raiz.getBoundingClientRect().left;
+      lista.style.left = Math.max(margem - esquerdaDoSeletor, -sobra) + 'px';
+    }
+
     function abrir() {
       if (aberto) return;
       if (aoAbrir) aoAbrir();
@@ -377,6 +390,7 @@ window.Blink = window.Blink || {};
       lista.hidden = false;
       botao.setAttribute('aria-expanded', 'true');
       raiz.classList.add('aberto');
+      manterDentroDaJanela();
       marcarDestaque();
     }
 
@@ -384,6 +398,7 @@ window.Blink = window.Blink || {};
       if (!aberto) return;
       aberto = false;
       lista.hidden = true;
+      lista.style.left = '';
       botao.setAttribute('aria-expanded', 'false');
       raiz.classList.remove('aberto');
     }
@@ -393,7 +408,8 @@ window.Blink = window.Blink || {};
       if (!item) return;
       fechar();
       botao.focus();
-      if (item.valor !== atual) aoEscolher(item.valor);
+      // Escolher "+ Criar nova nota" com ela ja aberta so devolve o foco ao nome (quem decide e o note.js).
+      if (item.valor !== atual || item.valor === valorNovo) aoEscolher(item.valor);
     }
 
     botao.addEventListener('click', () => (aberto ? fechar() : abrir()));
@@ -446,9 +462,10 @@ window.Blink = window.Blink || {};
      * estrela ou um relogio - e ela continua aberta.
      */
     function definir(dados) {
+      // "+ Criar nova nota" fica sempre no topo da lista.
       itens = [
-        ...dados.arquivos.map((a) => ({ valor: a, rotulo: a, marcavel: true })),
         { valor: valorNovo, rotulo: rotuloNovo, marcavel: false },
+        ...dados.arquivos.map((a) => ({ valor: a, rotulo: a, marcavel: true })),
       ];
       atual = dados.atual;
       principal = dados.principal || '';
@@ -475,5 +492,6 @@ window.Blink = window.Blink || {};
     };
   }
 
-  window.Blink.seletor = { criar };
+  // Os desenhos das marcas, para a tela de "+ Criar nova nota" mostrar os mesmos icones (note.js).
+  window.Blink.seletor = { criar, ICONES: { FOLHA, QUADRO, TEXTO, CADEADO, RELOGIO, ESTRELA } };
 })();

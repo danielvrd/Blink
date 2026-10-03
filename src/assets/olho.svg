@@ -19,13 +19,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24">
   <defs>
     <linearGradient id="fundo" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#262731"/>
-      <stop offset="100%" stop-color="#111217"/>
+      <stop offset="0%" stop-color="#96174d"/>
+      <stop offset="100%" stop-color="#6a0932"/>
     </linearGradient>
     <radialGradient id="iris" cx="42%" cy="38%" r="65%">
-      <stop offset="0%" stop-color="#e46a6a"/>
-      <stop offset="45%" stop-color="#cb3e3e"/>
-      <stop offset="100%" stop-color="#6b1717"/>
+      <stop offset="0%" stop-color="#c88a8a"/>
+      <stop offset="45%" stop-color="#a56464"/>
+      <stop offset="100%" stop-color="#6b3a3a"/>
     </radialGradient>
     <radialGradient id="pupila" cx="38%" cy="35%" r="70%">
       <stop offset="0%" stop-color="#4a1218"/>
@@ -39,11 +39,11 @@
   <rect x="1.4" y="1.4" width="21.2" height="21.2" rx="6.1" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="0.6"/>
 
   <!-- anel claro do olho: identico ao do olho-simples.svg -->
-  <circle cx="12" cy="12" r="6" fill="none" stroke="#d6d9e0" stroke-width="1.7"/>
+  <circle cx="12" cy="12" r="6.7" fill="none" stroke="#d6d9e0" stroke-width="1.7"/>
 
   <!-- iris -->
-  <circle cx="12" cy="12" r="3.5" fill="url(#iris)"/>
-  <circle cx="12" cy="12" r="3.5" fill="none" stroke="#3a0810" stroke-width="0.4"/>
+  <circle cx="12" cy="12" r="4" fill="url(#iris)"/>
+  <circle cx="12" cy="12" r="4" fill="none" stroke="#3a1418" stroke-width="0.4"/>
 
   <!-- pupila -->
   <circle cx="12" cy="12" r="1.8" fill="url(#pupila)"/>
