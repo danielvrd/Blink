@@ -107,7 +107,8 @@ Formatter das configurações; a indentação vale também para XML e JSON.
 
 O **estilo** também é escolhido lá, ao lado do dialeto:
 
-- **Alinhado** (padrão): o `FROM` fica na mesma linha da primeira tabela, os `AND`/`OR` de um
+- **Alinhado** (padrão): o `FROM` fica na mesma linha da primeira tabela, os `JOIN` ficam na mesma
+  coluna do `FROM`, do `SELECT` e do `WHERE` (não mais um nível para dentro), os `AND`/`OR` de um
   `JOIN ... ON` ficam alinhados embaixo do `ON` (e o `ON ( ... )` mantém os parênteses, com o `)`
   no fim da última condição), o `END` de um `CASE` fica na coluna dos `WHEN`, os CTEs de um `WITH`
   começam na linha do próprio `WITH` (`WITH Nome AS (`), e vários `DECLARE` seguidos ficam sem linha em
@@ -334,7 +335,7 @@ anotações por baixo.
 
 Abra o seletor de arquivos: ao lado da estrela, cada arquivo também tem um relógio. Clique nele
 para ligar o **histórico diário** — o arquivo passa a guardar um registro por dia, e um campo de
-calendário aparece ao lado do seletor para escolher qual dia ver. Pode haver vários arquivos com o
+calendário aparece no cabeçalho, à direita do seletor (entre ele e os botões C, vassoura e lixeira), para escolher qual dia ver. Em janela estreita ele mostra só o ícone. Pode haver vários arquivos com o
 relógio ligado ao mesmo tempo, cada um funcionando como um diário próprio.
 
 Escolher um dia no calendário mostra os tópicos daquele dia — editar, apagar e adicionar funcionam

@@ -146,6 +146,8 @@ window.Blink = window.Blink || {};
 
     function desenharBotao() {
       texto.textContent = formatarCurto(atual);
+      // Em janela estreita o texto some: o title diz o dia.
+      botao.title = 'Escolher o dia (' + formatarCurto(atual) + ')';
     }
 
     /** Quantos dias tem o mes (0 = ultimo dia do mes anterior a mes+1). */
@@ -195,6 +197,17 @@ window.Blink = window.Blink || {};
       desenharGrade();
     }
 
+    /**
+     * O painel abre alinhado a direita do botao; com o calendario no cabecalho e a janela estreita, isso o jogaria para fora
+     * da borda esquerda. Aqui ele e empurrado para a direita o quanto precisar (pelo CSSOM, que a CSP permite).
+     */
+    function manterDentroDaJanela() {
+      painel.style.right = '';
+      const margem = 8;
+      const falta = margem - painel.getBoundingClientRect().left;
+      if (falta > 0) painel.style.right = -falta + 'px';
+    }
+
     function abrir() {
       if (aberto) return;
       if (aoAbrir) aoAbrir();
@@ -202,6 +215,7 @@ window.Blink = window.Blink || {};
       exibido = partes(atual);
       desenharGrade();
       painel.hidden = false;
+      manterDentroDaJanela();
       botao.setAttribute('aria-expanded', 'true');
       raiz.classList.add('aberto');
     }
@@ -210,6 +224,7 @@ window.Blink = window.Blink || {};
       if (!aberto) return;
       aberto = false;
       painel.hidden = true;
+      painel.style.right = '';
       botao.setAttribute('aria-expanded', 'false');
       raiz.classList.remove('aberto');
     }

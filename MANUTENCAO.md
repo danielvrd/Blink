@@ -355,12 +355,17 @@ e o estilo. `sql.estilo` é `'alinhado'` (padrão) ou `'classico'`; **configura�
 vale 'alinhado'**, então quem lê usa `!== 'classico'` (o campo não é `required` no schema). O estilo vale
 para todos os dialetos. `'classico'` é exatamente a saída de antes (o golden prova, byte a byte).
 
-`estilo-sql.js` trabalha por **linhas** sobre a saída da biblioteca, com seis regras (cada uma re-tokeniza o
+`estilo-sql.js` trabalha por **linhas** sobre a saída da biblioteca, com sete regras (cada uma re-tokeniza o
 texto, via `linhasDe()`): `regraWith` (`WITH` sozinho + CTEs → `WITH Nome AS (`, e a seção dos CTEs um nível
 para a esquerda), `regraPontoEVirgulaWith` (`;` que abre o comando + `WITH` → `;WITH`; o `;` que fecha o
 comando anterior não é tocado), `regraFrom` (`FROM` sozinho + 1ª tabela na linha de baixo; não junta se a
 linha seguinte começa com `(` ou comentário), `regraOn` (AND/OR do `ON` alinhados na coluna do `ON`; e o bloco
-`ON (` … `)` vira `ON (cond1` / AND sob o ON / `)` colado na última condição) e `regraCase` (END do CASE na
+`ON (` … `)` vira `ON (cond1` / AND sob o ON / `)` colado na última condição) `regraJuncao` (os JOINs e APPLYs na **coluna do FROM**, em vez de um nível para dentro: um JOIN
+cujo FROM está um nível acima — a 1ª linha de menor indentação antes dele — sobe com o bloco dele: as linhas mais
+fundas e as que continuam na coluna dele, `)`, AND e OR; quem já está na coluna de um FROM/SELECT/WHERE fica como
+está, o que a faz idempotente; cada linha sobe **um nível por JOIN que a contém** (`niveis`, medido nas linhas
+como chegaram), então um JOIN dentro da subconsulta de outro também sobe numa só volta; bloco com linha opaca
+não é tocado), `regraCase` (END do CASE na
 coluna dos WHEN, com pilha de CASE) e `regraDeclare` (sem linha em branco entre DECLAREs).
 A unidade de indentação é a da aba: com Tab, o **nível** é Tab e o **alinhamento** (a distância até o `ON`)
 são espaços.
@@ -706,7 +711,7 @@ apaga o que não vale). O editor é um `<textarea id="texto-livre">` que serve �
 600 ms, e ao trocar de aba ou fechar); Ctrl+clique abre links; Tab indenta.
 
 **Layout (0.7.1):** o cabeçalho é, da esquerda para a direita, olho → "Fast Note" (`.nome-janela`, some abaixo de 440 px) → seletor
-(`flex: 0 1 220px`, `no-drag`, encolhe com reticências; a lista abre por cima do corpo com `z-index`) → `.acoes-arquivo` (salvar da aba
+(`flex: 0 1 220px`, `no-drag`, encolhe com reticências; a lista abre por cima do corpo com `z-index`) → `.calendario` (o calendário do histórico diário, **só** com o relógio ligado: `#calendario-historico` mora no cabeçalho, `align-self: stretch` como o `.acoes-arquivo`, painel em `top: calc(100% + 24px)`; abaixo de 380 px mostra só o ícone e a seta, a data vai no `title`; `calendario.js` empurra o painel para dentro da janela por CSSOM) → `.acoes-arquivo` (salvar da aba
 rápida e imagem, só quando valem, mais C / vassoura / lixeira, e os três popovers de confirmação ancorados nele: `top: calc(100% + 24px)`,
 porque o `.acoes-arquivo` tem a altura toda do conteúdo do cabeçalho e o resto é o padding) → `.botoes-janela` (o botão de atualização
 entra no começo dele, `comum/atualizacao.js`). A `.linha-arquivo` do corpo é **só** `#barra-abas` + o `+` (`.botao-aba-nova`, no fim das abas,

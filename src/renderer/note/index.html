@@ -32,6 +32,8 @@
              cabecalho; abrir um arquivo por ele (ou por "/nome") abre ou ativa a aba dele (seletor.js, abas.js) -->
         <div class="seletor" id="seletor-arquivo"></div>
       </div>
+      <!-- O dia do arquivo com historico diario (relogio ligado), a direita do seletor; so aparece nesses arquivos (calendario.js) -->
+      <div class="calendario" id="calendario-historico" hidden></div>
       <!-- Salvar (aba rapida), imagem (folha e quadro), copiar, limpar e excluir: os botoes do arquivo aberto -->
       <div class="acoes-arquivo">
         <!-- So na aba rapida: salva o texto como um arquivo (pede o nome) -->
@@ -131,9 +133,6 @@
           </svg>
         </button>
       </div>
-
-      <!-- So aparece com o relogio ligado no arquivo aberto (calendario.js) -->
-      <div class="calendario" id="calendario-historico" hidden></div>
 
       <!-- Só aparece quando "+ Criar nova nota" está escolhido: o nome (Enter cria a nota na hora) e, à direita, os mesmos
            ícones do seletor para escolher o tipo (montados pelo note.js) -->

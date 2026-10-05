@@ -7,10 +7,10 @@
  * procedures (layout-tsql.js) - e muda so isso, no estilo que o Daniel escreve:
  *
  *   FROM TMOV T (NOLOCK)                          o FROM e a primeira tabela, na mesma linha
- *       INNER JOIN B ON B.ID = T.ID               os JOINs ficam um nivel para dentro
- *                    AND B.K = T.K                AND / OR do ON alinhados sob o ON
- *       LEFT JOIN C ON (C.ID = T.ID               ON ( ... ): a condicao comeca na linha do ON,
- *                   AND C.K = T.K)                os AND sob o ON e o ")" fecha na ultima condicao
+ *   INNER JOIN B ON B.ID = T.ID                   os JOINs na mesma coluna do FROM, do SELECT e do WHERE
+ *                AND B.K = T.K                    AND / OR do ON alinhados sob o ON
+ *   LEFT JOIN C ON (C.ID = T.ID                   ON ( ... ): a condicao comeca na linha do ON,
+ *               AND C.K = T.K)                    os AND sob o ON e o ")" fecha na ultima condicao
  *   CASE
  *       WHEN ... THEN ...
  *       END AS X                                  o END do CASE na coluna dos WHEN
@@ -39,6 +39,12 @@ const { tokenizar, assinatura } = require('./lexer-sql');
 
 /** Comecos de linha de um JOIN que pode ter ON. (CROSS JOIN nao tem; sem ON a linha e ignorada.) */
 const INICIO_JOIN = new Set(['INNER', 'LEFT', 'RIGHT', 'FULL', 'CROSS', 'NATURAL', 'JOIN']);
+
+/** Comecos de linha de um JOIN ou de um APPLY (CROSS APPLY / OUTER APPLY): os que vao para a coluna do FROM. */
+const INICIO_JUNCAO = new Set([...INICIO_JOIN, 'OUTER']);
+
+/** Palavras que abrem uma clausula: um JOIN que tem uma delas na sua propria coluna ja esta alinhado com o FROM dele. */
+const CLAUSULAS = new Set(['FROM', 'SELECT', 'WHERE', 'GROUP', 'ORDER', 'HAVING', 'UNION', 'EXCEPT', 'INTERSECT', 'SET', 'UPDATE', 'DELETE', 'INSERT', 'INTO', 'VALUES', 'WITH']);
 
 /** Atalho: sem uma destas palavras nao ha nada para arrumar (e nem vale tokenizar). */
 const PALAVRA_CANDIDATA = /(?:^|[^A-Za-z0-9_])(?:FROM|WITH|JOIN|CASE|DECLARE)(?![A-Za-z0-9_])/i;
@@ -231,6 +237,76 @@ function regraOn(linhas, unidade) {
   return saida.filter((t) => t !== null);
 }
 
+/**
+ * Os JOINs (e APPLYs) na coluna do FROM, em vez de um nivel para dentro.
+ *
+ * A biblioteca poe o FROM e, um nivel para dentro, a tabela e os JOINs. Aqui cada JOIN que esta um nivel abaixo de um
+ * FROM (a primeira linha de MENOR indentacao antes dele e um FROM, na coluna do JOIN menos um nivel) sobe um nivel
+ * junto com tudo o que e dele: as linhas mais fundas (o ON alinhado, os AND, uma subconsulta) e as que fecham ou
+ * continuam o JOIN na coluna dele (")" e AND / OR). Quem ja esta na coluna de um FROM / SELECT / WHERE fica como esta
+ * (e por isso aplicar de novo nao muda nada). Um bloco com texto de varias linhas dentro nao e tocado.
+ *
+ * Um JOIN dentro da subconsulta de outro JOIN tambem sobe: cada linha sobe um nivel por JOIN que a contem (`niveis`),
+ * tudo medido nas linhas como chegaram - assim uma so volta resolve qualquer profundidade.
+ */
+function regraJuncao(linhas, unidade) {
+  const niveis = linhas.map(() => 0);
+
+  for (let i = 0; i < linhas.length; i++) {
+    const l = linhas[i];
+    if (l.opaca || !INICIO_JUNCAO.has(primeiroU(l))) continue;
+
+    // O FROM deste JOIN: subindo, a primeira linha de indentacao menor. Uma clausula na MESMA coluna do JOIN
+    // (o proprio FROM, um SELECT) quer dizer que ele ja esta alinhado.
+    let de = -1;
+    let jaAlinhado = false;
+    for (let k = i - 1; k >= 0; k--) {
+      const x = linhas[k];
+      if (x.opaca || x.corpo === '') continue;
+      if (x.ind.length > l.ind.length) continue;
+      if (x.ind.length === l.ind.length) {
+        if (CLAUSULAS.has(primeiroU(x))) { jaAlinhado = true; break; }
+        continue;
+      }
+      if (primeiroU(x) === 'FROM' && l.ind === x.ind + unidade) de = k;
+      break;
+    }
+    if (jaAlinhado || de < 0) continue;
+
+    // O bloco do JOIN: as linhas mais fundas, e as da coluna dele que fecham ou continuam o JOIN.
+    let fim = i;
+    for (let k = i + 1; k < linhas.length; k++) {
+      const x = linhas[k];
+      if (x.opaca) { fim = -1; break; }
+      if (x.corpo === '') {
+        // Linha em branco: o bloco so continua se a proxima linha ainda e dele.
+        continue;
+      }
+      const continua = x.ind.length > l.ind.length || (x.ind === l.ind && (x.corpo.startsWith(')') || primeiroU(x) === 'AND' || primeiroU(x) === 'OR'));
+      if (!continua) break;
+      fim = k;
+    }
+    if (fim < 0) continue;
+
+    const prefixo = linhas[de].ind + unidade;
+    let cabe = true;
+    for (let k = i; k <= fim; k++) {
+      if (linhas[k].corpo !== '' && !linhas[k].texto.startsWith(prefixo)) { cabe = false; break; }
+    }
+    if (!cabe) continue;
+
+    for (let k = i; k <= fim; k++) if (linhas[k].corpo !== '') niveis[k] += 1;
+  }
+
+  // Cada linha perde `niveis` unidades do comeco (a indentacao e feita so de unidades, e depois o alinhamento do ON).
+  return linhas.map((l, k) => {
+    if (niveis[k] === 0) return l.texto;
+    const tirar = unidade.repeat(niveis[k]);
+    if (!l.texto.startsWith(tirar)) throw new Error('indentacao inesperada');
+    return l.texto.slice(tirar.length);
+  });
+}
+
 /** O END de um CASE de varias linhas, na coluna dos WHEN. */
 function regraCase(linhas) {
   const saida = linhas.map((l) => l.texto);
@@ -318,7 +394,7 @@ function regraDeclare(linhas) {
 function aplicar(texto, unidade) {
   if (!PALAVRA_CANDIDATA.test(texto)) return null;
 
-  const passos = [regraWith, regraPontoEVirgulaWith, regraFrom, regraOn, regraCase, regraDeclare];
+  const passos = [regraWith, regraPontoEVirgulaWith, regraFrom, regraOn, regraJuncao, regraCase, regraDeclare];
   let atual = texto;
 
   try {

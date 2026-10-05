@@ -291,11 +291,29 @@ body {
 
 /* --- Calendario do historico diario (calendario.js) ------------------------ */
 
-/* So aparece quando o arquivo aberto tem o relogio ligado. Um filho flex:none
-   a mais em .linha-arquivo encolhe o .seletor sozinho, sem CSS extra nele. */
+/* So aparece quando o arquivo aberto tem o relogio ligado. Mora no cabecalho, entre o seletor e os botoes do arquivo; sendo
+   um filho flex:none a mais, ele encolhe o .seletor sozinho. */
 .calendario {
   flex: none;
   position: relative;
+  /* Ocupa a altura toda do conteudo do cabecalho (como o .acoes-arquivo): o painel abre logo abaixo dele. */
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+  -webkit-app-region: no-drag;
+}
+
+.calendario[hidden] {
+  display: none;
+}
+
+.cabecalho .calendario-botao {
+  height: auto;
+}
+
+.cabecalho .calendario-painel {
+  top: calc(100% + 24px);
 }
 
 .calendario-botao {
@@ -319,6 +337,8 @@ body {
 
 .calendario-botao > svg:first-child {
   color: var(--historico);
+  /* O desenho do icone nao tem cor de traco propria: sem isto o icone nao aparecia. */
+  stroke: currentColor;
 }
 
 .calendario-botao > svg:last-child {
@@ -1790,6 +1810,19 @@ body.impressao {
     margin-right: 6px;
   }
 
+  /* Sem espaco para a data: so o icone e a seta (a data fica no title do botao). */
+  .calendario {
+    margin-right: 6px;
+  }
+
+  .calendario-texto {
+    display: none;
+  }
+
+  .cabecalho .calendario-painel {
+    top: calc(100% + 20px);
+  }
+
   .acoes-arquivo .popover {
     top: calc(100% + 20px);
   }
@@ -1956,11 +1989,6 @@ body.impressao {
 .aba-nota.modo-privado::before { background: var(--destaque-estado); }
 .aba-nota.modo-historico::before { background: var(--historico); }
 .aba-nota.modo-rapida::before { background: transparent; border: 1px dashed var(--rotulo); }
-
-/* O calendario do historico passa a morar numa faixa propria, logo abaixo das abas. */
-.corpo > .calendario {
-  align-self: flex-end;
-}
 
 /* A aba rapida e o arquivo em modo texto: o texto inteiro num editor simples. */
 .texto-livre {
