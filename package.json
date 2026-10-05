@@ -1,7 +1,7 @@
 {
   "name": "blink",
   "productName": "Blink",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "App desktop local para Windows com quatro ferramentas de acesso rapido: Diff Checker, Fast Note, Formatter e I18n.",
   "main": "src/main/main.js",
   "author": "danielvrd",
