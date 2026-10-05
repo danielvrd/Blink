@@ -11,7 +11,7 @@ window.Blink = window.Blink || {};
   const { el } = window.Blink.ui;
 
   /**
-   * Rodape da aba: uma legenda e o botao "Abrir demonstracao".
+   * Rodape da aba: uma legenda e o botao "Abrir".
    *
    * O botao chama a mesma funcao do processo principal que a bind global
    * chama, entao a ferramenta abre igual pelos dois caminhos. Nas etapas 2, 3
@@ -23,7 +23,8 @@ window.Blink = window.Blink || {};
       el('div', { class: 'legenda', texto: legenda }),
       el('button', {
         class: 'botao-primario',
-        texto: 'Abrir demonstração',
+        texto: 'Abrir',
+        title: 'Abrir a janela da ferramenta',
         onclick: () => window.blink.demonstracao.abrir(ferramenta),
       }),
     ]);

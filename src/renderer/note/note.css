@@ -965,14 +965,40 @@ body {
   color: var(--destaque-estado);
 }
 
+/* O corpo do topico: um cartao recuado sob o titulo, com um conector em L a esquerda. O conector desce a partir da seta
+   do titulo e dobra para dentro do cartao na METADE da altura dele (50% do bloco, que cresce com o texto). O textarea
+   fica dentro de um .bloco-corpo porque textarea nao tem pseudo-elemento; o estado "fechado" continua sendo o hidden
+   do textarea, e o :has esconde o bloco junto. */
+.bloco-corpo {
+  position: relative;
+  margin-left: 28px;
+}
+
+.bloco-corpo:has(> .corpo-recolhivel[hidden]) {
+  display: none;
+}
+
+.bloco-corpo::before {
+  content: '';
+  position: absolute;
+  left: -22px;
+  top: -5px;
+  width: 22px;
+  height: calc(50% + 5px);
+  border-left: 2px solid var(--destaque-estado);
+  border-bottom: 2px solid var(--destaque-estado);
+  border-bottom-left-radius: 8px;
+  pointer-events: none;
+}
+
 .corpo-recolhivel {
+  display: block;
   width: 100%;
   resize: none;
   overflow: hidden;
-  padding: 4px 8px;
+  padding: 6px 10px;
   border: 1px solid var(--borda-campo);
-  border-left: 2px solid rgba(168, 57, 58, 0.55);
-  border-radius: var(--raio-item);
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
   font: calc(var(--tamanho-conteudo) - 0.5px)/1.5 var(--fonte-conteudo);
   color: var(--texto-forte);
@@ -1848,8 +1874,13 @@ body.impressao {
 }
 
 .aba-nota {
-  flex: 0 1 150px;
-  min-width: 34px;
+  /* Largura FIXA (como no Bloco de Notas): todas iguais, 225 px quando ha espaco. O width (e nao so o flex-basis) e o que
+     faz a barra ter o tamanho das abas: o tamanho "natural" de um container flex vem do width dos filhos, nao do flex-basis
+     (com so o flex-basis a barra ficava do tamanho do texto, ~65 px por aba). Com muitas abas TODAS encolhem igual (mesmo
+     width, nenhuma com min-width proprio), ate 56 px; passando disso, a barra rola. */
+  width: 225px;
+  flex: 0 1 auto;
+  min-width: 56px;
   height: 26px;
   box-sizing: border-box;
   display: flex;
@@ -1873,8 +1904,7 @@ body.impressao {
 }
 
 .aba-nota.ativa {
-  /* A ativa e a ultima a encolher: o nome dela continua legivel. */
-  min-width: 96px;
+  /* So cor e fundo: tamanho nunca (um min-width aqui fazia a ativa "crescer" ao clicar). */
   color: var(--texto-forte);
   background: rgba(168, 57, 58, 0.2);
   border-color: var(--borda-modal-nota);
@@ -1900,7 +1930,7 @@ body.impressao {
   color: var(--destaque-estado);
 }
 
-/* O X fica SEMPRE no layout (so muda a opacidade): tirar e pôr o X no hover mudava a largura do nome e a aba "pulava". */
+/* O X aparece SEMPRE, em todas as abas (so a intensidade muda): assim tambem nao ha o que mudar de largura no hover. */
 .aba-fechar {
   flex: none;
   width: 15px;
@@ -1913,17 +1943,12 @@ body.impressao {
   border-radius: 4px;
   background: transparent;
   color: inherit;
-  opacity: 0;
+  opacity: 0.55;
 }
 
 .aba-nota:hover .aba-fechar,
 .aba-nota.ativa .aba-fechar {
-  opacity: 0.8;
-}
-
-/* Invisivel, o X nao pode receber clique (fecharia a aba sem querer). */
-.aba-nota:not(.ativa):not(:hover) .aba-fechar {
-  pointer-events: none;
+  opacity: 0.9;
 }
 
 .aba-fechar:hover {

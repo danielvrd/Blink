@@ -1263,7 +1263,10 @@
 
     window.Blink.ui.anexar(item, [
       el('span', { class: 'alca', texto: '⋮⋮' }),
-      el('div', { class: 'corpo-topico caixa-recolhivel' }, [el('div', { class: 'linha-titulo' }, [seta, spanTitulo]), campoCorpo]),
+      el('div', { class: 'corpo-topico caixa-recolhivel' }, [
+        el('div', { class: 'linha-titulo' }, [seta, spanTitulo]),
+        el('div', { class: 'bloco-corpo' }, [campoCorpo]),
+      ]),
       el('button', {
         class: 'botao-apagar',
         texto: '×',

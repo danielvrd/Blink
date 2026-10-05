@@ -670,6 +670,10 @@ desenhar (o estado aberto fica em `recolhiveisAbertos`, só na memória, chave `
 redesenhos). O corpo grava com debounce de 600 ms e ao sair do campo (`salvarDiaHistorico`; confere que o
 índice ainda é o mesmo tópico antes de gravar). Editar o título preserva o corpo (quebra de linha no título
 vira espaço). O C copia `- título` + corpo indentado, sem o prefixo.
+O textarea mora num `<div class="bloco-corpo">` (textarea não tem pseudo-elemento): o bloco é o cartão recuado (`margin-left: 28px`)
+e o `::before` dele é o **conector em L** (1.5 px, `var(--destaque-estado)`; `top: -5px` até `50%` da altura + 5 px, então ele
+dobra na metade do texto e acompanha o `ajustarAltura`). O estado fechado continua sendo o `hidden` do textarea; o
+`.bloco-corpo:has(> .corpo-recolhivel[hidden])` esconde o bloco junto.
 
 **Tela:** `ajustarAltura()` também serve ao corpo do recolhível. A aba Fast Note das configurações ganhou o
 segmentado "Ao concluir uma tarefa" e o select "Arquivo da daily" (só arquivos com relógio + "Nenhum"); com o
@@ -709,6 +713,15 @@ linha final); `criar(nome, texto)` (o salvar da aba rápida) usa `flag: 'wx'` �
 e nome existente. Travas dos dois lados com folha, quadro, cadeado e relógio (`ehArquivoEspecial` em `notas.js`; o seletor mostra o "T" e
 apaga o que não vale). O editor é um `<textarea id="texto-livre">` que serve à aba rápida e ao arquivo em modo texto (gravação com atraso de
 600 ms, e ao trocar de aba ou fechar); Ctrl+clique abre links; Tab indenta.
+
+**Largura das abas (0.7.4):** `.aba-nota { flex: 0 1 225px; min-width: 56px }` — a mesma base para todas e **nenhum `min-width` na ativa**
+(o `min-width: 96px` dela fazia a ativa "crescer" ao clicar, porque as outras encolhiam mais). O X fica sempre à vista
+(`opacity` 0.55, 0.9 na ativa e no hover da aba): sem nada que apareça só no hover, nada muda de largura. A constante de 225 px é uma só.
+
+**Janelas normais (0.7.4):** o Fast Note e o Diff **não** são `alwaysOnTop`. Como a bind é usada de dentro de outro programa e o
+Windows não deixa uma janela comum passar na frente de quem está em uso, `janelas.js` tem `trazParaFrente(janela)` (`show`, `setAlwaysOnTop(true)`,
+`focus`, `setAlwaysOnTop(false)`) usado ao abrir e ao reaproveitar. O botão **Abrir** das configurações (`demonstracao:abrir`) esconde a janela
+que chamou quando abre uma janela (Diff; Fast Note, se `ferramentaNote.executar()` devolver `true`); I18n e Formatter só mostram aviso e não escondem.
 
 **Layout (0.7.1):** o cabeçalho é, da esquerda para a direita, olho → "Fast Note" (`.nome-janela`, some abaixo de 440 px) → seletor
 (`flex: 0 1 220px`, `no-drag`, encolhe com reticências; a lista abre por cima do corpo com `z-index`) → `.calendario` (o calendário do histórico diário, **só** com o relógio ligado: `#calendario-historico` mora no cabeçalho, `align-self: stretch` como o `.acoes-arquivo`, painel em `top: calc(100% + 24px)`; abaixo de 380 px mostra só o ícone e a seta, a data vai no `title`; `calendario.js` empurra o painel para dentro da janela por CSSOM) → `.acoes-arquivo` (salvar da aba
@@ -834,8 +847,7 @@ arquivo, e só o processo principal grava (fora dos `CAMINHOS_GRAVAVEIS`).
 **O olho** do cabeçalho do Fast Note e do Diff é um botão (`.botao-olho`, com `no-drag`: o cabeçalho
 inteiro é área de arrasto e o clique nunca chegaria ao JS). Chama `janela:abrirPrincipal`, que só
 aceita nomes de ferramenta conhecidos, mostra a principal (`mostrarPrincipal(aba)`) e **fecha** a
-janela da ferramenta — elas são `alwaysOnTop` e a principal não, então a principal apareceria
-escondida atrás. A aba vai gravada em `abaAtiva` (vale se a principal ainda carrega) e também
+janela da ferramenta (para ficar uma janela só na tela; desde a 0.7.4 elas não são mais `alwaysOnTop`). A aba vai gravada em `abaAtiva` (vale se a principal ainda carrega) e também
 mandada pelo canal `principal:aba`, porque a principal só lê o config uma vez, ao abrir.
 
 **O estado da janela principal envelhece.** A principal nasce escondida na abertura do app e fica

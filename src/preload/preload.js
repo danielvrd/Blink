@@ -205,7 +205,7 @@ contextBridge.exposeInMainWorld('blink', {
   },
 
   demonstracao: {
-    /** O botao "Abrir demonstracao" de cada aba. */
+    /** O botao "Abrir" de cada aba. */
     abrir: (nome) => ipcRenderer.invoke('demonstracao:abrir', nome),
   },
 });

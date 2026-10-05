@@ -1,7 +1,7 @@
 /**
  * Fast Note.
  *
- * A bind abre um bloco de notas pequeno, sempre no topo, para anotar um
+ * A bind abre um bloco de notas pequeno, na frente do programa em uso, para anotar um
  * topico sem sair do que voce estava fazendo. Os topicos vao para arquivos
  * .md de uma pasta que voce escolhe.
  *
@@ -38,14 +38,16 @@ async function garantirPasta() {
   return true;
 }
 
-/** O que a bind do Fast Note faz. */
+/** O que a bind do Fast Note faz. Devolve true se a janela abriu (false sem pasta ou com erro). */
 async function executar() {
   try {
-    if (!(await garantirPasta())) return;
+    if (!(await garantirPasta())) return false;
     janelas.abrirNota();
+    return true;
   } catch (erro) {
     console.error('[ferramenta-note] falhou:', erro);
     aviso.mostrar('Algo deu errado ao abrir o Fast Note.');
+    return false;
   }
 }
 

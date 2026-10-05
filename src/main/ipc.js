@@ -96,9 +96,8 @@ function registrar() {
   });
 
   // O olho do cabecalho de uma ferramenta: abre as configuracoes na aba dela
-  // e fecha a janela da ferramenta (ela fica sempre por cima, e a principal
-  // apareceria escondida atras). Nome de aba desconhecido e recusado sem
-  // fechar nada.
+  // e fecha a janela da ferramenta (para ficar uma janela so na tela). Nome de
+  // aba desconhecido e recusado sem fechar nada.
   ipcMain.handle('janela:abrirPrincipal', (evento, aba) => {
     if (typeof aba !== 'string' || !atalhos.FERRAMENTAS.includes(aba)) return false;
     janelas.mostrarPrincipal(aba);
@@ -440,21 +439,23 @@ function registrar() {
 
   // --- Demonstracao --------------------------------------------------------
 
-  // O botao "Abrir demonstracao" de cada aba.
-  ipcMain.handle('demonstracao:abrir', (_evento, nome) => {
+  // O botao "Abrir" de cada aba. Quando ele abre uma janela (Diff, Fast Note), a janela de configuracoes se esconde:
+  // fica so o que foi aberto (e o olho da ferramenta faz o caminho de volta).
+  ipcMain.handle('demonstracao:abrir', async (evento, nome) => {
     if (!atalhos.FERRAMENTAS.includes(nome)) return false;
 
     // O Diff Checker abre a mesma janela da bind, com dois textos de
     // exemplo, para dar para ver como fica sem capturar nada.
     if (nome === 'diff') {
       ferramentaDiff.abrirExemplo();
+      janelaDoEvento(evento)?.hide();
       return true;
     }
 
     // O Fast Note nao tem o que demonstrar: o botao abre o bloco de notas
-    // de verdade, igual a bind.
+    // de verdade, igual a bind. Sem pasta e com o seletor cancelado, nada abre e as configuracoes ficam.
     if (nome === 'note') {
-      ferramentaNote.executar();
+      if (await ferramentaNote.executar()) janelaDoEvento(evento)?.hide();
       return true;
     }
 

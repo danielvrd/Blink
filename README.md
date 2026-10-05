@@ -186,9 +186,13 @@ iguais. Clicar no **✓** de uma linha aplicada **desfaz**: ela volta a ser uma 
 aplicadas. `Esc` **minimiza** a janela (a comparação continua lá); para fechar e descartar, use o
 `×`.
 
-O botão **Abrir demonstração** da aba do Diff Checker abre uma comparação de **código de verdade** (JavaScript,
+O botão **Abrir** de cada aba abre a ferramenta; na do Diff Checker ele abre uma comparação de **código de verdade** (JavaScript,
 SQL ou XML — um seletor **Exemplo** no rodapé troca entre eles), para você ver como o tema escolhido pinta cada
-linguagem: trocar o tema na aba recolore a demonstração aberta.
+linguagem: trocar o tema na aba recolore a demonstração aberta. Ao abrir o Diff Checker ou o Fast Note por ali, a
+janela de configurações **se esconde**: fica só a ferramenta que você abriu (o **olho** do cabeçalho dela faz o caminho de volta).
+
+O Fast Note e o Diff Checker são **janelas comuns do Windows**: não ficam por cima das outras, então clicar em outro programa
+as deixa atrás dele, como em qualquer janela. Ao abrir pela tecla de atalho elas vêm para a frente.
 
 O primeiro texto guardado vale por **2 minutos**. Depois disso o próximo atalho volta a ser o
 primeiro, para você não comparar com algo que capturou e esqueceu.
@@ -219,7 +223,8 @@ de baixo é só das abas, e o **+** de nova aba fica no fim delas.
 
 O Fast Note tem **abas**, como o Bloco de Notas do Windows 11. O seletor de arquivos fica no **cabeçalho**, com todas as
 marcas de sempre (estrela, relógio, cadeado, folha, quadro e o "T"); escolher um arquivo nele, escrever `/nome` ou o
-atalho do Fast Note **abre a aba** desse arquivo (se já estava aberto, só a ativa). Clique na aba para trocar; o **×** (ou o
+atalho do Fast Note **abre a aba** desse arquivo (se já estava aberto, só a ativa). Todas as abas têm a **mesma largura** (como no Bloco de Notas) e só encolhem, juntas e por igual, quando são muitas
+para a linha; o **×** aparece sempre, em todas. Clique na aba para trocar; o **×** (ou o
 botão do meio do mouse) fecha; arraste uma aba para mudar a ordem. Cada aba lembra o **rascunho** que você estava escrevendo e
 o **dia** do calendário. Um pontinho colorido na aba diz o modo do arquivo (folha, quadro, texto, cadeado, histórico).
 
@@ -323,8 +328,8 @@ arquivo é a sua daily (só aparecem os arquivos com o relógio ligado; sem esco
 registrado). Ao concluir, a tarefa vira um tópico no **dia de hoje** da daily: dez tarefas
 concluídas são dez tópicos. No modo **Daily com tópico** cada tarefa vira um tópico **recolhível**:
 uma seta ▸ ao lado do título abre e fecha uma caixa de anotações, que grava sozinha. O título
-aparece **um pouco maior e em negrito**, e as anotações num cartão logo abaixo, em letra um pouco menor (fechado por
-padrão; a seta fica em destaque quando há anotações). Desmarcar a tarefa tira o tópico da daily — do
+aparece **um pouco maior e em negrito**, e as anotações num cartão recuado logo abaixo, em letra um pouco menor, ligado
+ao título por um traço vermelho fino em L (fechado por padrão; a seta fica em destaque quando há anotações). Desmarcar a tarefa tira o tópico da daily — do
 **dia em que ela foi concluída**, não do de hoje (o Blink guarda esse dia, escondido, no `task.md`).
 Se o texto foi mudado na daily, o Blink não acha, nada é removido de lá e um aviso diz isso; se o
 tópico recolhível tem anotações suas, ele pergunta antes de remover. Limpar as concluídas ou apagar

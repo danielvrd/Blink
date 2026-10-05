@@ -215,7 +215,7 @@ async function executar() {
 /**
  * Abre a janela com um exemplo pronto, sem capturar nada.
  *
- * E o botao "Abrir demonstracao" da aba: serve para ver como a comparacao fica, testar o aplicar linha a linha
+ * E o botao "Abrir" da aba: serve para ver como a comparacao fica, testar o aplicar linha a linha
  * e - com codigo de verdade - conferir as cores do tema escolhido. A janela tem um seletor de linguagem
  * (JavaScript, SQL e XML) que chama esta funcao de novo.
  */

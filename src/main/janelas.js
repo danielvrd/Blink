@@ -57,6 +57,21 @@ const LIMITE_DA_TELA = 0.95;
 /** Mesma cor do fundo das telas: aparece por um instante antes do HTML carregar. */
 const COR_DE_FUNDO = '#0a0a0a';
 
+/**
+ * Mostra a janela e a poe na frente de tudo, uma vez. O Fast Note e o Diff sao janelas NORMAIS do Windows (nao ficam
+ * sempre no topo): clicar em outra janela as deixa atras, como qualquer programa. Mas a bind e usada de dentro de outro
+ * programa, e o Windows nao deixa uma janela comum passar na frente de quem esta em uso - ela abriria escondida. Um toque
+ * de "sempre no topo", ligado e desligado na hora, a traz para a frente sem deixa-la presa la.
+ */
+function trazParaFrente(janela) {
+  if (!janela || janela.isDestroyed()) return;
+  // Liga e desliga ANTES do focus: desligar depois dele mexia na ativacao da janela e, as vezes, o foco do teclado se perdia.
+  janela.setAlwaysOnTop(true);
+  janela.show();
+  janela.setAlwaysOnTop(false);
+  janela.focus();
+}
+
 /** Opcoes que valem para as tres janelas. */
 const OPCOES_COMUNS = {
   show: false,
@@ -288,8 +303,7 @@ function abrirDiff(linhas, { exemplo = null } = {}) {
   if (diff && !diff.isDestroyed()) {
     if (diff.isMinimized()) diff.restore();
     diff.reload();
-    diff.show();
-    diff.focus();
+    trazParaFrente(diff);
     return diff;
   }
 
@@ -297,9 +311,6 @@ function abrirDiff(linhas, { exemplo = null } = {}) {
   diff = new BrowserWindow({
     ...OPCOES_COMUNS,
     ...inicial,
-    // Sempre no topo: a bind e usada de dentro de outro programa e a
-    // comparacao precisa aparecer na frente dele.
-    alwaysOnTop: true,
     title: 'Comparação de texto',
   });
 
@@ -307,10 +318,7 @@ function abrirDiff(linhas, { exemplo = null } = {}) {
   diff.loadFile(path.join(RENDERER, 'diff', 'index.html'));
   lembrarTamanho(diff, 'diff');
 
-  diff.once('ready-to-show', () => {
-    diff.show();
-    diff.focus();
-  });
+  diff.once('ready-to-show', () => trazParaFrente(diff));
 
   // Fechar descarta a comparacao, como pede o design.
   diff.on('closed', () => {
@@ -347,6 +355,8 @@ function abrirNota() {
     // recarrega, senao o que estava sendo escrito no rascunho se perderia -
     // o rascunho nao e gravado em disco.
     if (nota.isMinimized()) {
+      // Restaurar da barra de tarefas ja traz a janela para a frente: sem o toque de "sempre no topo" (que, aqui,
+      // atrapalhava o foco do teclado de volta no campo).
       nota.restore();
       nota.show();
       nota.focus();
@@ -357,8 +367,7 @@ function abrirNota() {
     // Ja esta aberto: recarrega para a lista de arquivos vir atualizada,
     // caso algum .md tenha sido criado ou apagado por fora.
     nota.reload();
-    nota.show();
-    nota.focus();
+    trazParaFrente(nota);
     return nota;
   }
 
@@ -366,7 +375,6 @@ function abrirNota() {
   nota = new BrowserWindow({
     ...OPCOES_COMUNS,
     ...inicial,
-    alwaysOnTop: true,
     title: 'Fast Note',
   });
 
@@ -376,8 +384,7 @@ function abrirNota() {
   lembrarTamanho(nota, () => TAMANHO_DO_MODO[modoNota]);
 
   nota.once('ready-to-show', () => {
-    nota.show();
-    nota.focus();
+    trazParaFrente(nota);
   });
 
   // Restaurada pelo icone da barra de tarefas (e nao pela bind): o mesmo foco.
